@@ -8,15 +8,15 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-card text-card-foreground border-border/80",
+        default: "bg-white text-foreground border-border",
         success:
-          "border-green-500/25 bg-green-500/10 text-green-50 [&>svg]:text-green-300",
+          "border-green-200 bg-green-50 text-green-800 [&>svg]:text-green-500",
         warning:
-          "border-yellow-500/25 bg-yellow-500/10 text-yellow-50 [&>svg]:text-yellow-300",
+          "border-yellow-200 bg-yellow-50 text-yellow-800 [&>svg]:text-yellow-500",
         info:
-          "border-blue-500/25 bg-blue-500/10 text-blue-50 [&>svg]:text-blue-300",
+          "border-blue-200 bg-blue-50 text-blue-800 [&>svg]:text-blue-500",
         destructive:
-          "border-destructive/30 text-destructive bg-card [&>svg]:text-current *:data-[slot=alert-description]:text-destructive/90",
+          "border-red-200 bg-red-50 text-red-700 [&>svg]:text-red-500 *:data-[slot=alert-description]:text-red-600",
       },
     },
     defaultVariants: {
@@ -70,3 +70,5 @@ function AlertDescription({
 }
 
 export { Alert, AlertTitle, AlertDescription };
+
+

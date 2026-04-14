@@ -35,7 +35,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       subtitle: "Across all levels",
       icon: Users,
       borderClass: "border-l-red-600",
-      iconClass: "bg-red-600/10 text-red-600 dark:bg-red-600/15 dark:text-red-400",
+      iconClass: "bg-red-600/10 text-red-600",
     },
     {
       title: "Selected Subjects",
@@ -44,7 +44,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       icon: BookOpen,
       borderClass: "border-l-amber-500",
       iconClass:
-        "bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400",
+        "bg-amber-500/10 text-amber-600",
     },
     {
       title: "Total Entries",
@@ -52,7 +52,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       subtitle: "Individual entries",
       icon: CheckCircle,
       borderClass: "border-l-blue-500",
-      iconClass: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400",
+      iconClass: "bg-blue-500/10 text-blue-600",
     },
     {
       title: "Payment Amount",
@@ -63,8 +63,8 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       borderClass: "border-l-orange-500",
       iconClass:
         user?.status === "active"
-          ? "bg-green-500/10 text-green-600 dark:bg-green-500/15 dark:text-green-400"
-          : "bg-orange-500/10 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400",
+          ? "bg-green-500/10 text-green-600"
+          : "bg-orange-500/10 text-orange-600",
     },
   ];
 
@@ -124,21 +124,21 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
     <div className="flex flex-col w-full gap-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-red-400">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
             School Workspace
           </p>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">School Dashboard</h1>
-            <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">
+            <h1 className="text-3xl font-bold text-slate-900">School Dashboard</h1>
+            <p className="mt-2 max-w-2xl text-slate-500">
               Welcome back, {user?.name}. Track registration progress, subject
               entries, payment status, and your examination timetable from one
               place.
             </p>
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white dark:border-[#1e1e2e] dark:bg-[#13131e] px-4 py-3 text-sm text-slate-500 dark:text-[#94a3b8] shadow-sm">
+        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-500">
           Academic year:{" "}
-          <span className="font-semibold text-slate-900 dark:text-white">
+          <span className="font-semibold text-slate-900">
             {user?.academicYear ?? "2026"}
           </span>
         </div>
@@ -186,14 +186,14 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    <p className="text-sm font-medium text-slate-500">
                       {stat.title}
                     </p>
                     <div className="space-y-1">
-                      <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                      <p className="text-3xl font-bold text-slate-900">
                         {stat.value}
                       </p>
-                      <p className="text-sm text-slate-500 dark:text-[#94a3b8]">{stat.subtitle}</p>
+                      <p className="text-sm text-slate-500">{stat.subtitle}</p>
                     </div>
                   </div>
                   <div
@@ -211,16 +211,16 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       <div className="flex flex-col w-full gap-6">
         <Card className="w-full">
           <CardHeader>
-            <CardTitle className="text-slate-900 dark:text-white">Submission Progress</CardTitle>
-            <CardDescription className="text-slate-600 dark:text-slate-400">
+            <CardTitle className="text-slate-900">Submission Progress</CardTitle>
+            <CardDescription className="text-slate-500">
               Complete each step to finalise registration
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 dark:bg-[#13131e] dark:border-[#1e1e2e] p-4">
+            <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
               <div className="mb-3 flex items-center justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-400">Completion</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
+                <span className="text-slate-500">Completion</span>
+                <span className="font-semibold text-slate-900">
                   {completedSteps}/{completionSteps.length}
                 </span>
               </div>
@@ -231,13 +231,13 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
               {completionSteps.map((step, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] px-4 py-3 shadow-sm"
+                  className="bg-white shadow-sm border border-slate-200 rounded-2xl flex items-center gap-3 px-4 py-3"
                 >
                   <div
                     className={`flex h-8 w-8 items-center justify-center rounded-full ${
                       step.completed
-                        ? "bg-green-500/10 text-green-600 dark:bg-green-500/15 dark:text-green-300"
-                        : "bg-slate-100 text-slate-500 dark:bg-white/[0.06] dark:text-slate-400"
+                        ? "bg-green-500/10 text-green-600"
+                        : "bg-slate-100 text-slate-500"
                     }`}
                   >
                     {step.completed ? (
@@ -248,7 +248,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
                   </div>
                   <span
                     className={`text-sm ${
-                      step.completed ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"
+                      step.completed ? "text-slate-900" : "text-slate-500"
                     }`}
                   >
                     {step.label}
@@ -266,11 +266,11 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </Card>
 
         <Card className="w-full">
-          <CardHeader className="border-b border-border">
+          <CardHeader className="border-b border-slate-200">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <CardTitle className="text-slate-900 dark:text-white">Selected Subjects</CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-400">
+                <CardTitle className="text-slate-900">Selected Subjects</CardTitle>
+                <CardDescription className="text-slate-500">
                   Overview of registered subject entries
                 </CardDescription>
               </div>
@@ -287,25 +287,25 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
             {subjectSummary.map((item) => (
               <div
                 key={item.code}
-                className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4 transition-colors hover:bg-slate-50 dark:hover:bg-[#1a1a26]"
+                className="bg-white shadow-sm border border-slate-200 rounded-2xl flex items-center justify-between gap-4 p-4 transition-colors hover:bg-slate-50"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <BookOpen className="h-4 w-4 text-red-500" />
-                    <span className="truncate font-semibold text-slate-900 dark:text-white">
+                    <span className="truncate font-semibold text-slate-900">
                       {item.subject}
                     </span>
                     <Badge variant="secondary">{item.code}</Badge>
                   </div>
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                  <p className="mt-1 text-xs text-slate-500">
                     {item.level} Level
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-semibold text-slate-900 dark:text-white">
+                  <div className="text-lg font-semibold text-slate-900">
                     {item.entries}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">entries</div>
+                  <div className="text-xs text-slate-500">entries</div>
                 </div>
               </div>
             ))}
@@ -314,11 +314,11 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       </div>
 
       <Card className="w-full">
-        <CardHeader className="border-b border-border">
+        <CardHeader className="border-b border-slate-200">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle className="text-slate-900 dark:text-white">Timetable Preview</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">
+              <CardTitle className="text-slate-900">Timetable Preview</CardTitle>
+              <CardDescription className="text-slate-500">
                 Upcoming examinations for your school
               </CardDescription>
             </div>
@@ -336,16 +336,16 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
             {upcomingExams.map((exam, index) => (
               <div
                 key={index}
-                className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4 shadow-sm"
+                className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4"
               >
                 <div className="mb-3 flex items-center justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600 dark:bg-red-600/15 dark:text-red-400">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
                     <Calendar className="h-4 w-4" />
                   </div>
                   <Badge variant="info">Upcoming</Badge>
                 </div>
-                <h4 className="font-semibold text-slate-900 dark:text-white">{exam.subject}</h4>
-                <div className="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-400">
+                <h4 className="font-semibold text-slate-900">{exam.subject}</h4>
+                <div className="mt-3 space-y-1 text-sm text-slate-500">
                   <p>Date: {new Date(exam.date).toLocaleDateString()}</p>
                   <p>Time: {exam.time}</p>
                   <p>Duration: {exam.duration}</p>
@@ -356,18 +356,77 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </CardContent>
       </Card>
 
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-slate-900">Zone & Support Details</CardTitle>
+          <CardDescription className="text-slate-500">
+            Your zone coordinator and WAKISSHA support contacts for assistance
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 lg:grid-cols-2">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-50 border border-blue-200 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-10 w-10 rounded-full bg-blue-600/10 text-blue-600 flex items-center justify-center font-semibold">
+                Z
+              </div>
+              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-blue-600">
+                Zone Coordinator
+              </p>
+            </div>
+            <div className="mt-4 flex items-start gap-4">
+              <div className="h-14 w-14 rounded-full bg-white border border-blue-200 text-blue-600 flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                GN
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-slate-900">
+                  Ms. Grace Nalwanga
+                </p>
+                <p className="text-sm text-slate-600 mt-1">Central Zone Coordinator</p>
+                <div className="mt-3 space-y-1 text-sm">
+                  <p className="text-slate-700"><span className="font-medium">Phone:</span> <a href="tel:+256700200115" className="text-blue-600 hover:underline">+256 700 200 115</a></p>
+                  <p className="text-slate-700"><span className="font-medium">Email:</span> <a href="mailto:grace.nalwanga@wakissha.org" className="text-blue-600 hover:underline">grace.nalwanga@wakissha.org</a></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-50 border border-red-200 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-10 w-10 rounded-full bg-red-600/10 text-red-600 flex items-center justify-center font-semibold">
+                S
+              </div>
+              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-red-600">
+                WAKISSHA Secretariat
+              </p>
+            </div>
+            <div className="mt-4">
+              <p className="text-lg font-semibold text-slate-900">
+                Secretariat Desk
+              </p>
+              <p className="text-sm text-slate-600 mt-1">
+                Registration & Exam Support
+              </p>
+              <div className="mt-4 space-y-1 text-sm">
+                <p className="text-slate-700"><span className="font-medium">Phone:</span> <a href="tel:+256700100420" className="text-red-600 hover:underline">+256 700 100 420</a></p>
+                <p className="text-slate-700"><span className="font-medium">Email:</span> <a href="mailto:secretariat@wakissha.org" className="text-red-600 hover:underline">secretariat@wakissha.org</a></p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-3">
         <Button
           variant="outline"
           className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
           onClick={() => onPageChange("add-student")}
         >
-          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600 dark:bg-red-600/15 dark:text-red-400">
+          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <div className="font-semibold text-foreground">Add Student</div>
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div className="font-semibold text-slate-900">Add Student</div>
+            <div className="mt-1 text-xs text-slate-500">
               Register a new candidate for examination entries
             </div>
           </div>
@@ -378,12 +437,12 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
           className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
           onClick={() => onPageChange("upload-pdf")}
         >
-          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
+          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
             <Upload className="h-5 w-5" />
           </div>
           <div>
-            <div className="font-semibold text-foreground">Upload Signed Form</div>
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div className="font-semibold text-slate-900">Upload Signed Form</div>
+            <div className="mt-1 text-xs text-slate-500">
               Submit the authorised registration form for review
             </div>
           </div>
@@ -394,12 +453,12 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
           className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
           onClick={() => onPageChange("reports")}
         >
-          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
+          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
             <CheckCircle className="h-5 w-5" />
           </div>
           <div>
-            <div className="font-semibold text-foreground">My Reports</div>
-            <div className="mt-1 text-xs text-muted-foreground">
+            <div className="font-semibold text-slate-900">My Reports</div>
+            <div className="mt-1 text-xs text-slate-500">
               Review school registration summaries and downloads
             </div>
           </div>
@@ -408,3 +467,5 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
     </div>
   );
 }
+
+

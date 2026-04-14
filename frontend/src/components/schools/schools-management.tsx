@@ -62,15 +62,21 @@ function getStatusBadge(status: SchoolStatus) {
 }
 
 export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
-  const { schools, addSchool, updateSchoolStatus } = useAuth();
+  const { schools, zones, addSchool, updateSchoolStatus } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string>("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [newSchool, setNewSchool] = useState({
     name: "",
     email: "",
     phone: "",
     address: "",
+    educationLevel: "UCE" as const,
+    zone_id: "zone-1",
+    schoolLogo: "",
+    contactPerson: "",
   });
 
   const filteredSchools = useMemo(() => {
@@ -86,14 +92,52 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
     });
   }, [schools, searchTerm, statusFilter]);
 
+  const handleLogoChange = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      toast.error("Invalid file type", {
+        description: "Please upload PNG, JPEG, or WebP image",
+      });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File too large", {
+        description: "Logo must be under 2MB",
+      });
+      return;
+    }
+
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setLogoPreview(base64);
+      setNewSchool({ ...newSchool, schoolLogo: base64 });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAddSchool = () => {
-    const nextCode = `WAK26-${String(schools.length + 1).padStart(4, "0")}`;
     addSchool(newSchool);
     setIsAddDialogOpen(false);
-    setNewSchool({ name: "", email: "", phone: "", address: "" });
+    setNewSchool({
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      educationLevel: "UCE",
+      zone_id: "zone-1",
+      schoolLogo: "",
+      contactPerson: "",
+    });
+    setLogoPreview("");
+    setLogoFile(null);
 
     toast.success("School Added", {
-      description: `${newSchool.name} has been registered with code ${nextCode}.`,
+      description: `${newSchool.name} has been registered successfully.`,
     });
   };
 
@@ -115,32 +159,32 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
     {
       label: "Total Schools",
       value: schools.length,
-      className: "border-l-red-600",
-      valueClass: "text-slate-900 dark:text-white",
+      className: "border-l-4 border-l-primary",
+      valueClass: "text-foreground",
     },
     {
       label: "Active",
       value: schools.filter((school) => school.status === "active").length,
-      className: "border-l-green-500",
-      valueClass: "text-green-600 dark:text-green-300",
+      className: "border-l-4 border-l-success",
+      valueClass: "text-foreground",
     },
     {
       label: "Verified",
       value: schools.filter((school) => school.status === "verified").length,
-      className: "border-l-blue-500",
-      valueClass: "text-blue-600 dark:text-blue-300",
+      className: "border-l-4 border-l-primary",
+      valueClass: "text-foreground",
     },
     {
       label: "Payment Submitted",
       value: schools.filter((school) => school.status === "payment_submitted").length,
-      className: "border-l-orange-500",
-      valueClass: "text-orange-600 dark:text-orange-300",
+      className: "border-l-4 border-l-warning",
+      valueClass: "text-foreground",
     },
     {
       label: "Pending",
       value: schools.filter((school) => school.status === "pending").length,
-      className: "border-l-amber-500",
-      valueClass: "text-amber-600 dark:text-amber-300",
+      className: "border-l-4 border-l-destructive",
+      valueClass: "text-foreground",
     },
   ];
 
@@ -148,14 +192,14 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
     <div className="flex flex-col w-full gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400 dark:text-red-400">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
             School Administration
           </p>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-foreground">
               Schools Management
             </h1>
-            <p className="mt-2 max-w-3xl text-slate-600 dark:text-slate-300">
+            <p className="mt-2 max-w-3xl text-muted-foreground">
               Track registration, payment verification, and activation progress
               for member schools across all WAKISSHA zones.
             </p>
@@ -179,7 +223,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
             </DialogHeader>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="name">School Name</Label>
+                <Label htmlFor="name">School Name *</Label>
                 <Input
                   id="name"
                   placeholder="Enter school name"
@@ -190,7 +234,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">Email Address *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -202,7 +246,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">Phone Number *</Label>
                 <Input
                   id="phone"
                   placeholder="+256 700 000 000"
@@ -213,7 +257,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="address">Address *</Label>
                 <Input
                   id="address"
                   placeholder="School address"
@@ -223,17 +267,104 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   }
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="educationLevel">Education Level *</Label>
+                <Select
+                  value={newSchool.educationLevel}
+                  onValueChange={(value: any) =>
+                    setNewSchool({ ...newSchool, educationLevel: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UCE">UCE (O' Level)</SelectItem>
+                    <SelectItem value="UACE">UACE (A' Level)</SelectItem>
+                    <SelectItem value="BOTH">Both UCE & UACE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="zone">Zone *</Label>
+                <Select value={newSchool.zone_id} onValueChange={(value) =>
+                    setNewSchool({ ...newSchool, zone_id: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {zones.map((zone) => (
+                      <SelectItem key={zone.id} value={zone.id}>
+                        {zone.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="schoolLogo">School Logo (Optional)</Label>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Input
+                      id="schoolLogo"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(e) => handleLogoChange(e.target.files)}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      PNG, JPEG or WebP. Max 2MB.
+                    </p>
+                  </div>
+                  {logoPreview && (
+                    <div className="flex items-center justify-center w-16 h-16 border border-border rounded-lg bg-muted">
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="contactPerson">Contact Person (Optional)</Label>
+                <Input
+                  id="contactPerson"
+                  placeholder="Name of school contact"
+                  value={newSchool.contactPerson}
+                  onChange={(event) =>
+                    setNewSchool({
+                      ...newSchool,
+                      contactPerson: event.target.value,
+                    })
+                  }
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setIsAddDialogOpen(false)}
+                onClick={() => {
+                  setIsAddDialogOpen(false);
+                  setLogoPreview("");
+                  setLogoFile(null);
+                }}
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleAddSchool}
-                disabled={!newSchool.name || !newSchool.email || !newSchool.phone}
+                disabled={
+                  !newSchool.name ||
+                  !newSchool.email ||
+                  !newSchool.phone ||
+                  !newSchool.address ||
+                  !newSchool.educationLevel ||
+                  !newSchool.zone_id
+                }
               >
                 Add School
               </Button>
@@ -246,7 +377,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
         {stats.map((stat) => (
           <Card key={stat.label} className={`border-l-4 ${stat.className}`}>
             <CardContent className="pt-6">
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{stat.label}</p>
+              <p className="text-sm font-medium text-slate-500">{stat.label}</p>
               <p className={`mt-3 text-3xl font-bold ${stat.valueClass}`}>
                 {stat.value}
               </p>
@@ -259,7 +390,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 lg:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by school name, code, or district..."
                 value={searchTerm}
@@ -284,11 +415,11 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
       </Card>
 
       <Card>
-        <CardHeader className="border-b border-border/70">
+        <CardHeader className="border-b border-slate-200">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="text-slate-900 dark:text-white">Registered Schools</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">
+              <CardTitle className="text-slate-900">Registered Schools</CardTitle>
+              <CardDescription className="text-slate-500">
                 {filteredSchools.length} school
                 {filteredSchools.length !== 1 ? "s" : ""} found
               </CardDescription>
@@ -317,7 +448,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
             <TableBody>
               {filteredSchools.map((school) => (
                 <TableRow key={school.id}>
-                  <TableCell className="font-semibold text-white">
+                  <TableCell className="font-semibold text-slate-900">
                     {school.name}
                   </TableCell>
                   <TableCell>
@@ -325,21 +456,21 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div className="text-white">{school.district}</div>
-                      <div className="text-slate-400">{school.zone}</div>
+                      <div className="text-slate-900">{school.district}</div>
+                      <div className="text-slate-500">{school.zone}</div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div className="text-white">{school.email}</div>
-                      <div className="text-slate-400">{school.phone}</div>
+                      <div className="text-slate-900">{school.email}</div>
+                      <div className="text-slate-500">{school.phone}</div>
                     </div>
                   </TableCell>
                   <TableCell>{school.students}</TableCell>
                   <TableCell>{getStatusBadge(school.status)}</TableCell>
                   <TableCell>
                     {school.status === "active" && school.activationCode ? (
-                      <div className="flex items-center gap-2 text-sm text-slate-200">
+                      <div className="flex items-center gap-2 text-sm text-slate-900">
                         <ShieldCheck className="h-4 w-4 text-green-400" />
                         {school.activationCode}
                       </div>
@@ -347,7 +478,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                       <span className="text-sm text-slate-500">Not active yet</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-slate-400">
+                  <TableCell className="text-slate-500">
                     {new Date(school.registrationDate).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
@@ -379,3 +510,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
     </div>
   );
 }
+
+
+
+

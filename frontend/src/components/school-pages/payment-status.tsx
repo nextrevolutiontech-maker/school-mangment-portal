@@ -105,11 +105,11 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
   return (
     <div className="flex flex-col w-full gap-6">
       <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-red-400">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
           Finance & Activation
         </p>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Payment Status</h1>
-        <p className="max-w-2xl text-slate-600 dark:text-slate-300">
+        <h1 className="text-3xl font-bold text-slate-900">Payment Status</h1>
+        <p className="max-w-2xl text-slate-500">
           Review your payment summary, see your verification stage, and complete
           any remaining finance requirements for activation.
         </p>
@@ -124,64 +124,64 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
       <div className="flex flex-col w-full gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-slate-900 dark:text-white">Payment Summary</CardTitle>
-            <CardDescription className="text-slate-600 dark:text-slate-400">
+            <CardTitle className="text-slate-900">Payment Summary</CardTitle>
+            <CardDescription className="text-slate-500">
               Breakdown of registration and student entry fees
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 dark:bg-[#13131e] dark:border-[#1e1e2e] p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-semibold text-slate-900 dark:text-white">
+                    <p className="font-semibold text-slate-900">
                       School Registration Fee
                     </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="text-sm text-slate-500">
                       One-time portal registration
                     </p>
                   </div>
-                  <p className="text-lg font-semibold text-slate-900 dark:text-white">
+                  <p className="text-lg font-semibold text-slate-900">
                     {formatUGX(registrationFee)}
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 dark:bg-[#13131e] dark:border-[#1e1e2e] p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-semibold text-slate-900 dark:text-white">Per Student Fee</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="font-semibold text-slate-900">Per Student Fee</p>
+                    <p className="text-sm text-slate-500">
                       {formatUGX(perStudentFee)} x {totalStudents} students
                     </p>
                   </div>
-                  <p className="text-lg font-semibold text-slate-900 dark:text-white">
+                  <p className="text-lg font-semibold text-slate-900">
                     {formatUGX(perStudentFee * totalStudents)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-red-200 bg-red-50 dark:border-red-600/25 dark:bg-red-600/10 p-5">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.16em] text-red-600 dark:text-red-300">
+                  <p className="text-sm uppercase tracking-[0.16em] text-red-600">
                     Total Amount
                   </p>
-                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  <p className="mt-2 text-sm text-slate-500">
                     {totalStudents} students registered
                   </p>
                 </div>
-                <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                <p className="text-3xl font-bold text-slate-900">
                   {formatUGX(totalAmount)}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4 shadow-sm">
+            <div className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4 shadow-sm">
               <div className="grid gap-3 text-sm md:grid-cols-2">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-slate-600 dark:text-slate-400">Payment Status</span>
+                  <span className="text-slate-500">Payment Status</span>
                   <Badge variant={status.badgeVariant}>
                     {paymentStatus.toUpperCase()}
                   </Badge>
@@ -189,12 +189,12 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                 {paymentStatus !== "pending" && (
                   <>
                     <div className="flex items-center justify-between gap-4">
-                      <span className="text-slate-600 dark:text-slate-400">Submission Date</span>
-                      <span className="text-slate-900 dark:text-white">April 12, 2026</span>
+                      <span className="text-slate-500">Submission Date</span>
+                      <span className="text-slate-900">April 12, 2026</span>
                     </div>
                     <div className="flex items-center justify-between gap-4 md:col-span-2">
-                      <span className="text-slate-600 dark:text-slate-400">Reference Number</span>
-                      <span className="font-mono text-slate-900 dark:text-white">
+                      <span className="text-slate-500">Reference Number</span>
+                      <span className="font-mono text-slate-900">
                         PAY-2026-001-{user?.schoolCode}
                       </span>
                     </div>
@@ -207,8 +207,8 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-slate-900 dark:text-white">Payment Instructions</CardTitle>
-            <CardDescription className="text-slate-600 dark:text-slate-400">
+            <CardTitle className="text-slate-900">Payment Instructions</CardTitle>
+            <CardDescription className="text-slate-500">
               Complete the following steps to activate your portal access
             </CardDescription>
           </CardHeader>
@@ -216,18 +216,18 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
             {instructions.map((item, index) => (
               <div
                 key={item.title}
-                className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4 shadow-sm"
+                className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4 shadow-sm"
               >
                 <div className="mb-3 flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600/10 text-sm font-semibold text-red-600 dark:bg-red-600/15 dark:text-red-400">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600/10 text-sm font-semibold text-red-600">
                     {index + 1}
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 dark:text-white">{item.title}</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{item.description}</p>
+                    <p className="font-semibold text-slate-900">{item.title}</p>
+                    <p className="text-sm text-slate-500">{item.description}</p>
                   </div>
                 </div>
-                <div className="space-y-1 pl-11 text-sm text-slate-500 dark:text-slate-400">
+                <div className="space-y-1 pl-11 text-sm text-slate-500">
                   {item.meta.map((line) => (
                     <p key={line}>{line}</p>
                   ))}
@@ -235,16 +235,16 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
               </div>
             ))}
 
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10 p-4">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
               <div className="flex items-start gap-3">
-                <Landmark className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-300" />
+                <Landmark className="mt-0.5 h-5 w-5 text-amber-600" />
                 <div>
-                  <p className="font-semibold text-slate-900 dark:text-white">Need help?</p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  <p className="font-semibold text-slate-900">Need help?</p>
+                  <p className="mt-1 text-sm text-slate-500">
                     Contact finance support at{" "}
                     <a
                       href="mailto:payments@wakissha.org"
-                      className="text-red-600 hover:underline dark:text-red-400"
+                      className="text-red-600 hover:underline"
                     >
                       payments@wakissha.org
                     </a>{" "}
@@ -264,12 +264,12 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
           onClick={() => window.print()}
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
               <Download className="h-5 w-5" />
             </div>
             <div className="text-left">
-              <div className="font-semibold text-slate-900 dark:text-white">Download Invoice</div>
-              <div className="text-xs text-slate-600 dark:text-slate-400">
+              <div className="font-semibold text-slate-900">Download Invoice</div>
+              <div className="text-xs text-slate-500">
                 Save the payment summary as PDF
               </div>
             </div>
@@ -296,3 +296,6 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
     </div>
   );
 }
+
+
+

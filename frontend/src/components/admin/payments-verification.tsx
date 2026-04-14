@@ -46,6 +46,13 @@ const filterOptions: Array<{ label: string; value: "all" | SchoolStatus }> = [
   { label: "Active", value: "active" },
 ];
 
+const examLevelMap: Record<string, "UCE" | "UACE"> = {
+  "WAK26-0001": "UCE",
+  "WAK26-0002": "UACE",
+  "WAK26-0003": "UCE",
+  "WAK26-0004": "UACE",
+};
+
 function getStatusBadge(status: SchoolStatus) {
   const badgeMap = {
     active: { variant: "success" as const, label: "Active" },
@@ -83,25 +90,25 @@ export function PaymentsVerification({
       label: "Pending Review",
       value: schools.filter((school) => school.status === "pending").length,
       border: "border-l-yellow-500",
-      valueClass: "text-yellow-300",
+      valueClass: "text-slate-900",
     },
     {
       label: "Payment Submitted",
       value: schools.filter((school) => school.status === "payment_submitted").length,
       border: "border-l-orange-500",
-      valueClass: "text-orange-300",
+      valueClass: "text-slate-900",
     },
     {
       label: "Verified",
       value: schools.filter((school) => school.status === "verified").length,
       border: "border-l-blue-500",
-      valueClass: "text-blue-300",
+      valueClass: "text-slate-900",
     },
     {
       label: "Activated",
       value: schools.filter((school) => school.status === "active").length,
       border: "border-l-green-500",
-      valueClass: "text-green-300",
+      valueClass: "text-slate-900",
     },
   ];
 
@@ -130,16 +137,16 @@ export function PaymentsVerification({
 
   return (
     <div className="flex flex-col w-full gap-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="w-full flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400 dark:text-red-400">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
             Finance Control
           </p>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-slate-900">
               Payments &amp; Verification
             </h1>
-            <p className="mt-2 max-w-3xl text-slate-600 dark:text-slate-300">
+            <p className="mt-2 max-w-3xl text-slate-500">
               Review school submissions, verify uploaded payment proof, and
               activate school accounts for the 2026 examination cycle.
             </p>
@@ -156,7 +163,7 @@ export function PaymentsVerification({
         {summaryCards.map((card) => (
           <Card key={card.label} className={`border-l-4 ${card.border}`}>
             <CardContent className="pt-6">
-              <p className="text-sm font-medium text-slate-400">{card.label}</p>
+              <p className="text-sm font-medium text-slate-500">{card.label}</p>
               <p className={`mt-3 text-3xl font-bold ${card.valueClass}`}>
                 {card.value}
               </p>
@@ -166,11 +173,11 @@ export function PaymentsVerification({
       </div>
 
       <Card className="w-full mt-6">
-        <CardHeader className="border-b border-border/70">
+        <CardHeader className="border-b border-slate-200">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle className="text-slate-900 dark:text-white">Verification Queue</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">
+              <CardTitle className="text-slate-900">Verification Queue</CardTitle>
+              <CardDescription className="text-slate-500">
                 Filter and action school payment submissions from a single admin
                 workspace.
               </CardDescription>
@@ -195,6 +202,7 @@ export function PaymentsVerification({
               <TableRow>
                 <TableHead>School Code</TableHead>
                 <TableHead>School Name</TableHead>
+                <TableHead>Exam Level</TableHead>
                 <TableHead>Amount Paid</TableHead>
                 <TableHead>Payment Proof</TableHead>
                 <TableHead>Status</TableHead>
@@ -209,13 +217,16 @@ export function PaymentsVerification({
                   </TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-semibold text-slate-900 dark:text-white">{school.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="font-semibold text-slate-900">{school.name}</p>
+                      <p className="text-xs text-slate-500">
                         {school.district} / {school.zone}
                       </p>
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium text-slate-900 dark:text-white">
+                  <TableCell className="font-medium text-slate-900">
+                    {examLevelMap[school.code] ?? "UCE"}
+                  </TableCell>
+                  <TableCell className="font-medium text-slate-900">
                     {school.amountPaid}
                   </TableCell>
                   <TableCell>
@@ -236,14 +247,14 @@ export function PaymentsVerification({
                         Verify &amp; Activate
                       </Button>
                     ) : school.status === "active" ? (
-                      <div className="text-sm text-slate-600 dark:text-slate-300">
+                      <div className="text-sm text-slate-500">
                         Activation:{" "}
-                        <span className="font-medium text-slate-700 dark:text-slate-200">
+                        <span className="font-medium text-slate-900">
                           {school.activationCode || "Generated"}
                         </span>
                       </div>
                     ) : (
-                      <div className="text-sm text-slate-500 dark:text-slate-400">
+                      <div className="text-sm text-slate-500">
                         Awaiting next action
                       </div>
                     )}
@@ -273,7 +284,7 @@ export function PaymentsVerification({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-2xl border border-slate-200 dark:border-[#1e1e2e] bg-white dark:bg-[#13131e] p-4">
+          <div className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600/15 text-red-400">
                 {isProcessing ? (
@@ -283,10 +294,10 @@ export function PaymentsVerification({
                 )}
               </div>
               <div className="space-y-1">
-                <p className="font-semibold text-slate-900 dark:text-white">
+                <p className="font-semibold text-slate-900">
                   {isProcessing ? "Processing verification..." : "Ready to activate"}
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <p className="text-sm text-slate-500">
                   {isProcessing
                     ? "Reviewing payment proof, generating activation code, and preparing confirmation email."
                     : "This will update the school status to active and send the activation details by email."}
@@ -322,3 +333,6 @@ export function PaymentsVerification({
     </div>
   );
 }
+
+
+

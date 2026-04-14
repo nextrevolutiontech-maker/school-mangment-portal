@@ -194,7 +194,7 @@ function SchedulePanel({
       label: "Total Papers",
       value: schedule.length,
       className: "border-l-red-600",
-      valueClass: "text-slate-900 dark:text-white",
+      valueClass: "text-slate-900",
     },
     {
       label: "Start Date",
@@ -203,7 +203,7 @@ function SchedulePanel({
         day: "numeric",
       }),
       className: "border-l-amber-500",
-      valueClass: "text-amber-600 dark:text-amber-300",
+      valueClass: "text-slate-900",
     },
     {
       label: "End Date",
@@ -215,13 +215,13 @@ function SchedulePanel({
         },
       ),
       className: "border-l-blue-500",
-      valueClass: "text-blue-600 dark:text-blue-300",
+      valueClass: "text-slate-900",
     },
     {
       label: "Exam Centres",
       value: new Set(schedule.map((exam) => exam.venue)).size,
       className: "border-l-green-500",
-      valueClass: "text-green-600 dark:text-green-300",
+      valueClass: "text-slate-900",
     },
   ];
 
@@ -231,7 +231,7 @@ function SchedulePanel({
         {statCards.map((stat) => (
           <Card key={stat.label} className={`border-l-4 ${stat.className}`}>
             <CardContent className="pt-6">
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{stat.label}</p>
+              <p className="text-sm font-medium text-slate-500">{stat.label}</p>
               <p className={`mt-3 text-3xl font-bold ${stat.valueClass}`}>
                 {stat.value}
               </p>
@@ -248,9 +248,9 @@ function SchedulePanel({
 
         <TabsContent value="table">
           <Card>
-            <CardHeader className="border-b border-border/70">
-              <CardTitle className="text-slate-900 dark:text-white">{title}</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">{description}</CardDescription>
+            <CardHeader className="border-b border-slate-200">
+              <CardTitle className="text-slate-900">{title}</CardTitle>
+              <CardDescription className="text-slate-500">{description}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <Table>
@@ -269,14 +269,14 @@ function SchedulePanel({
                 <TableBody>
                   {schedule.map((exam) => (
                     <TableRow key={`${exam.code}-${exam.date}`}>
-                      <TableCell className="font-semibold text-slate-900 dark:text-white">
+                      <TableCell className="font-semibold text-slate-900">
                         {new Date(exam.date).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
                         })}
                       </TableCell>
-                      <TableCell className="text-slate-900 dark:text-white">{exam.day}</TableCell>
-                      <TableCell className="font-medium text-slate-900 dark:text-white">
+                      <TableCell className="text-slate-900">{exam.day}</TableCell>
+                      <TableCell className="font-medium text-slate-900">
                         {exam.subject}
                       </TableCell>
                       <TableCell>
@@ -285,11 +285,11 @@ function SchedulePanel({
                       <TableCell>
                         <Badge variant="secondary">{exam.paper}</Badge>
                       </TableCell>
-                      <TableCell className="text-slate-900 dark:text-white">{exam.time}</TableCell>
-                      <TableCell className="text-slate-600 dark:text-slate-400">
+                      <TableCell className="text-slate-900">{exam.time}</TableCell>
+                      <TableCell className="text-slate-500">
                         {exam.duration}
                       </TableCell>
-                      <TableCell className="text-slate-900 dark:text-white">{exam.venue}</TableCell>
+                      <TableCell className="text-slate-900">{exam.venue}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -301,13 +301,13 @@ function SchedulePanel({
         <TabsContent value="calendar" className="w-full space-y-4">
           {Object.entries(groupedSchedule).map(([date, exams]) => (
             <Card key={date}>
-              <CardHeader className="border-b border-border/70">
+              <CardHeader className="border-b border-slate-200">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600/15 text-red-400">
                     <Calendar className="h-5 w-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-slate-900 dark:text-white">
+                    <CardTitle className="text-slate-900">
                       {new Date(date).toLocaleDateString("en-US", {
                         weekday: "long",
                         month: "long",
@@ -315,7 +315,7 @@ function SchedulePanel({
                         year: "numeric",
                       })}
                     </CardTitle>
-                    <CardDescription className="text-slate-600 dark:text-slate-400">
+                    <CardDescription className="text-slate-500">
                       {exams.length} paper{exams.length > 1 ? "s" : ""} scheduled
                     </CardDescription>
                   </div>
@@ -325,15 +325,15 @@ function SchedulePanel({
                 {exams.map((exam) => (
                   <div
                     key={`${exam.code}-${exam.time}`}
-                    className="rounded-2xl border border-slate-200 dark:border-[#1e1e2e] bg-white dark:bg-[#13131e] p-4"
+                    className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4"
                   >
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                       <BookOpen className="h-4 w-4 text-red-400" />
-                      <h4 className="font-semibold text-slate-900 dark:text-white">{exam.subject}</h4>
+                      <h4 className="font-semibold text-slate-900">{exam.subject}</h4>
                       <Badge variant="outline">{exam.code}</Badge>
                       <Badge variant="secondary">{exam.paper}</Badge>
                     </div>
-                    <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                    <div className="space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <Clock className="h-3.5 w-3.5" />
                         <span>{exam.time}</span>
@@ -367,13 +367,13 @@ export function Timetable({ onPageChange }: TimetableProps) {
     <div className="flex flex-col w-full gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400 dark:text-red-400">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
             Examination Schedule
           </p>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-slate-900">
             UCE &amp; UACE Timetable
           </h1>
-          <p className="max-w-3xl text-slate-600 dark:text-slate-300">
+          <p className="max-w-3xl text-slate-500">
             Browse separate UCE and UACE examination schedules with table and
             calendar views for planning, printing, and dashboard review.
           </p>
@@ -422,26 +422,26 @@ export function Timetable({ onPageChange }: TimetableProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-white">Candidate Instructions</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-slate-900">Candidate Instructions</CardTitle>
+          <CardDescription className="text-slate-500">
             Key reminders for schools, invigilators, and student candidates.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-3 text-sm text-slate-400">
-            <li className="rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3">
+          <ul className="space-y-3 text-sm text-slate-500">
+            <li className="bg-white shadow-sm border border-slate-200 rounded-xl px-4 py-3">
               Schools should display both UCE and UACE schedules on noticeboards
               at least one week before the first paper.
             </li>
-            <li className="rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3">
+            <li className="bg-white shadow-sm border border-slate-200 rounded-xl px-4 py-3">
               Candidates must arrive at the assigned venue 30 minutes before
               start time with valid identification.
             </li>
-            <li className="rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3">
+            <li className="bg-white shadow-sm border border-slate-200 rounded-xl px-4 py-3">
               Practical and science papers should only be sat in approved rooms
               listed on the timetable.
             </li>
-            <li className="rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3">
+            <li className="bg-white shadow-sm border border-slate-200 rounded-xl px-4 py-3">
               Any timetable changes will be communicated through the WAKISSHA
               portal dashboard and school email.
             </li>
@@ -451,3 +451,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
     </div>
   );
 }
+
+
+
+

@@ -38,7 +38,7 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
       change: "+3 new registrations",
       icon: School,
       borderClass: "border-l-red-600",
-      iconClass: "bg-red-600/10 text-red-600 dark:bg-red-600/15 dark:text-red-400",
+      iconClass: "bg-red-600/10 text-red-600",
     },
     {
       title: "Total Students",
@@ -47,7 +47,7 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
       icon: Users,
       borderClass: "border-l-amber-500",
       iconClass:
-        "bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400",
+        "bg-amber-500/10 text-amber-600",
     },
     {
       title: "Subjects Registered",
@@ -55,7 +55,7 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
       change: "All active this term",
       icon: BookOpen,
       borderClass: "border-l-blue-500",
-      iconClass: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400",
+      iconClass: "bg-blue-500/10 text-blue-600",
     },
     {
       title: "Pending Payments",
@@ -64,7 +64,7 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
       icon: AlertCircle,
       borderClass: "border-l-orange-500",
       iconClass:
-        "bg-orange-500/10 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400",
+        "bg-orange-500/10 text-orange-600",
     },
   ];
 
@@ -146,22 +146,22 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
     <div className="flex flex-col w-full gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-red-400">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
             Administrator Overview
           </p>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-slate-900">
               Organisation Admin Dashboard
             </h1>
-            <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">
+            <p className="mt-2 max-w-2xl text-slate-500">
               Monitor school registrations, payment verification, and
               examination readiness across the WAKISSHA network.
             </p>
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] px-4 py-3 text-sm text-slate-500 dark:text-[#94a3b8] shadow-sm">
+        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-500">
           Registration window:{" "}
-          <span className="font-semibold text-slate-900 dark:text-white">April 2026</span>
+          <span className="font-semibold text-slate-900">April 2026</span>
         </div>
       </div>
 
@@ -174,14 +174,14 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    <p className="text-sm font-medium text-slate-500">
                       {stat.title}
                     </p>
                     <div className="space-y-1">
-                      <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                      <p className="text-3xl font-bold text-slate-900">
                         {stat.value}
                       </p>
-                      <p className="text-sm text-slate-500 dark:text-[#94a3b8]">
+                      <p className="text-sm text-slate-500">
                         {stat.change}
                       </p>
                     </div>
@@ -200,10 +200,10 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
 
       <div className="flex flex-col gap-6 w-full">
         <Card className="w-full">
-          <CardHeader className="flex flex-col gap-4 border-b border-border md:flex-row md:items-center md:justify-between">
+          <CardHeader className="flex flex-col gap-4 border-b border-slate-200 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="text-slate-900 dark:text-white">Recent Submissions</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">
+              <CardTitle className="text-slate-900">Recent Submissions</CardTitle>
+              <CardDescription className="text-slate-500">
                 Latest student registration submissions from schools
               </CardDescription>
             </div>
@@ -231,18 +231,18 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
               <TableBody>
                 {recentSubmissions.map((submission) => (
                   <TableRow key={submission.id}>
-                    <TableCell className="font-semibold text-slate-900 dark:text-white">
+                    <TableCell className="font-semibold text-slate-900">
                       {submission.school}
                     </TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
+                    <TableCell className="text-slate-500">
                       {submission.code}
                     </TableCell>
                     <TableCell>{submission.students}</TableCell>
-                    <TableCell className="font-semibold text-slate-900 dark:text-white">
+                    <TableCell className="font-semibold text-slate-900">
                       {submission.amount}
                     </TableCell>
                     <TableCell>{getStatusBadge(submission.status)}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400">
+                    <TableCell className="text-slate-500">
                       {new Date(submission.date).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
@@ -255,8 +255,8 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
         <div className="flex flex-col w-full gap-6">
           <Card className="w-full">
             <CardHeader>
-              <CardTitle className="text-slate-900 dark:text-white">Quick Actions</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">
+              <CardTitle className="text-slate-900">Quick Actions</CardTitle>
+              <CardDescription className="text-slate-500">
                 Common administrative tasks at a glance
               </CardDescription>
             </CardHeader>
@@ -271,14 +271,14 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
                     className="h-auto w-full justify-start rounded-2xl px-4 py-4 text-left"
                     onClick={() => onPageChange(action.page)}
                   >
-                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600 dark:bg-red-600/12 dark:text-red-400">
+                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="space-y-1">
-                      <div className="font-semibold text-slate-900 dark:text-white">
+                      <div className="font-semibold text-slate-900">
                         {action.label}
                       </div>
-                      <div className="text-xs text-slate-600 dark:text-slate-400">
+                      <div className="text-xs text-slate-500">
                         {action.description}
                       </div>
                     </div>
@@ -290,41 +290,41 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
 
           <Card className="w-full">
             <CardHeader>
-              <CardTitle className="text-slate-900 dark:text-white">System Overview</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">
+              <CardTitle className="text-slate-900">System Overview</CardTitle>
+              <CardDescription className="text-slate-500">
                 Current registration period status
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4">
+              <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="text-sm text-slate-500">
                       Registration Period
                     </p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+                    <p className="mt-1 text-lg font-semibold text-slate-900">
                       April 2026
                     </p>
                   </div>
                   <Badge variant="success">Active</Badge>
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4">
+              <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Deadline</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+                    <p className="text-sm text-slate-500">Deadline</p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900">
                       April 30, 2026
                     </p>
                   </div>
                   <Badge variant="warning">17 days left</Badge>
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4">
+              <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Completion Rate</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
+                    <p className="text-sm text-slate-500">Completion Rate</p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900">
                       75%
                     </p>
                   </div>
@@ -338,3 +338,5 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
     </div>
   );
 }
+
+

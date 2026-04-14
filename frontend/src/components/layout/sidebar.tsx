@@ -64,11 +64,11 @@ const statusStyles: Record<
   "active" | "verified" | "pending" | "payment_submitted",
   string
 > = {
-  active: "border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/12 dark:text-green-300",
-  verified: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/12 dark:text-blue-300",
-  pending: "border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-500/30 dark:bg-yellow-500/12 dark:text-yellow-300",
+  active: "border-green-200 bg-green-50 text-green-700",
+  verified: "border-blue-200 bg-blue-50 text-blue-700",
+  pending: "border-yellow-200 bg-yellow-50 text-yellow-700",
   payment_submitted:
-    "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/30 dark:bg-orange-500/12 dark:text-orange-300",
+    "border-orange-200 bg-orange-50 text-orange-700",
 };
 
 const statusLabels: Record<
@@ -118,12 +118,12 @@ export function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 h-full flex-shrink-0 flex flex-col overflow-y-auto overflow-x-hidden border-r border-slate-200 bg-white text-slate-900 transition-[width,transform] duration-300 dark:border-[#1e1e2e] dark:bg-[#13131e] dark:text-white md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 h-full flex-shrink-0 flex flex-col overflow-y-auto overflow-x-hidden border-r border-slate-200 bg-white text-slate-900 transition-[width,transform] duration-300 md:static md:translate-x-0 ${
           isCollapsed ? "md:w-20" : "md:w-64"
         } w-[19rem] ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div
-          className={`relative border-b border-slate-200 px-4 py-5 dark:border-[#1e1e2e] ${
+          className={`relative border-b border-slate-200 px-4 py-5 ${
             isCollapsed ? "flex justify-center" : ""
           }`}
         >
@@ -138,7 +138,7 @@ export function Sidebar({
               }`}
             >
               {isCollapsed ? (
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-lg font-bold tracking-[0.12em] text-[#DC2626] shadow-sm dark:border-[#1e1e2e] dark:bg-[#13131e]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-200 text-lg font-bold tracking-[0.12em] text-[#DC2626] shadow-sm">
                   W
                 </div>
               ) : (
@@ -153,24 +153,24 @@ export function Sidebar({
                       <p className="text-lg font-bold tracking-[0.14em] text-[#DC2626]">
                         WAKISSHA
                       </p>
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-[#94a3b8]">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                         Exam Portal
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-[#1e1e2e] dark:bg-[#13131e]">
-                    <Avatar className="h-10 w-10 shrink-0 ring-1 ring-slate-200 dark:ring-[#1e1e2e]">
+                  <div className="flex items-center gap-3 rounded-2xl bg-white shadow-sm border border-slate-200 p-3">
+                    <Avatar className="h-10 w-10 shrink-0 ring-1 ring-slate-200">
                       <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback className="bg-red-600/10 text-red-600 dark:bg-red-600/15 dark:text-red-400">
+                      <AvatarFallback className="bg-red-600/10 text-red-600">
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1 overflow-hidden">
-                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                      <p className="truncate text-sm font-semibold text-slate-900">
                         {user.name}
                       </p>
-                      <p className="truncate text-xs text-slate-500 dark:text-[#94a3b8]">
+                      <p className="truncate text-xs text-slate-500">
                         {user.role === "school" ? user.schoolCode : "Administrator"}
                       </p>
                       {user.status && (
@@ -239,7 +239,7 @@ export function Sidebar({
                 } ${
                   isActive
                     ? "bg-[#DC2626] text-white shadow-sm hover:bg-[#b91c1c]"
-                    : "text-slate-500 hover:bg-red-50 hover:text-[#DC2626] dark:text-[#94a3b8] dark:hover:bg-red-500/[0.08] dark:hover:text-white"
+                    : "text-slate-500 hover:bg-red-50 hover:text-[#DC2626]"
                 }`}
                 onClick={() => handleNavigation(item.id)}
               >
@@ -252,13 +252,13 @@ export function Sidebar({
           })}
         </nav>
 
-        <div className="border-t border-slate-200 px-4 py-4 dark:border-[#1e1e2e]">
+        <div className="border-t border-slate-200 px-4 py-4">
           <Button
             type="button"
             variant="ghost"
             className={`w-full ${
               isCollapsed ? "justify-center px-0" : "justify-start px-3"
-            } text-red-500 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300`}
+            } text-red-500 hover:bg-red-50 hover:text-red-600`}
             onClick={logout}
           >
             <LogOut className={`${isCollapsed ? "" : "mr-3"} h-4 w-4`} />
@@ -269,3 +269,5 @@ export function Sidebar({
     </>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Menu } from "lucide-react";
 import { AuthProvider, useAuth } from "./components/auth-context";
 import { Login } from "./components/auth/login";
@@ -12,32 +12,16 @@ import { PaymentStatus } from "./components/school-pages/payment-status";
 import { UploadPDF } from "./components/school-pages/upload-pdf";
 import { Timetable } from "./components/shared/timetable";
 import { Reports } from "./components/shared/reports";
-import { ThemeToggle } from "./components/shared/theme-toggle";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
 
 function AppContent() {
   const { user, isAuthenticated } = useAuth();
   const [currentPage, setCurrentPage] = useState("dashboard");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    const savedTheme = window.localStorage.getItem("wakissha-theme");
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setTheme(savedTheme);
-    }
-  }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle("dark", theme === "dark");
-    root.style.colorScheme = theme;
-    window.localStorage.setItem("wakissha-theme", theme);
-  }, [theme]);
-
   if (!isAuthenticated) {
-    return <Login theme={theme} onThemeToggle={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))} />;
+    return <Login />;
   }
 
   const handlePageChange = (page: string) => {
@@ -48,8 +32,8 @@ function AppContent() {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
-          <h2 className="mb-2 text-xl font-bold text-foreground">{pageTitle}</h2>
-          <p className="text-muted-foreground">This section is coming soon.</p>
+          <h2 className="mb-2 text-xl font-bold text-slate-900">{pageTitle}</h2>
+          <p className="text-slate-500">This section is coming soon.</p>
           <button
             onClick={() => setCurrentPage("dashboard")}
             className="mt-4 text-primary hover:underline"
@@ -112,7 +96,7 @@ function AppContent() {
   };
 
   return (
-    <div className="h-screen w-full max-w-[100vw] flex overflow-hidden bg-slate-50 dark:bg-[#0a0a0f]">
+    <div className="h-screen w-full max-w-[100vw] flex overflow-hidden bg-slate-50">
       <Sidebar
         currentPage={currentPage}
         onPageChange={handlePageChange}
@@ -120,7 +104,7 @@ function AppContent() {
         onMobileClose={() => setIsSidebarOpen(false)}
       />
       <div className="flex-1 h-full min-w-0 max-w-full flex flex-col overflow-y-auto overflow-x-hidden">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-[#1e1e2e] dark:bg-[#0a0a0f]/90">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/90 backdrop-blur">
           <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <div className="flex items-center gap-3">
               <Button
@@ -134,24 +118,18 @@ function AppContent() {
                 <Menu className="h-4 w-4" />
               </Button>
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#DC2626]">
                   WAKISSHA
                 </p>
-                <p className="text-xs text-slate-500 dark:text-[#94a3b8]">
+                <p className="text-xs text-slate-500">
                   Exam Portal
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="hidden text-sm font-medium text-slate-500 dark:text-[#94a3b8] sm:inline">
+              <span className="hidden text-sm font-medium text-slate-500 sm:inline">
                 Exam Portal
               </span>
-              <ThemeToggle
-                theme={theme}
-                onToggle={() =>
-                  setTheme((prev) => (prev === "light" ? "dark" : "light"))
-                }
-              />
             </div>
           </div>
         </header>
@@ -171,3 +149,5 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+

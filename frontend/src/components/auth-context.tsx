@@ -5,6 +5,8 @@ import {
   useState,
   ReactNode,
 } from "react";
+import type { Zone } from "../types/zone";
+import type { Subject } from "../types/subject";
 
 export type UserRole = "admin" | "school";
 export type SchoolStatus =
@@ -12,6 +14,7 @@ export type SchoolStatus =
   | "payment_submitted"
   | "verified"
   | "active";
+export type EducationLevel = "UCE" | "UACE" | "BOTH";
 
 export interface User {
   id: string;
@@ -36,6 +39,8 @@ export interface SchoolRecord {
   address: string;
   district: string;
   zone: string;
+  zone_id: string;
+  educationLevel: EducationLevel;
   academicYear: string;
   status: SchoolStatus;
   registrationDate: string;
@@ -44,6 +49,9 @@ export interface SchoolRecord {
   paymentProof: string;
   activationCode: string;
   avatar?: string;
+  schoolLogo?: string;
+  contactPerson?: string;
+  contactDesignation?: string;
 }
 
 interface NewSchoolInput {
@@ -51,11 +59,17 @@ interface NewSchoolInput {
   email: string;
   phone: string;
   address: string;
+  educationLevel: EducationLevel;
+  zone_id: string;
+  schoolLogo?: string;
+  contactPerson?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   schools: SchoolRecord[];
+  zones: Zone[];
+  subjects: Subject[];
   login: (identifier: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -78,6 +92,112 @@ const adminUser: User = {
   status: "active",
 };
 
+const initialZones: Zone[] = [
+  {
+    id: "zone-1",
+    name: "Central Zone",
+    district: "Kampala",
+    leaderName: "Mr. Robert Kasigire",
+    leaderPhone: "+256 757 123 456",
+    leaderEmail: "robert.kasigire@wakissha.org",
+    secretariatName: "Ms. Grace Nalweyiso",
+    secretariatPhone: "+256 757 234 567",
+    secretariatEmail: "grace.nalweyiso@wakissha.org",
+  },
+  {
+    id: "zone-2",
+    name: "North Zone",
+    district: "Wakiso",
+    leaderName: "Dr. Henry Musoke",
+    leaderPhone: "+256 757 345 678",
+    leaderEmail: "henry.musoke@wakissha.org",
+    secretariatName: "Ms. Fatuma Ahmed",
+    secretariatPhone: "+256 757 456 789",
+    secretariatEmail: "fatuma.ahmed@wakissha.org",
+  },
+  {
+    id: "zone-3",
+    name: "South Zone",
+    district: "Entebbe",
+    leaderName: "Prof. Sarah Nakamya",
+    leaderPhone: "+256 757 567 890",
+    leaderEmail: "sarah.nakamya@wakissha.org",
+    secretariatName: "Mr. Joseph Kyambadde",
+    secretariatPhone: "+256 757 678 901",
+    secretariatEmail: "joseph.kyambadde@wakissha.org",
+  },
+  {
+    id: "zone-4",
+    name: "West Zone",
+    district: "Wakiso",
+    leaderName: "Mr. Patrick Lubega",
+    leaderPhone: "+256 757 789 012",
+    leaderEmail: "patrick.lubega@wakissha.org",
+    secretariatName: "Ms. Sylvia Namujju",
+    secretariatPhone: "+256 757 890 123",
+    secretariatEmail: "sylvia.namujju@wakissha.org",
+  },
+  {
+    id: "zone-5",
+    name: "Eastern Zone",
+    district: "Mukono",
+    leaderName: "Mr. David Otim",
+    leaderPhone: "+256 757 901 234",
+    leaderEmail: "david.otim@wakissha.org",
+    secretariatName: "Ms. Rosemary Kiwanuka",
+    secretariatPhone: "+256 757 012 345",
+    secretariatEmail: "rosemary.kiwanuka@wakissha.org",
+  },
+  {
+    id: "zone-6",
+    name: "Northern Region",
+    district: "Jinja",
+    leaderName: "Mr. Edgar Kamya",
+    leaderPhone: "+256 758 112 233",
+    leaderEmail: "edgar.kamya@wakissha.org",
+    secretariatName: "Ms. Christine Nabulya",
+    secretariatPhone: "+256 758 223 334",
+    secretariatEmail: "christine.nabulya@wakissha.org",
+  },
+  {
+    id: "zone-7",
+    name: "Fort Portal Zone",
+    district: "Fort Portal",
+    leaderName: "Mr. Julius Mugyenyi",
+    leaderPhone: "+256 758 334 445",
+    leaderEmail: "julius.mugyenyi@wakissha.org",
+    secretariatName: "Ms. Hilda Kamugyisha",
+    secretariatPhone: "+256 758 445 556",
+    secretariatEmail: "hilda.kamugyisha@wakissha.org",
+  },
+  {
+    id: "zone-8",
+    name: "Mbarara Zone",
+    district: "Mbarara",
+    leaderName: "Mr. Amos Bazira",
+    leaderPhone: "+256 758 556 667",
+    leaderEmail: "amos.bazira@wakissha.org",
+    secretariatName: "Ms. Teresa Byamukama",
+    secretariatPhone: "+256 758 667 778",
+    secretariatEmail: "teresa.byamukama@wakissha.org",
+  },
+];
+
+const initialSubjects: Subject[] = [
+  { id: "subj-1", name: "Mathematics", code: "MTH", educationLevel: "BOTH", optional: false },
+  { id: "subj-2", name: "English Language", code: "ENG", educationLevel: "BOTH", optional: false },
+  { id: "subj-3", name: "Physics", code: "PHY", educationLevel: "UCE", optional: false },
+  { id: "subj-4", name: "Chemistry", code: "CHM", educationLevel: "BOTH", optional: false },
+  { id: "subj-5", name: "Biology", code: "BIO", educationLevel: "BOTH", optional: false },
+  { id: "subj-6", name: "History", code: "HIS", educationLevel: "BOTH", optional: true },
+  { id: "subj-7", name: "Geography", code: "GEO", educationLevel: "BOTH", optional: true },
+  { id: "subj-8", name: "Computer Science", code: "CPS", educationLevel: "BOTH", optional: true },
+  { id: "subj-9", name: "Literature in English", code: "LIT", educationLevel: "UACE", optional: true },
+  { id: "subj-10", name: "General Paper", code: "GP", educationLevel: "UACE", optional: false },
+  { id: "subj-11", name: "Economics", code: "ECN", educationLevel: "UACE", optional: true },
+  { id: "subj-12", name: "Entrepreneurship", code: "ETP", educationLevel: "UACE", optional: true },
+];
+
 const initialSchools: SchoolRecord[] = [
   {
     id: "2",
@@ -88,8 +208,10 @@ const initialSchools: SchoolRecord[] = [
     address: "Plot 12 Kampala Road, Kampala",
     district: "Kampala",
     zone: "Central Zone",
+    zone_id: "zone-1",
+    educationLevel: "UCE" as const,
     academicYear: "2026",
-    status: "active",
+    status: "active" as const,
     registrationDate: "2026-01-12",
     students: 120,
     amountPaid: "3,600,000 UGX",
@@ -105,8 +227,10 @@ const initialSchools: SchoolRecord[] = [
     address: "Mityana Road, Wakiso",
     district: "Wakiso",
     zone: "North Zone",
+    zone_id: "zone-2",
+    educationLevel: "UACE" as const,
     academicYear: "2026",
-    status: "verified",
+    status: "verified" as const,
     registrationDate: "2026-01-18",
     students: 98,
     amountPaid: "2,940,000 UGX",
@@ -122,8 +246,10 @@ const initialSchools: SchoolRecord[] = [
     address: "Airport Road, Entebbe",
     district: "Entebbe",
     zone: "South Zone",
+    zone_id: "zone-3",
+    educationLevel: "BOTH" as const,
     academicYear: "2026",
-    status: "pending",
+    status: "pending" as const,
     registrationDate: "2026-02-01",
     students: 84,
     amountPaid: "0 UGX",
@@ -139,8 +265,10 @@ const initialSchools: SchoolRecord[] = [
     address: "Hoima Road, Nansana",
     district: "Wakiso",
     zone: "West Zone",
+    zone_id: "zone-4",
+    educationLevel: "UCE" as const,
     academicYear: "2026",
-    status: "payment_submitted",
+    status: "payment_submitted" as const,
     registrationDate: "2026-02-10",
     students: 73,
     amountPaid: "2,190,000 UGX",
@@ -183,6 +311,8 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [schools, setSchools] = useState<SchoolRecord[]>(initialSchools);
+  const [zones] = useState<Zone[]>(initialZones);
+  const [subjects] = useState<Subject[]>(initialSubjects);
 
   useEffect(() => {
     if (!user || user.role !== "school" || !user.schoolCode) return;
@@ -220,6 +350,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const addSchool = (newSchool: NewSchoolInput) => {
     const nextNumber = schools.length + 1;
     const schoolCode = `WAK26-${String(nextNumber).padStart(4, "0")}`;
+    const zone = initialZones.find((z) => z.id === newSchool.zone_id) || initialZones[0];
 
     const school: SchoolRecord = {
       id: String(nextNumber + 1),
@@ -228,8 +359,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: newSchool.email,
       phone: newSchool.phone,
       address: newSchool.address,
-      district: "Wakiso",
-      zone: "Central Zone",
+      district: zone.district,
+      zone: zone.name,
+      zone_id: newSchool.zone_id,
+      educationLevel: newSchool.educationLevel,
       academicYear: "2026",
       status: "pending",
       registrationDate: new Date().toISOString().split("T")[0],
@@ -237,6 +370,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       amountPaid: "0 UGX",
       paymentProof: "not-submitted.pdf",
       activationCode: "",
+      schoolLogo: newSchool.schoolLogo,
+      contactPerson: newSchool.contactPerson,
     };
 
     schoolPasswords[schoolCode] = "demo123";
@@ -287,6 +422,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         schools,
+        zones,
+        subjects,
         login,
         logout,
         isAuthenticated: !!user,

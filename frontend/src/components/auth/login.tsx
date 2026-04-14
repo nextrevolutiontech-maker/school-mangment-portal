@@ -12,15 +12,9 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Alert, AlertDescription } from "../ui/alert";
 import { useAuth } from "../auth-context";
-import { ThemeToggle } from "../shared/theme-toggle";
 import wakisshaLogo from "../../assets/logo.png";
 
-interface LoginProps {
-  theme: "light" | "dark";
-  onThemeToggle: () => void;
-}
-
-export function Login({ theme, onThemeToggle }: LoginProps) {
+export function Login() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -71,16 +65,12 @@ export function Login({ theme, onThemeToggle }: LoginProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-background p-4 text-foreground sm:p-6">
+    <div className="min-h-screen bg-slate-50 p-4 text-slate-900 sm:p-6">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col justify-center gap-6">
-        <div className="flex justify-end">
-          <ThemeToggle theme={theme} onToggle={onThemeToggle} />
-        </div>
-
         <Card className="overflow-hidden">
           <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="relative overflow-hidden border-b border-border p-8 lg:border-r lg:border-b-0 lg:p-12">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.1),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.08),transparent_24%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.22),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.1),transparent_28%)]" />
+            <div className="relative overflow-hidden border-b border-slate-200 p-8 lg:border-r lg:border-b-0 lg:p-12">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.1),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.08),transparent_24%)]" />
               <div className="relative z-10 flex h-full flex-col justify-between gap-10">
                 <div className="space-y-6">
                   <img
@@ -90,7 +80,7 @@ export function Login({ theme, onThemeToggle }: LoginProps) {
                   />
 
                   <div className="space-y-4">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-red-600">
                       <Sparkles className="h-3.5 w-3.5" />
                       Digital Exam Portal
                     </div>
@@ -99,12 +89,12 @@ export function Login({ theme, onThemeToggle }: LoginProps) {
                       <h1 className="text-4xl font-bold tracking-tight text-[#DC2626] lg:text-5xl">
                         WAKISSHA PORTAL
                       </h1>
-                      <p className="max-w-xl text-base text-slate-700 dark:text-slate-300 lg:text-lg">
+                      <p className="max-w-xl text-base text-slate-500 lg:text-lg">
                         Wakiso Secondary School Headteachers Association
                       </p>
                     </div>
 
-                    <p className="max-w-2xl text-sm leading-7 text-slate-500 dark:text-slate-400 lg:text-base">
+                    <p className="max-w-2xl text-sm leading-7 text-slate-500 lg:text-base">
                       A premium SaaS portal for school registration, student
                       entries, payment tracking, reporting, and examination
                       readiness across member schools.
@@ -113,27 +103,27 @@ export function Login({ theme, onThemeToggle }: LoginProps) {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm dark:border-white/8 dark:bg-white/[0.03]">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600 dark:bg-red-600/15 dark:text-red-400">
+                  <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
                       <ShieldCheck className="h-5 w-5" />
                     </div>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    <p className="text-sm font-semibold text-slate-900">
                       Secure School Access
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
                       Schools and administrators sign in from one protected
                       workspace with role-based navigation.
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm dark:border-white/8 dark:bg-white/[0.03]">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
+                  <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
                       <Sparkles className="h-5 w-5" />
                     </div>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    <p className="text-sm font-semibold text-slate-900">
                       Registration Visibility
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
                       Track entries, finance progress, uploads, reports, and
                       exam schedules in one place.
                     </p>
@@ -142,14 +132,14 @@ export function Login({ theme, onThemeToggle }: LoginProps) {
               </div>
             </div>
 
-            <div className="bg-white/70 p-6 dark:bg-slate-950/30 lg:p-10">
+            <div className="bg-white p-6 lg:p-10">
               <div className="mx-auto flex h-full max-w-md flex-col justify-center">
-                <Card className="border-slate-200 bg-white dark:border-white/8 dark:bg-[#0f1720]">
+                <Card className="bg-white shadow-sm border border-slate-200">
                   <CardHeader className="space-y-2">
-                    <CardTitle className="text-2xl font-semibold text-slate-900 dark:text-white">
+                    <CardTitle className="text-2xl font-semibold text-slate-900">
                       Sign In
                     </CardTitle>
-                    <CardDescription className="text-slate-500 dark:text-slate-400">
+                    <CardDescription className="text-slate-500">
                       Enter your school code or admin email to access your
                       portal.
                     </CardDescription>
@@ -157,7 +147,7 @@ export function Login({ theme, onThemeToggle }: LoginProps) {
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-5">
                       <div className="space-y-2">
-                        <Label htmlFor="identifier" className="text-slate-700 dark:text-slate-200">
+                        <Label htmlFor="identifier" className="text-slate-500">
                           School Code / Admin Email
                         </Label>
                         <Input
@@ -171,7 +161,7 @@ export function Login({ theme, onThemeToggle }: LoginProps) {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="password" className="text-slate-700 dark:text-slate-200">
+                        <Label htmlFor="password" className="text-slate-500">
                           Password
                         </Label>
                         <Input
@@ -217,19 +207,19 @@ export function Login({ theme, onThemeToggle }: LoginProps) {
             <button
               key={account.identifier}
               type="button"
-              className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:border-red-200 hover:bg-red-50 dark:border-white/8 dark:bg-white/[0.03] dark:hover:border-red-500/30 dark:hover:bg-red-500/[0.06]"
+              className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4 text-left shadow-sm transition-all hover:border-red-200 hover:bg-red-50"
               onClick={() => {
                 setIdentifier(account.identifier);
                 setPassword(account.password);
               }}
             >
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              <p className="text-sm font-semibold text-slate-900">
                 {account.role}
               </p>
-              <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-400">
+              <p className="mt-1 text-xs font-medium text-red-600">
                 {account.identifier}
               </p>
-              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+              <p className="mt-2 text-sm leading-6 text-slate-500">
                 {account.description}
               </p>
             </button>
@@ -239,3 +229,6 @@ export function Login({ theme, onThemeToggle }: LoginProps) {
     </div>
   );
 }
+
+
+

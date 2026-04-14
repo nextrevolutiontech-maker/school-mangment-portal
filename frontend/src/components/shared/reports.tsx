@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import {
   FileSpreadsheet,
   FileText,
@@ -25,15 +25,6 @@ import {
 } from "../ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
-import { Progress } from "../ui/progress";
-import {
   Table,
   TableBody,
   TableCell,
@@ -43,17 +34,17 @@ import {
 } from "../ui/table";
 import { toast } from "sonner";
 import { useAuth } from "../auth-context";
+import { jsPDF } from "jspdf";
+import { utils as XLSXUtils, writeFile } from "xlsx";
+import html2canvas from "html2canvas";
+import "jspdf-autotable";
 
 interface ReportsProps {
   onPageChange: (page: string) => void;
 }
 
-interface ExportState {
-  open: boolean;
-  format: "pdf" | "excel";
-  reportType: string;
-  ready: boolean;
-}
+type EducationLevelFilter = "all" | "UCE" | "UACE";
+
 
 const uaceHeaders = [
   "Ref No",
@@ -192,13 +183,10 @@ function getStatusBadge(status: string) {
 export function Reports({ onPageChange }: ReportsProps) {
   const { schools } = useAuth();
   const [selectedSchool, setSelectedSchool] = useState("all");
-  const [exportState, setExportState] = useState<ExportState>({
-    open: false,
-    format: "pdf",
-    reportType: "Consolidated",
-    ready: false,
-  });
-  const [progressValue, setProgressValue] = useState(14);
+  const [exportingKey, setExportingKey] = useState<string | null>(null);
+  const [educationLevelFilter, setEducationLevelFilter] = useState<EducationLevelFilter>("all");
+  const consolidatedTableRef = useRef<HTMLDivElement>(null);
+  const subjectWiseTableRef = useRef<HTMLDivElement>(null);
 
   const consolidatedRows = useMemo<UaceRow[]>(() => {
     const defaultRows: UaceRow[] = [
@@ -332,30 +320,20 @@ export function Reports({ onPageChange }: ReportsProps) {
       },
     ];
 
-    return schools.length > 0 ? defaultRows : [];
-  }, [schools]);
+    let filtered = schools.length > 0 ? defaultRows : [];
 
-  useEffect(() => {
-    if (!exportState.open || exportState.ready) {
-      return;
+    if (educationLevelFilter !== "all") {
+      filtered = filtered.filter((row) => {
+        const school = schools.find((s) => s.code === `WAK26-${String(row["Ref No"]).padStart(4, "0")}`);
+        if (!school) return true;
+        if (educationLevelFilter === "UCE") return school.educationLevel === "UCE" || school.educationLevel === "BOTH";
+        if (educationLevelFilter === "UACE") return school.educationLevel === "UACE" || school.educationLevel === "BOTH";
+        return true;
+      });
     }
 
-    setProgressValue(14);
-    const interval = setInterval(() => {
-      setProgressValue((prev) => (prev >= 88 ? prev : prev + 12));
-    }, 250);
-
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
-      setProgressValue(100);
-      setExportState((prev) => ({ ...prev, ready: true }));
-    }, 2000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [exportState.open, exportState.ready]);
+    return filtered;
+  }, [schools, educationLevelFilter]);
 
   const selectedSchoolData =
     selectedSchool !== "all"
@@ -373,57 +351,333 @@ export function Reports({ onPageChange }: ReportsProps) {
       label: "Registered Schools",
       value: schools.length,
       className: "border-l-red-600",
-      valueClass: "text-slate-900 dark:text-white",
+      valueClass: "text-slate-900",
     },
     {
       label: "Total Students",
       value: schools.reduce((sum, school) => sum + school.students, 0),
       className: "border-l-amber-500",
-      valueClass: "text-amber-600 dark:text-amber-300",
+      valueClass: "text-slate-900",
     },
     {
       label: "Active Schools",
       value: schools.filter((school) => school.status === "active").length,
       className: "border-l-green-500",
-      valueClass: "text-green-600 dark:text-green-300",
+      valueClass: "text-slate-900",
     },
     {
       label: "Payment Submitted",
       value: schools.filter((school) => school.status === "payment_submitted").length,
       className: "border-l-blue-500",
-      valueClass: "text-blue-600 dark:text-blue-300",
+      valueClass: "text-slate-900",
     },
   ];
 
-  const handleExport = (format: "pdf" | "excel", reportType: string) => {
-    setExportState({
-      open: true,
-      format,
-      reportType,
-      ready: false,
-    });
+  const buildExportKey = (format: "pdf" | "excel", reportType: string) =>
+    `${reportType}-${format}`;
+
+  const isExporting = (format: "pdf" | "excel", reportType: string) =>
+    exportingKey === buildExportKey(format, reportType);
+
+  const exportConsolidatedToPDF = (fileName: string) => {
+    try {
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPos = 15;
+
+      // Title
+      pdf.setFontSize(16);
+      pdf.text("UACE Consolidated Report", pageWidth / 2, yPos, {
+        align: "center",
+      });
+      yPos += 10;
+
+      // Metadata
+      pdf.setFontSize(10);
+      pdf.text(`WAKISSHA Exam Portal - ${new Date().toLocaleDateString()}`, 15, yPos);
+      yPos += 8;
+
+      // Table
+      pdf.setFontSize(9);
+      const tableColumn = uaceHeaders.slice(0, 10); // Limit columns for readability
+      const tableRows = consolidatedRows.map((row) =>
+        tableColumn.map((col) => row[col])
+      );
+
+      (pdf as any).autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: yPos,
+        margin: { left: 10, right: 10 },
+        columnStyles: {
+          0: { cellWidth: 8 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 15 },
+        },
+        headStyles: {
+          fillColor: [22, 101, 174],
+          textColor: [255, 255, 255],
+          fontSize: 8,
+          fontStyle: "bold",
+        },
+        bodyStyles: {
+          fontSize: 7,
+          textColor: [50, 50, 50],
+        },
+        alternateRowStyles: {
+          fillColor: [240, 245, 250],
+        },
+      });
+
+      pdf.save(`${fileName}.pdf`);
+      toast.success("PDF exported successfully");
+    } catch (error) {
+      toast.error("Failed to export PDF");
+      console.error(error);
+    }
   };
 
-  const handleDownload = () => {
-    toast.success("Document download started", {
-      description: `${exportState.reportType} report ${exportState.format.toUpperCase()} is ready for demo download.`,
-    });
-    setExportState((prev) => ({ ...prev, open: false }));
+  const exportSubjectWiseToPDF = (fileName: string) => {
+    try {
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let yPos = 15;
+
+      // Title
+      pdf.setFontSize(16);
+      pdf.text("Subject-Wise Report", pageWidth / 2, yPos, { align: "center" });
+      yPos += 10;
+
+      // Metadata
+      pdf.setFontSize(10);
+      pdf.text(`WAKISSHA Exam Portal - ${new Date().toLocaleDateString()}`, 15, yPos);
+      yPos += 8;
+
+      // Table
+      const tableColumn = ["Subject", "Code", "Level", "Total Students", "Schools", "Average"];
+      const tableRows = subjectWiseData.map((row) => [
+        row.subject,
+        row.code,
+        row.level,
+        row.totalStudents.toString(),
+        row.schools.toString(),
+        row.average.toString(),
+      ]);
+
+      (pdf as any).autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: yPos,
+        margin: { left: 15, right: 15 },
+        headStyles: {
+          fillColor: [22, 101, 174],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: "bold",
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: [50, 50, 50],
+        },
+        alternateRowStyles: {
+          fillColor: [240, 245, 250],
+        },
+      });
+
+      pdf.save(`${fileName}.pdf`);
+      toast.success("PDF exported successfully");
+    } catch (error) {
+      toast.error("Failed to export PDF");
+      console.error(error);
+    }
   };
 
-  const closeExportDialog = () => {
-    setExportState((prev) => ({ ...prev, open: false }));
+  const exportSingleSchoolToPDF = (fileName: string) => {
+    try {
+      const selected = schools.find((s) => s.code === selectedSchool);
+      if (!selected) {
+        toast.error("Please select a school");
+        return;
+      }
+
+      const profileData =
+        schoolReportProfiles[selected.code] ||
+        schoolReportProfiles["WAK26-0001"];
+
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let yPos = 15;
+
+      // Header
+      pdf.setFontSize(16);
+      pdf.text("Single School Report", pageWidth / 2, yPos, { align: "center" });
+      yPos += 10;
+
+      // School Details
+      pdf.setFontSize(11);
+      pdf.text(`School: ${selected.name}`, 15, yPos);
+      yPos += 7;
+      pdf.setFontSize(10);
+      pdf.text(`Code: ${selected.code}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`District: ${selected.district}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Total Students: ${profileData.totalStudents}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Subjects Registered: ${profileData.subjectsRegistered}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Fees Status: ${selected.status}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Last Updated: ${profileData.lastUpdated}`, 15, yPos);
+      yPos += 10;
+
+      // Report Note
+      pdf.setFontSize(9);
+      pdf.text("Report Note:", 15, yPos);
+      yPos += 5;
+      const splitText = pdf.splitTextToSize(profileData.reportNote, 180);
+      pdf.text(splitText, 15, yPos);
+
+      pdf.save(`${fileName}.pdf`);
+      toast.success("PDF exported successfully");
+    } catch (error) {
+      toast.error("Failed to export PDF");
+      console.error(error);
+    }
+  };
+
+  const exportToExcel = (data: any[], fileName: string) => {
+    try {
+      const worksheet = XLSXUtils.json_to_sheet(data);
+      const workbook = XLSXUtils.book_new();
+      XLSXUtils.book_append_sheet(workbook, worksheet, "Report");
+      writeFile(workbook, `${fileName}.xlsx`);
+      toast.success("Excel file exported successfully");
+    } catch (error) {
+      toast.error("Failed to export Excel");
+      console.error(error);
+    }
+  };
+
+  const handleExport = async (format: "pdf" | "excel", reportType: string) => {
+    const key = buildExportKey(format, reportType);
+    if (exportingKey) return;
+    setExportingKey(key);
+
+    try {
+      if (reportType === "UACE Consolidated") {
+        if (format === "pdf") {
+          exportConsolidatedToPDF("UACE-Consolidated-Report");
+        } else {
+          exportToExcel(
+            consolidatedRows.map((row) => ({
+              "Ref No": row["Ref No"],
+              "School Name": row["School Name"],
+              District: row.District,
+              "Zone/Centre": row["Zone/Centre"],
+              GP: row.GP,
+              "S/Maths": row["S/Maths"],
+              Maths: row.Maths,
+              PHY: row.PHY,
+              Chem: row.Chem,
+              BIO: row.BIO,
+            })),
+            "UACE-Consolidated-Report"
+          );
+        }
+      } else if (reportType === "Subject-Wise") {
+        if (format === "pdf") {
+          exportSubjectWiseToPDF("Subject-Wise-Report");
+        } else {
+          exportToExcel(subjectWiseData, "Subject-Wise-Report");
+        }
+      } else if (reportType === "Quick Summary") {
+        exportToExcel(
+          [
+            {
+              Metric: "Registered Schools",
+              Value: schools.length,
+            },
+            {
+              Metric: "Total Students",
+              Value: schools.reduce((sum, school) => sum + school.students, 0),
+            },
+            {
+              Metric: "Active Schools",
+              Value: schools.filter((s) => s.status === "active").length,
+            },
+          ],
+          "Quick-Summary"
+        );
+      } else if (reportType === "Single School") {
+        if (format === "pdf") {
+          exportSingleSchoolToPDF("Single-School-Report");
+        } else {
+          const selected = schools.find((s) => s.code === selectedSchool);
+          if (selected) {
+            const profileData =
+              schoolReportProfiles[selected.code] ||
+              schoolReportProfiles["WAK26-0001"];
+            exportToExcel(
+              [
+                {
+                  Field: "School Name",
+                  Value: selected.name,
+                },
+                {
+                  Field: "School Code",
+                  Value: selected.code,
+                },
+                {
+                  Field: "District",
+                  Value: selected.district,
+                },
+                {
+                  Field: "Zone",
+                  Value: selected.zone,
+                },
+                {
+                  Field: "Total Students",
+                  Value: profileData.totalStudents,
+                },
+                {
+                  Field: "Subjects Registered",
+                  Value: profileData.subjectsRegistered,
+                },
+                {
+                  Field: "Fees Status",
+                  Value: selected.status,
+                },
+                {
+                  Field: "Last Updated",
+                  Value: profileData.lastUpdated,
+                },
+              ],
+              `Single-School-${selected.code}`
+            );
+          }
+        }
+      }
+    } finally {
+      setExportingKey(null);
+    }
   };
 
   return (
     <div className="flex flex-col w-full gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-red-400">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
             Reporting Centre
           </p>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Reports</h1>
-          <p className="max-w-3xl text-slate-600 dark:text-slate-300">
+          <h1 className="text-3xl font-bold text-slate-900">Reports</h1>
+          <p className="max-w-3xl text-slate-500">
             Generate UACE consolidated exports, subject-wise breakdowns, and
             dynamic single-school reports for the Phase 1 frontend demo.
           </p>
@@ -435,9 +689,19 @@ export function Reports({ onPageChange }: ReportsProps) {
           <Button
             variant="outline"
             onClick={() => handleExport("pdf", "Quick Summary")}
+            disabled={isExporting("pdf", "Quick Summary")}
           >
-            <Download className="h-4 w-4" />
-            Quick Export
+            {isExporting("pdf", "Quick Summary") ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Quick Export
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -446,7 +710,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         {summaryCards.map((card) => (
           <Card key={card.label} className={`border-l-4 ${card.className}`}>
             <CardContent className="pt-6">
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{card.label}</p>
+              <p className="text-sm font-medium text-slate-500">{card.label}</p>
               <p className={`mt-3 text-3xl font-bold ${card.valueClass}`}>
                 {card.value}
               </p>
@@ -464,39 +728,71 @@ export function Reports({ onPageChange }: ReportsProps) {
 
         <TabsContent value="consolidated">
           <Card>
-            <CardHeader className="border-b border-border/70">
+            <CardHeader className="border-b border-slate-200">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <CardTitle className="text-slate-900 dark:text-white">
+                  <CardTitle className="text-slate-900">
                     UACE Consolidated Report
                   </CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-slate-400">
+                  <CardDescription className="text-slate-500">
                     Full subject-by-subject consolidated sheet formatted for
                     WAKISSHA UACE reporting.
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport("pdf", "UACE Consolidated")}
-                  >
-                    <FileText className="h-4 w-4" />
-                    Export PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport("excel", "UACE Consolidated")}
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Export Excel
-                  </Button>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                  <Select value={educationLevelFilter} onValueChange={(value: any) => setEducationLevelFilter(value)}>
+                    <SelectTrigger className="w-full lg:w-[180px]">
+                      <SelectValue placeholder="Filter by level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Levels</SelectItem>
+                      <SelectItem value="UCE">UCE (O Level)</SelectItem>
+                      <SelectItem value="UACE">UACE (A Level)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExport("pdf", "UACE Consolidated")}
+                      disabled={isExporting("pdf", "UACE Consolidated")}
+                    >
+                      {isExporting("pdf", "UACE Consolidated") ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4" />
+                          Export PDF
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExport("excel", "UACE Consolidated")}
+                      disabled={isExporting("excel", "UACE Consolidated")}
+                    >
+                      {isExporting("excel", "UACE Consolidated") ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileSpreadsheet className="h-4 w-4" />
+                          Export Excel
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#1e1e2e]">
+              <div className="w-full max-w-full overflow-x-auto bg-white shadow-sm border border-slate-200 rounded-2xl" ref={consolidatedTableRef}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -514,7 +810,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                           <TableCell
                             key={`${row["Ref No"]}-${header}`}
                             className={
-                              header === "School Name" ? "font-semibold text-slate-900 dark:text-white" : ""
+                              header === "School Name" ? "font-semibold text-slate-900" : ""
                             }
                           >
                             {row[header]}
@@ -531,11 +827,11 @@ export function Reports({ onPageChange }: ReportsProps) {
 
         <TabsContent value="subject-wise">
           <Card>
-            <CardHeader className="border-b border-border/70">
+            <CardHeader className="border-b border-slate-200">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <CardTitle className="text-slate-900 dark:text-white">Subject-Wise Report</CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-slate-400">
+                  <CardTitle className="text-slate-900">Subject-Wise Report</CardTitle>
+                  <CardDescription className="text-slate-500">
                     Compare total student counts and school participation by
                     subject.
                   </CardDescription>
@@ -545,23 +841,44 @@ export function Reports({ onPageChange }: ReportsProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => handleExport("pdf", "Subject-Wise")}
+                    disabled={isExporting("pdf", "Subject-Wise")}
                   >
-                    <FileText className="h-4 w-4" />
-                    Export PDF
+                    {isExporting("pdf", "Subject-Wise") ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4" />
+                        Export PDF
+                      </>
+                    )}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleExport("excel", "Subject-Wise")}
+                    disabled={isExporting("excel", "Subject-Wise")}
                   >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Export Excel
+                    {isExporting("excel", "Subject-Wise") ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileSpreadsheet className="h-4 w-4" />
+                        Export Excel
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <Table>
+              <div ref={subjectWiseTableRef}>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Subject</TableHead>
@@ -575,7 +892,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                 <TableBody>
                   {subjectWiseData.map((subject) => (
                     <TableRow key={subject.code}>
-                      <TableCell className="font-semibold text-white">
+                      <TableCell className="font-semibold text-slate-900">
                         {subject.subject}
                       </TableCell>
                       <TableCell>
@@ -584,7 +901,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       <TableCell>
                         <Badge variant="secondary">{subject.level}</Badge>
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-white">
+                      <TableCell className="text-right font-semibold text-slate-900">
                         {subject.totalStudents}
                       </TableCell>
                       <TableCell className="text-right">{subject.schools}</TableCell>
@@ -593,17 +910,18 @@ export function Reports({ onPageChange }: ReportsProps) {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="school-wise">
           <Card>
-            <CardHeader className="border-b border-border/70">
+            <CardHeader className="border-b border-slate-200">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <CardTitle className="text-white">Single School Report</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-slate-900">Single School Report</CardTitle>
+                  <CardDescription className="text-slate-500">
                     Select a school to view a simulated reporting breakdown for
                     the frontend demo.
                   </CardDescription>
@@ -625,7 +943,7 @@ export function Reports({ onPageChange }: ReportsProps) {
             </CardHeader>
             <CardContent className="pt-6">
               {!selectedSchoolData || !selectedSchoolProfile ? (
-                <div className="rounded-2xl border border-white/6 bg-white/[0.02] py-16 text-center text-slate-400">
+                <div className="bg-white shadow-sm border border-slate-200 rounded-2xl py-16 text-center text-slate-500">
                   <School className="mx-auto mb-3 h-12 w-12 opacity-50" />
                   <p>Select a school to view the detailed report.</p>
                 </div>
@@ -634,25 +952,25 @@ export function Reports({ onPageChange }: ReportsProps) {
                   <div className="grid gap-4 md:grid-cols-3">
                     <Card className="border-l-4 border-l-red-600">
                       <CardContent className="pt-6">
-                        <p className="text-sm text-slate-400">Total Students</p>
-                        <p className="mt-2 text-3xl font-bold text-white">
+                        <p className="text-sm text-slate-500">Total Students</p>
+                        <p className="mt-2 text-3xl font-bold text-slate-900">
                           {selectedSchoolProfile.totalStudents}
                         </p>
                       </CardContent>
                     </Card>
                     <Card className="border-l-4 border-l-amber-500">
                       <CardContent className="pt-6">
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-slate-500">
                           Subjects Registered
                         </p>
-                        <p className="mt-2 text-3xl font-bold text-amber-300">
+                        <p className="mt-2 text-3xl font-bold text-slate-900">
                           {selectedSchoolProfile.subjectsRegistered}
                         </p>
                       </CardContent>
                     </Card>
                     <Card className="border-l-4 border-l-blue-500">
                       <CardContent className="pt-6">
-                        <p className="text-sm text-slate-400">Fees Status</p>
+                        <p className="text-sm text-slate-500">Fees Status</p>
                         <div className="mt-3">
                           {getStatusBadge(selectedSchoolData.status)}
                         </div>
@@ -664,20 +982,20 @@ export function Reports({ onPageChange }: ReportsProps) {
                     <Card>
                       <CardContent className="pt-6">
                         <div className="mb-4 flex items-center gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600/15 text-red-400">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600/10 text-red-600">
                             <BarChart3 className="h-5 w-5" />
                           </div>
                           <div>
-                            <p className="font-semibold text-white">
+                            <p className="font-semibold text-slate-900">
                               {selectedSchoolData.name}
                             </p>
-                            <p className="text-sm text-slate-400">
+                            <p className="text-sm text-slate-500">
                               {selectedSchoolData.code} / {selectedSchoolData.district} /{" "}
                               {selectedSchoolData.zone}
                             </p>
                           </div>
                         </div>
-                        <p className="text-sm leading-6 text-slate-400">
+                        <p className="text-sm leading-6 text-slate-500">
                           {selectedSchoolProfile.reportNote}
                         </p>
                       </CardContent>
@@ -685,27 +1003,27 @@ export function Reports({ onPageChange }: ReportsProps) {
 
                     <Card>
                       <CardContent className="space-y-4 pt-6">
-                        <div className="rounded-2xl border border-white/6 bg-white/[0.02] p-4">
+                        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
                           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                             Academic Year
                           </p>
-                          <p className="mt-2 text-lg font-semibold text-white">
+                          <p className="mt-2 text-lg font-semibold text-slate-900">
                             {selectedSchoolData.academicYear}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-white/6 bg-white/[0.02] p-4">
+                        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
                           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                             Activation Code
                           </p>
-                          <p className="mt-2 text-lg font-semibold text-white">
+                          <p className="mt-2 text-lg font-semibold text-slate-900">
                             {selectedSchoolData.activationCode || "Pending activation"}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-white/6 bg-white/[0.02] p-4">
+                        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
                           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                             Last Updated
                           </p>
-                          <p className="mt-2 text-lg font-semibold text-white">
+                          <p className="mt-2 text-lg font-semibold text-slate-900">
                             {selectedSchoolProfile.lastUpdated}
                           </p>
                         </div>
@@ -718,17 +1036,37 @@ export function Reports({ onPageChange }: ReportsProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleExport("pdf", "Single School")}
+                      disabled={isExporting("pdf", "Single School")}
                     >
-                      <FileText className="h-4 w-4" />
-                      Export PDF
+                      {isExporting("pdf", "Single School") ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4" />
+                          Export PDF
+                        </>
+                      )}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleExport("excel", "Single School")}
+                      disabled={isExporting("excel", "Single School")}
                     >
-                      <FileSpreadsheet className="h-4 w-4" />
-                      Export Excel
+                      {isExporting("excel", "Single School") ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileSpreadsheet className="h-4 w-4" />
+                          Export Excel
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -737,58 +1075,10 @@ export function Reports({ onPageChange }: ReportsProps) {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Dialog open={exportState.open} onOpenChange={(open) => !open && closeExportDialog()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {exportState.ready ? "Document Ready" : "Compiling WAKISSHA Data..."}
-            </DialogTitle>
-            <DialogDescription>
-              {exportState.ready
-                ? `${exportState.reportType} ${exportState.format.toUpperCase()} is prepared and ready to download.`
-                : `Preparing ${exportState.reportType} ${exportState.format.toUpperCase()} export for the portal demo.`}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 rounded-2xl border border-white/6 bg-white/[0.03] p-5">
-            <div className="flex items-center gap-3">
-              {exportState.ready ? (
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-500/15 text-green-300">
-                  <Download className="h-6 w-6" />
-                </div>
-              ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-600/15 text-red-400">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              )}
-              <div>
-                <p className="font-semibold text-white">
-                  {exportState.ready ? "Compilation complete" : "Building report package"}
-                </p>
-                <p className="text-sm text-slate-400">
-                  {exportState.ready
-                    ? "The document package has been assembled successfully."
-                    : "Collecting school data, validating totals, and packaging the final report."}
-                </p>
-              </div>
-            </div>
-            <Progress value={progressValue} className="h-2.5" />
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeExportDialog}>
-              Close
-            </Button>
-            {exportState.ready && (
-              <Button onClick={handleDownload}>
-                <Download className="h-4 w-4" />
-                Download File
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
+
+
+
+

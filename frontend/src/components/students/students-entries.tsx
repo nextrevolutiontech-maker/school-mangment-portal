@@ -44,6 +44,7 @@ interface StudentsEntriesProps {
 
 interface StudentEntry {
   id: string;
+  examLevel: "UCE" | "UACE";
   studentName: string;
   classLevel: string;
   subject: string;
@@ -76,6 +77,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
   const [entries, setEntries] = useState<StudentEntry[]>([
     {
       id: "1",
+      examLevel: "UCE",
       studentName: "John Smith",
       classLevel: "Grade 12",
       subject: "Mathematics",
@@ -90,6 +92,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     },
     {
       id: "2",
+      examLevel: "UCE",
       studentName: "Emma Johnson",
       classLevel: "Grade 11",
       subject: "English Language",
@@ -104,6 +107,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     },
     {
       id: "3",
+      examLevel: "UACE",
       studentName: "Michael Chen",
       classLevel: "Grade 12",
       subject: "Physics",
@@ -119,6 +123,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
   ]);
 
   const [newEntry, setNewEntry] = useState({
+    examLevel: "UCE",
     studentName: "",
     classLevel: "Grade 12",
     subjectCode: "",
@@ -173,6 +178,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
 
     const entry: StudentEntry = {
       id: String(entries.length + 1),
+      examLevel: newEntry.examLevel,
       studentName: newEntry.studentName,
       classLevel: newEntry.classLevel,
       subject: subject?.name || "",
@@ -189,6 +195,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     setEntries([...entries, entry]);
     setIsAddDialogOpen(false);
     setNewEntry({
+      examLevel: "UCE",
       studentName: "",
       classLevel: "Grade 12",
       subjectCode: "",
@@ -234,25 +241,25 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
       label: "Total Students",
       value: totalStudents,
       className: "border-l-red-600",
-      valueClass: "text-white",
+      valueClass: "text-slate-900",
     },
     {
       label: "Total Entries",
       value: totalEntries,
       className: "border-l-amber-500",
-      valueClass: "text-amber-300",
+      valueClass: "text-slate-900",
     },
     {
       label: "Subject Combinations",
       value: entries.length,
       className: "border-l-blue-500",
-      valueClass: "text-blue-300",
+      valueClass: "text-slate-900",
     },
     {
       label: "Schools",
       value: new Set(entries.map((entry) => entry.schoolCode)).size,
       className: "border-l-green-500",
-      valueClass: "text-green-300",
+      valueClass: "text-slate-900",
     },
   ];
 
@@ -260,14 +267,14 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     <div className="flex flex-col w-full gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400 dark:text-red-400">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400">
             Student Registry
           </p>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-slate-900">
               Students & Entries
             </h1>
-            <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">
+            <p className="mt-2 max-w-2xl text-slate-500">
               Manage student examination entries, subject combinations, and
               numeric paper counts from a clean central registry.
             </p>
@@ -304,6 +311,27 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
             )}
 
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="examLevel">Exam Level (UCE / UACE)</Label>
+                <Select
+                  value={newEntry.examLevel}
+                  onValueChange={(value) =>
+                    setNewEntry({
+                      ...newEntry,
+                      examLevel: value as "UCE" | "UACE",
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select exam level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UCE">UCE (O' Level)</SelectItem>
+                    <SelectItem value="UACE">UACE (A' Level)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="studentName">Student Name</Label>
                 <Input
@@ -357,8 +385,8 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                 </Select>
               </div>
 
-              <div className="space-y-3 rounded-2xl border border-slate-200 dark:border-[#1e1e2e] bg-white dark:bg-[#13131e] p-4 md:col-span-2">
-                <Label className="text-sm font-semibold text-slate-900 dark:text-white">
+              <div className="space-y-3 rounded-2xl bg-white shadow-sm border border-slate-200 p-4 md:col-span-2">
+                <Label className="text-sm font-semibold text-slate-900">
                   Entry Columns
                 </Label>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -367,7 +395,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                       <div key={field} className="space-y-1">
                         <Label
                           htmlFor={field}
-                          className="text-xs text-slate-600 dark:text-slate-400"
+                          className="text-xs text-slate-500"
                         >
                           Entry {index + 1}
                         </Label>
@@ -386,16 +414,16 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                     ),
                   )}
                 </div>
-                <div className="rounded-xl border border-slate-200 dark:border-[#1e1e2e] bg-slate-50 dark:bg-[#0a0a0f] px-4 py-3">
+                <div className="rounded-xl bg-white shadow-sm border border-slate-200 px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                    <span className="text-sm font-medium text-slate-500">
                       Total Entries
                     </span>
-                    <span className="text-xl font-bold text-red-600 dark:text-red-400">
+                    <span className="text-xl font-bold text-red-600">
                       {calculateTotal()}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
+                  <p className="mt-1 text-xs text-slate-500">
                     Automatically calculated from Entry 1 to Entry 4
                   </p>
                 </div>
@@ -422,7 +450,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
         {statCards.map((stat) => (
           <Card key={stat.label} className={`border-l-4 ${stat.className}`}>
             <CardContent className="pt-6">
-              <p className="text-sm font-medium text-slate-400">{stat.label}</p>
+              <p className="text-sm font-medium text-slate-500">{stat.label}</p>
               <p className={`mt-3 text-3xl font-bold ${stat.valueClass}`}>
                 {stat.value}
               </p>
@@ -466,9 +494,9 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
       </Card>
 
       <Card>
-        <CardHeader className="border-b border-border/70">
-          <CardTitle className="text-white">Student Entries</CardTitle>
-          <CardDescription>
+        <CardHeader className="border-b border-slate-200">
+          <CardTitle className="text-slate-900">Student Entries</CardTitle>
+          <CardDescription className="text-slate-500">
             {filteredEntries.length} entr
             {filteredEntries.length !== 1 ? "ies" : "y"} found
           </CardDescription>
@@ -490,15 +518,17 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEntries.map((entry) => (
+                {filteredEntries.map((entry) => (
                 <TableRow key={entry.id}>
-                  <TableCell className="font-semibold text-white">
+                  <TableCell className="font-semibold text-slate-900">
                     {entry.studentName}
                   </TableCell>
                   <TableCell>{entry.classLevel}</TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium text-white">{entry.subject}</div>
+                      <div className="font-medium text-slate-900">
+                        {entry.subject}
+                      </div>
                       <Badge variant="outline" className="mt-1">
                         {entry.subjectCode}
                       </Badge>
@@ -519,14 +549,14 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                   <TableCell className="text-center">
                     <Badge variant="secondary">{entry.totalEntries}</Badge>
                   </TableCell>
-                  <TableCell className="text-slate-400">
+                  <TableCell className="text-slate-500">
                     {entry.schoolCode}
                   </TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                      className="text-red-500 hover:bg-red-50 hover:text-red-600"
                       onClick={() => handleDeleteEntry(entry.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -541,3 +571,5 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     </div>
   );
 }
+
+
