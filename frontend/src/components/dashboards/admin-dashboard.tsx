@@ -25,87 +25,60 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { useAuth } from "../auth-context";
 
 interface AdminDashboardProps {
   onPageChange: (page: string) => void;
 }
 
 export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
+  const { schools, students } = useAuth();
   const stats = [
     {
       title: "Total Schools",
-      value: "24",
-      change: "+3 new registrations",
+      value: String(schools.length),
+      change: `${schools.filter((school) => school.status === "active").length} active schools`,
       icon: School,
       borderClass: "border-l-red-600",
       iconClass: "bg-red-600/10 text-red-600",
     },
     {
       title: "Total Students",
-      value: "1,847",
-      change: "+127 this month",
+      value: String(students.length),
+      change: "Live from frontend state",
       icon: Users,
       borderClass: "border-l-amber-500",
       iconClass:
         "bg-amber-500/10 text-amber-600",
     },
     {
-      title: "Subjects Registered",
-      value: "42",
-      change: "All active this term",
+      title: "Pending Payments",
+      value: String(schools.filter((school) => school.status === "payment_submitted").length),
+      change: "Require verification",
       icon: BookOpen,
       borderClass: "border-l-blue-500",
       iconClass: "bg-blue-500/10 text-blue-600",
     },
     {
-      title: "Pending Payments",
-      value: "8",
-      change: "Require verification",
+      title: "Verified Schools",
+      value: String(schools.filter((school) => school.status === "verified").length),
+      change: "Ready for activation",
       icon: AlertCircle,
-      borderClass: "border-l-orange-500",
+      borderClass: "border-l-green-500",
       iconClass:
         "bg-orange-500/10 text-orange-600",
     },
   ];
 
-  const recentSubmissions = [
-    {
-      id: 1,
-      school: "AMITY SECONDARY SCHOOL",
-      code: "WAK26-0001",
-      students: 120,
-      status: "verified",
-      date: "2026-04-12",
-      amount: "3,600,000 UGX",
-    },
-    {
-      id: 2,
-      school: "Wakiso Hills College",
-      code: "WAK26-0002",
-      students: 98,
-      status: "pending",
-      date: "2026-04-11",
-      amount: "2,940,000 UGX",
-    },
-    {
-      id: 3,
-      school: "Entebbe High School",
-      code: "WAK26-0003",
-      students: 84,
-      status: "pending",
-      date: "2026-04-10",
-      amount: "0 UGX",
-    },
-    {
-      id: 4,
-      school: "Nansana Modern School",
-      code: "WAK26-0004",
-      students: 73,
-      status: "verified",
-      date: "2026-04-09",
-      amount: "2,190,000 UGX",
-    },
-  ];
+  const recentSubmissions = schools.map((school) => ({
+    id: school.id,
+    school: school.name,
+    code: school.code,
+    students: students.filter((student) => student.schoolCode === school.code).length,
+    status: school.status,
+    date: school.registrationDate,
+    amount: school.amountPaid,
+  }));
 
   const quickActions = [
     {
@@ -143,14 +116,14 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
   };
 
   return (
-    <div className="flex flex-col w-full gap-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="flex flex-col w-full gap-6 anim-fade-up">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between anim-fade-up-delay">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
             Administrator Overview
           </p>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">
+            <h1 className="text-3xl font-bold text-shimmer">
               Organisation Admin Dashboard
             </h1>
             <p className="mt-2 max-w-2xl text-slate-500">
@@ -170,7 +143,7 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
           const Icon = stat.icon;
 
           return (
-            <Card key={stat.title} className={`border-l-4 ${stat.borderClass}`}>
+            <Card key={stat.title} className={`border-l-4 ${stat.borderClass} transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-md`}>
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-3">
@@ -271,7 +244,7 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
                     className="h-auto w-full justify-start rounded-2xl px-4 py-4 text-left"
                     onClick={() => onPageChange(action.page)}
                   >
-                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
+                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 text-blue-700">
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="space-y-1">
@@ -331,6 +304,37 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
                   <Badge variant="secondary">18/24 schools</Badge>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle className="text-slate-900">Status Distribution</CardTitle>
+              <CardDescription className="text-slate-500">
+                Visual snapshot of school lifecycle stages
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[
+                { label: "Pending", value: schools.filter((s) => s.status === "pending").length, color: "bg-amber-500" },
+                { label: "Payment Submitted", value: schools.filter((s) => s.status === "payment_submitted").length, color: "bg-orange-500" },
+                { label: "Verified", value: schools.filter((s) => s.status === "verified").length, color: "bg-blue-500" },
+                { label: "Active", value: schools.filter((s) => s.status === "active").length, color: "bg-green-500" },
+              ].map((item) => {
+                const max = Math.max(1, schools.length);
+                const width = `${(item.value / max) * 100}%`;
+                return (
+                  <div key={item.label} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500">{item.label}</span>
+                      <span className="font-semibold text-slate-900">{item.value}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100">
+                      <div className={`h-2 rounded-full ${item.color}`} style={{ width }} />
+                    </div>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         </div>

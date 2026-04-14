@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -34,103 +34,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Search, Plus, Trash2, AlertCircle, UserPlus } from "lucide-react";
+import { Search, AlertCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "../ui/alert";
+import { useAuth } from "../auth-context";
 
 interface StudentsEntriesProps {
   onPageChange: (page: string) => void;
 }
 
-interface StudentEntry {
-  id: string;
-  examLevel: "UCE" | "UACE";
-  studentName: string;
-  classLevel: string;
-  subject: string;
-  subjectCode: string;
-  entry1: number;
-  entry2: number;
-  entry3: number;
-  entry4: number;
-  totalEntries: number;
-  schoolCode: string;
-  schoolName: string;
-}
-
-const availableSubjects = [
-  { code: "MATH101", name: "Mathematics", level: "Advanced" },
-  { code: "ENG101", name: "English Language", level: "Standard" },
-  { code: "PHY101", name: "Physics", level: "Advanced" },
-  { code: "CHEM101", name: "Chemistry", level: "Advanced" },
-  { code: "BIO101", name: "Biology", level: "Advanced" },
-  { code: "HIST101", name: "History", level: "Standard" },
-  { code: "GEOG101", name: "Geography", level: "Standard" },
-  { code: "COMP101", name: "Computer Science", level: "Advanced" },
-];
-
 export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
+  const { user, schools, students, subjects, addStudentEntry } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [schoolFilter, setSchoolFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
-  const [entries, setEntries] = useState<StudentEntry[]>([
-    {
-      id: "1",
-      examLevel: "UCE",
-      studentName: "John Smith",
-      classLevel: "Grade 12",
-      subject: "Mathematics",
-      subjectCode: "MATH101",
-      entry1: 2,
-      entry2: 1,
-      entry3: 0,
-      entry4: 0,
-      totalEntries: 3,
-      schoolCode: "SCH001",
-      schoolName: "Greenwood High School",
-    },
-    {
-      id: "2",
-      examLevel: "UCE",
-      studentName: "Emma Johnson",
-      classLevel: "Grade 11",
-      subject: "English Language",
-      subjectCode: "ENG101",
-      entry1: 1,
-      entry2: 1,
-      entry3: 1,
-      entry4: 0,
-      totalEntries: 3,
-      schoolCode: "SCH001",
-      schoolName: "Greenwood High School",
-    },
-    {
-      id: "3",
-      examLevel: "UACE",
-      studentName: "Michael Chen",
-      classLevel: "Grade 12",
-      subject: "Physics",
-      subjectCode: "PHY101",
-      entry1: 2,
-      entry2: 0,
-      entry3: 0,
-      entry4: 0,
-      totalEntries: 2,
-      schoolCode: "SCH002",
-      schoolName: "Riverside Academy",
-    },
-  ]);
-
   const [newEntry, setNewEntry] = useState({
     examLevel: "UCE",
     studentName: "",
-    classLevel: "Grade 12",
+    classLevel: "S4",
+    schoolCode: user?.role === "school" ? user.schoolCode ?? "WAK26-0001" : "WAK26-0001",
     subjectCode: "",
     entry1: "",
     entry2: "",
     entry3: "",
     entry4: "",
+    totalEntries: "",
   });
 
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -163,6 +92,10 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     if (calculateTotal() === 0) {
       errors.push("At least one entry must be greater than 0");
     }
+    const enteredTotal = parseInt(newEntry.totalEntries) || 0;
+    if (enteredTotal !== calculateTotal()) {
+      errors.push("Grade1 + Grade2 + Grade3 + Grade4 must equal total entries");
+    }
 
     setValidationErrors(errors);
     return errors.length === 0;
@@ -171,56 +104,42 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
   const handleAddEntry = () => {
     if (!validateEntry()) return;
 
-    const subject = availableSubjects.find(
-      (record) => record.code === newEntry.subjectCode,
-    );
+    const subject = subjects.find((record) => record.code === newEntry.subjectCode);
     const total = calculateTotal();
-
-    const entry: StudentEntry = {
-      id: String(entries.length + 1),
-      examLevel: newEntry.examLevel,
+    addStudentEntry({
+      schoolCode: newEntry.schoolCode,
       studentName: newEntry.studentName,
+      examLevel: newEntry.examLevel as "UCE" | "UACE",
       classLevel: newEntry.classLevel,
-      subject: subject?.name || "",
       subjectCode: newEntry.subjectCode,
+      subjectName: subject?.name ?? "",
       entry1: parseInt(newEntry.entry1) || 0,
       entry2: parseInt(newEntry.entry2) || 0,
       entry3: parseInt(newEntry.entry3) || 0,
       entry4: parseInt(newEntry.entry4) || 0,
       totalEntries: total,
-      schoolCode: "SCH001",
-      schoolName: "Greenwood High School",
-    };
-
-    setEntries([...entries, entry]);
+    });
     setIsAddDialogOpen(false);
     setNewEntry({
       examLevel: "UCE",
       studentName: "",
-      classLevel: "Grade 12",
+      classLevel: "S4",
+      schoolCode: user?.role === "school" ? user.schoolCode ?? "WAK26-0001" : "WAK26-0001",
       subjectCode: "",
       entry1: "",
       entry2: "",
       entry3: "",
       entry4: "",
+      totalEntries: "",
     });
     setValidationErrors([]);
 
     toast.success("Student Entry Added", {
-      description: `${newEntry.studentName} registered for ${subject?.name}`,
+      description: `${newEntry.studentName} registered successfully`,
     });
   };
 
-  const handleDeleteEntry = (id: string) => {
-    const entry = entries.find((record) => record.id === id);
-    setEntries(entries.filter((record) => record.id !== id));
-
-    toast.success("Entry Deleted", {
-      description: `Entry for ${entry?.studentName} has been removed`,
-    });
-  };
-
-  const filteredEntries = entries.filter((entry) => {
+  const filteredEntries = students.filter((entry) => {
     const matchesSearch =
       entry.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.subjectCode.toLowerCase().includes(searchTerm.toLowerCase());
@@ -230,10 +149,19 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     return matchesSearch && matchesSchool;
   });
 
-  const totalStudents = new Set(entries.map((entry) => entry.studentName)).size;
-  const totalEntries = entries.reduce(
+  const totalStudents = new Set(students.map((entry) => entry.studentName)).size;
+  const totalEntries = students.reduce(
     (sum, entry) => sum + entry.totalEntries,
     0,
+  );
+  const allowedSubjects = useMemo(
+    () =>
+      subjects.filter(
+        (subject) =>
+          subject.educationLevel === "BOTH" ||
+          subject.educationLevel === newEntry.examLevel,
+      ),
+    [subjects, newEntry.examLevel],
   );
 
   const statCards = [
@@ -251,13 +179,13 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     },
     {
       label: "Subject Combinations",
-      value: entries.length,
+      value: students.length,
       className: "border-l-blue-500",
       valueClass: "text-slate-900",
     },
     {
       label: "Schools",
-      value: new Set(entries.map((entry) => entry.schoolCode)).size,
+      value: new Set(students.map((entry) => entry.schoolCode)).size,
       className: "border-l-green-500",
       valueClass: "text-slate-900",
     },
@@ -288,7 +216,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
               Add Student Entry
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Add Student Entry</DialogTitle>
               <DialogDescription>
@@ -356,10 +284,30 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Grade 9">Grade 9</SelectItem>
-                    <SelectItem value="Grade 10">Grade 10</SelectItem>
-                    <SelectItem value="Grade 11">Grade 11</SelectItem>
-                    <SelectItem value="Grade 12">Grade 12</SelectItem>
+                    <SelectItem value="S4">S4</SelectItem>
+                    <SelectItem value="S6">S6</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="schoolCode">School</Label>
+                <Select
+                  value={newEntry.schoolCode}
+                  onValueChange={(value) =>
+                    setNewEntry({ ...newEntry, schoolCode: value })
+                  }
+                  disabled={user?.role === "school"}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {schools.map((school) => (
+                      <SelectItem key={school.code} value={school.code}>
+                        {school.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -376,9 +324,9 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                     <SelectValue placeholder="Select a subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableSubjects.map((subject) => (
+                    {allowedSubjects.map((subject) => (
                       <SelectItem key={subject.code} value={subject.code}>
-                        {subject.code} - {subject.name} ({subject.level})
+                        {subject.code} - {subject.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -414,17 +362,30 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                     ),
                   )}
                 </div>
-                <div className="rounded-xl bg-white shadow-sm border border-slate-200 px-4 py-3">
+                <div className="rounded-xl bg-white shadow-sm border border-slate-200 px-4 py-3 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-500">
-                      Total Entries
+                      Calculated Total Entries
                     </span>
                     <span className="text-xl font-bold text-red-600">
                       {calculateTotal()}
                     </span>
                   </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="totalEntries" className="text-xs text-slate-500">
+                      Entered Total Entries (required)
+                    </Label>
+                    <Input
+                      id="totalEntries"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Enter total"
+                      value={newEntry.totalEntries}
+                      onChange={(e) => handleNumberInput("totalEntries", e.target.value)}
+                    />
+                  </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    Automatically calculated from Entry 1 to Entry 4
+                    Grade1 + Grade2 + Grade3 + Grade4 must match entered total
                   </p>
                 </div>
               </div>
@@ -477,9 +438,11 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Schools</SelectItem>
-                <SelectItem value="SCH001">Greenwood High</SelectItem>
-                <SelectItem value="SCH002">Riverside Academy</SelectItem>
-                <SelectItem value="SCH003">Oak Valley</SelectItem>
+                {schools.map((school) => (
+                  <SelectItem key={school.code} value={school.code}>
+                    {school.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Button
@@ -502,10 +465,13 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Reg No</TableHead>
                 <TableHead>Student Name</TableHead>
+                <TableHead>Level</TableHead>
                 <TableHead>Class / Level</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead className="text-center">1</TableHead>
@@ -520,14 +486,18 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
             <TableBody>
                 {filteredEntries.map((entry) => (
                 <TableRow key={entry.id}>
+                  <TableCell className="font-mono text-xs">{entry.registrationNumber}</TableCell>
                   <TableCell className="font-semibold text-slate-900">
                     {entry.studentName}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{entry.examLevel}</Badge>
                   </TableCell>
                   <TableCell>{entry.classLevel}</TableCell>
                   <TableCell>
                     <div>
                       <div className="font-medium text-slate-900">
-                        {entry.subject}
+                        {entry.subjectName}
                       </div>
                       <Badge variant="outline" className="mt-1">
                         {entry.subjectCode}
@@ -552,20 +522,12 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                   <TableCell className="text-slate-500">
                     {entry.schoolCode}
                   </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:bg-red-50 hover:text-red-600"
-                      onClick={() => handleDeleteEntry(entry.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                  <TableCell className="text-xs text-slate-500">Managed via state</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

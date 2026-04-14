@@ -14,6 +14,8 @@ import { Timetable } from "./components/shared/timetable";
 import { Reports } from "./components/shared/reports";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
+import { Badge } from "./components/ui/badge";
 
 function AppContent() {
   const { user, isAuthenticated } = useAuth();
@@ -27,6 +29,13 @@ function AppContent() {
   const handlePageChange = (page: string) => {
     setCurrentPage(page);
   };
+
+  const userInitials = user?.name
+    ?.split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   const renderPlaceholder = (pageTitle: string) => {
     return (
@@ -96,7 +105,7 @@ function AppContent() {
   };
 
   return (
-    <div className="h-screen w-full max-w-[100vw] flex overflow-hidden bg-slate-50">
+    <div className="h-screen w-full max-w-[100vw] flex overflow-hidden bg-background">
       <Sidebar
         currentPage={currentPage}
         onPageChange={handlePageChange}
@@ -118,7 +127,7 @@ function AppContent() {
                 <Menu className="h-4 w-4" />
               </Button>
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#DC2626]">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
                   WAKISSHA
                 </p>
                 <p className="text-xs text-slate-500">
@@ -127,9 +136,35 @@ function AppContent() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="hidden text-sm font-medium text-slate-500 sm:inline">
-                Exam Portal
-              </span>
+              <div className="hidden sm:flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <Avatar className="h-9 w-9 ring-1 ring-blue-100">
+                  <AvatarImage src={user?.avatar} alt={user?.name} />
+                  <AvatarFallback className="bg-blue-100 text-blue-700">
+                    {userInitials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-900">{user?.name}</p>
+                  <p className="truncate text-xs text-slate-500">
+                    {user?.role === "admin" ? "Administrator" : user?.schoolCode}
+                  </p>
+                </div>
+                {user?.status && (
+                  <Badge
+                    variant={
+                      user.status === "active"
+                        ? "success"
+                        : user.status === "verified"
+                          ? "info"
+                          : user.status === "payment_submitted"
+                            ? "payment"
+                            : "warning"
+                    }
+                  >
+                    {user.status.replace("_", " ")}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </header>

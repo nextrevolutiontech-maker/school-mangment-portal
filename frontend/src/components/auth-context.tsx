@@ -54,6 +54,23 @@ export interface SchoolRecord {
   contactDesignation?: string;
 }
 
+export interface StudentRecord {
+  id: string;
+  registrationNumber: string;
+  studentName: string;
+  examLevel: "UCE" | "UACE";
+  classLevel: string;
+  subjectCode: string;
+  subjectName: string;
+  entry1: number;
+  entry2: number;
+  entry3: number;
+  entry4: number;
+  totalEntries: number;
+  schoolCode: string;
+  schoolName: string;
+}
+
 interface NewSchoolInput {
   name: string;
   email: string;
@@ -68,6 +85,7 @@ interface NewSchoolInput {
 interface AuthContextType {
   user: User | null;
   schools: SchoolRecord[];
+  students: StudentRecord[];
   zones: Zone[];
   subjects: Subject[];
   login: (identifier: string, password: string) => Promise<void>;
@@ -80,6 +98,19 @@ interface AuthContextType {
     status: SchoolStatus,
     activationCode?: string,
   ) => void;
+  addStudentEntry: (entry: {
+    schoolCode: string;
+    studentName: string;
+    examLevel: "UCE" | "UACE";
+    classLevel: string;
+    subjectCode: string;
+    subjectName: string;
+    entry1: number;
+    entry2: number;
+    entry3: number;
+    entry4: number;
+    totalEntries: number;
+  }) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -284,6 +315,57 @@ const schoolPasswords: Record<string, string> = {
   "WAK26-0004": "demo123",
 };
 
+const initialStudents: StudentRecord[] = [
+  {
+    id: "student-1",
+    registrationNumber: "WAK/26-0001/001",
+    studentName: "John Smith",
+    examLevel: "UCE",
+    classLevel: "S4",
+    subjectCode: "MTH",
+    subjectName: "Mathematics",
+    entry1: 1,
+    entry2: 1,
+    entry3: 0,
+    entry4: 0,
+    totalEntries: 2,
+    schoolCode: "WAK26-0001",
+    schoolName: "AMITY SECONDARY SCHOOL",
+  },
+  {
+    id: "student-2",
+    registrationNumber: "WAK/26-0001/002",
+    studentName: "Emma Johnson",
+    examLevel: "UCE",
+    classLevel: "S4",
+    subjectCode: "ENG",
+    subjectName: "English Language",
+    entry1: 1,
+    entry2: 1,
+    entry3: 1,
+    entry4: 0,
+    totalEntries: 3,
+    schoolCode: "WAK26-0001",
+    schoolName: "AMITY SECONDARY SCHOOL",
+  },
+  {
+    id: "student-3",
+    registrationNumber: "WAK/26-0002/001",
+    studentName: "Michael Chen",
+    examLevel: "UACE",
+    classLevel: "S6",
+    subjectCode: "GP",
+    subjectName: "General Paper",
+    entry1: 1,
+    entry2: 0,
+    entry3: 0,
+    entry4: 0,
+    totalEntries: 1,
+    schoolCode: "WAK26-0002",
+    schoolName: "Wakiso Hills College",
+  },
+];
+
 function toSchoolUser(school: SchoolRecord): User {
   return {
     id: school.id,
@@ -311,6 +393,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [schools, setSchools] = useState<SchoolRecord[]>(initialSchools);
+  const [students, setStudents] = useState<StudentRecord[]>(initialStudents);
   const [zones] = useState<Zone[]>(initialZones);
   const [subjects] = useState<Subject[]>(initialSubjects);
 
@@ -417,11 +500,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const addStudentEntry: AuthContextType["addStudentEntry"] = (entry) => {
+    setStudents((prev) => {
+      const schoolStudents = prev.filter((student) => student.schoolCode === entry.schoolCode);
+      const serial = String(schoolStudents.length + 1).padStart(3, "0");
+      const schoolSuffix = entry.schoolCode.replace("WAK26-", "");
+      const registrationNumber = `WAK/26-${schoolSuffix}/${serial}`;
+
+      const schoolName =
+        schools.find((school) => school.code === entry.schoolCode)?.name ?? entry.schoolCode;
+
+      const newStudent: StudentRecord = {
+        id: `student-${Date.now()}`,
+        registrationNumber,
+        studentName: entry.studentName,
+        examLevel: entry.examLevel,
+        classLevel: entry.classLevel,
+        subjectCode: entry.subjectCode,
+        subjectName: entry.subjectName,
+        entry1: entry.entry1,
+        entry2: entry.entry2,
+        entry3: entry.entry3,
+        entry4: entry.entry4,
+        totalEntries: entry.totalEntries,
+        schoolCode: entry.schoolCode,
+        schoolName,
+      };
+
+      return [...prev, newStudent];
+    });
+
+    setSchools((prev) =>
+      prev.map((school) =>
+        school.code === entry.schoolCode
+          ? { ...school, students: school.students + 1 }
+          : school,
+      ),
+    );
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         schools,
+        students,
         zones,
         subjects,
         login,
@@ -430,6 +553,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         addSchool,
         submitSchoolDocuments,
         updateSchoolStatus,
+        addStudentEntry,
       }}
     >
       {children}

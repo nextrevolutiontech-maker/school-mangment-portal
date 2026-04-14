@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,6 +19,7 @@ export function Login() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,12 +66,12 @@ export function Login() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 text-slate-900 sm:p-6">
+    <div className="min-h-screen bg-[#F4F7FC] p-4 text-slate-900 sm:p-6">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col justify-center gap-6">
-        <Card className="overflow-hidden">
-          <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="relative overflow-hidden border-b border-slate-200 p-8 lg:border-r lg:border-b-0 lg:p-12">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.1),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.08),transparent_24%)]" />
+        <Card className="overflow-hidden border-[#DCE4F2] shadow-md">
+          <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="relative overflow-hidden border-b border-[#E8EDF7] bg-[#FBFCFF] p-8 lg:border-r lg:border-b-0 lg:p-12">
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(30,58,138,0.03),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.08),transparent_30%)]" />
               <div className="relative z-10 flex h-full flex-col justify-between gap-10">
                 <div className="space-y-6">
                   <img
@@ -80,13 +81,13 @@ export function Login() {
                   />
 
                   <div className="space-y-4">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-red-600">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-[#D9C38A] bg-[#FDF9ED] px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[#8B6A19]">
                       <Sparkles className="h-3.5 w-3.5" />
                       Digital Exam Portal
                     </div>
 
                     <div className="space-y-3">
-                      <h1 className="text-4xl font-bold tracking-tight text-[#DC2626] lg:text-5xl">
+                      <h1 className="text-4xl font-extrabold tracking-tight text-[#142C6E] lg:text-5xl">
                         WAKISSHA PORTAL
                       </h1>
                       <p className="max-w-xl text-base text-slate-500 lg:text-lg">
@@ -103,8 +104,8 @@ export function Login() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
+                  <div className="bg-white shadow-sm border border-[#E1E8F5] rounded-2xl p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 text-blue-700">
                       <ShieldCheck className="h-5 w-5" />
                     </div>
                     <p className="text-sm font-semibold text-slate-900">
@@ -116,8 +117,8 @@ export function Login() {
                     </p>
                   </div>
 
-                  <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+                  <div className="bg-white shadow-sm border border-[#E1E8F5] rounded-2xl p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDF9ED] text-[#A07514]">
                       <Sparkles className="h-5 w-5" />
                     </div>
                     <p className="text-sm font-semibold text-slate-900">
@@ -132,9 +133,9 @@ export function Login() {
               </div>
             </div>
 
-            <div className="bg-white p-6 lg:p-10">
+            <div className="relative bg-[linear-gradient(150deg,#F8FAFF,#F4F7FC)] p-6 lg:p-10">
               <div className="mx-auto flex h-full max-w-md flex-col justify-center">
-                <Card className="bg-white shadow-sm border border-slate-200">
+                <Card className="bg-white shadow-md border border-[#DCE4F2] rounded-3xl">
                   <CardHeader className="space-y-2">
                     <CardTitle className="text-2xl font-semibold text-slate-900">
                       Sign In
@@ -164,14 +165,25 @@ export function Login() {
                         <Label htmlFor="password" className="text-slate-500">
                           Password
                         </Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="Enter your password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                        />
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="pr-10"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
 
                       {error && (
@@ -182,7 +194,7 @@ export function Login() {
 
                       <Button
                         type="submit"
-                        className="w-full bg-red-600 text-white hover:bg-red-700"
+                        className="w-full bg-gradient-to-b from-[#2347A2] to-[#112E7E] text-white shadow-md hover:from-[#1F3F95] hover:to-[#0F286D]"
                         disabled={isLoading}
                       >
                         {isLoading ? (
@@ -194,6 +206,9 @@ export function Login() {
                           "Sign In"
                         )}
                       </Button>
+                      <p className="pt-1 text-right text-sm text-slate-500 hover:text-primary cursor-pointer transition-colors duration-200">
+                        Forgot Password?
+                      </p>
                     </form>
                   </CardContent>
                 </Card>
@@ -207,7 +222,7 @@ export function Login() {
             <button
               key={account.identifier}
               type="button"
-              className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4 text-left shadow-sm transition-all hover:border-red-200 hover:bg-red-50"
+              className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4 text-left transition-all duration-200 ease-in-out hover:border-blue-200 hover:bg-blue-50 hover:-translate-y-1 hover:shadow-md"
               onClick={() => {
                 setIdentifier(account.identifier);
                 setPassword(account.password);
@@ -216,7 +231,7 @@ export function Login() {
               <p className="text-sm font-semibold text-slate-900">
                 {account.role}
               </p>
-              <p className="mt-1 text-xs font-medium text-red-600">
+              <p className="mt-1 text-xs font-medium text-blue-700">
                 {account.identifier}
               </p>
               <p className="mt-2 text-sm leading-6 text-slate-500">

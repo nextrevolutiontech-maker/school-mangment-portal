@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState } from "react";
 import {
   FileSpreadsheet,
   FileText,
@@ -36,7 +36,6 @@ import { toast } from "sonner";
 import { useAuth } from "../auth-context";
 import { jsPDF } from "jspdf";
 import { utils as XLSXUtils, writeFile } from "xlsx";
-import html2canvas from "html2canvas";
 import autoTable from "jspdf-autotable";
 
 interface ReportsProps {
@@ -45,125 +44,95 @@ interface ReportsProps {
 
 type EducationLevelFilter = "all" | "UCE" | "UACE";
 
+type FormColumn = {
+  key: string;
+  label: string;
+};
 
-const uaceHeaders = [
-  "Ref No",
-  "School Name",
-  "District",
-  "Zone/Centre",
-  "Registered Subjects",
-  "Telephone",
-  "GP",
-  "S/Maths",
-  "S/ICT",
-  "Hist",
-  "Ent",
-  "Geog",
-  "IRE",
-  "CRE",
-  "LIT",
-  "Kiswa",
-  "Art",
-  "PHY",
-  "Chem",
-  "BIO",
-  "Maths",
-  "Agric",
-  "F/N",
-  "TD",
-  "French",
-  "German",
-  "Arabic",
-  "Luganda",
-  "Runy-Rukiga",
-  "Lusoga",
-] as const;
-
-type UaceHeader = (typeof uaceHeaders)[number];
-type UaceRow = Record<UaceHeader, string>;
-
-const subjectWiseData = [
-  {
-    subject: "English Language",
-    code: "ENG",
-    level: "UCE",
-    totalStudents: 364,
-    schools: 4,
-    average: 91,
-  },
-  {
-    subject: "General Paper",
-    code: "GP",
-    level: "UACE",
-    totalStudents: 281,
-    schools: 4,
-    average: 70,
-  },
-  {
-    subject: "Mathematics",
-    code: "MTH",
-    level: "UCE/UACE",
-    totalStudents: 332,
-    schools: 4,
-    average: 83,
-  },
-  {
-    subject: "Biology",
-    code: "BIO",
-    level: "UACE",
-    totalStudents: 143,
-    schools: 3,
-    average: 48,
-  },
-  {
-    subject: "Chemistry",
-    code: "CHE",
-    level: "UACE",
-    totalStudents: 136,
-    schools: 3,
-    average: 45,
-  },
+const formBaseColumns: FormColumn[] = [
+  { key: "refNo", label: "Ref No." },
+  { key: "schoolName", label: "Name of school" },
+  { key: "district", label: "District" },
+  { key: "zone", label: "Zone / Centre" },
+  { key: "registeredSubjects", label: "Registered subjects" },
+  { key: "telephone", label: "Telephone" },
 ];
 
-const schoolReportProfiles: Record<
-  string,
-  {
-    totalStudents: number;
-    subjectsRegistered: number;
-    feesStatus: string;
-    reportNote: string;
-    lastUpdated: string;
-  }
-> = {
-  "WAK26-0001": {
-    totalStudents: 120,
-    subjectsRegistered: 8,
-    feesStatus: "Active",
-    reportNote: "All candidate entries submitted and approved for printing.",
-    lastUpdated: "April 13, 2026",
-  },
-  "WAK26-0002": {
-    totalStudents: 98,
-    subjectsRegistered: 7,
-    feesStatus: "Verified",
-    reportNote: "Payment confirmed and final activation notice pending dispatch.",
-    lastUpdated: "April 12, 2026",
-  },
-  "WAK26-0003": {
-    totalStudents: 84,
-    subjectsRegistered: 6,
-    feesStatus: "Pending",
-    reportNote: "Awaiting signed summary form and payment confirmation upload.",
-    lastUpdated: "April 10, 2026",
-  },
-  "WAK26-0004": {
-    totalStudents: 73,
-    subjectsRegistered: 7,
-    feesStatus: "Payment Submitted",
-    reportNote: "Documents uploaded and queued for admin verification review.",
-    lastUpdated: "April 13, 2026",
-  },
-};
+const uaceSubjectColumns: FormColumn[] = [
+  { key: "GP", label: "GP" },
+  { key: "HIST", label: "Hist" },
+  { key: "ECON", label: "Econ" },
+  { key: "ENT", label: "Ent" },
+  { key: "IRE", label: "IRE" },
+  { key: "CRE", label: "CRE" },
+  { key: "GEOG", label: "Geog" },
+  { key: "LIT", label: "LIT" },
+  { key: "KISWA", label: "Kiswa" },
+  { key: "ART", label: "Art" },
+  { key: "PHY", label: "PHY" },
+  { key: "CHEM", label: "Chem" },
+  { key: "BIO", label: "BIO" },
+  { key: "MATH", label: "Maths" },
+  { key: "AGRIC", label: "Agric" },
+  { key: "FN", label: "F/N" },
+  { key: "TD", label: "TD" },
+  { key: "FRENCH", label: "French" },
+  { key: "GERMAN", label: "German" },
+  { key: "ARABIC", label: "Arabic" },
+  { key: "LUGANDA", label: "Luganda" },
+  { key: "RUNY", label: "Runy-Rukiga" },
+  { key: "LUSOGA", label: "Lusoga" },
+];
+
+const uceSubjectColumns: FormColumn[] = [
+  { key: "ENG", label: "English" },
+  { key: "MATH", label: "Maths" },
+  { key: "BIO", label: "Biology" },
+  { key: "CHEM", label: "Chemistry" },
+  { key: "PHY", label: "Physics" },
+  { key: "HIST", label: "History" },
+  { key: "GEOG", label: "Geography" },
+  { key: "CRE", label: "CRE" },
+  { key: "IRE", label: "IRE" },
+  { key: "CPS", label: "Comp" },
+  { key: "FRENCH", label: "French" },
+  { key: "GERMAN", label: "German" },
+  { key: "ARABIC", label: "Arabic" },
+  { key: "LUGANDA", label: "Luganda" },
+  { key: "RUNY", label: "Runy-Rukiga" },
+  { key: "LUSOGA", label: "Lusoga" },
+];
+
+const entryColumns: FormColumn[] = [
+  { key: "entries", label: "Entries" },
+  { key: "p1", label: "P1" },
+  { key: "p2", label: "P2" },
+  { key: "p3", label: "P3" },
+  { key: "p4", label: "P4" },
+];
+
+type FormRow = Record<string, string | number>;
+
+function mapSubjectCode(subjectCode: string) {
+  const normalized = subjectCode.toUpperCase();
+  const aliases: Record<string, string> = {
+    ENG: "ENG",
+    MTH: "MATH",
+    CPS: "CPS",
+    ETP: "ENT",
+    ECN: "ECON",
+    GEO: "GEOG",
+    HIS: "HIST",
+    CHM: "CHEM",
+    BIO: "BIO",
+    PHY: "PHY",
+    GP: "GP",
+    LIT: "LIT",
+    CRE: "CRE",
+    IRE: "IRE",
+  };
+  return aliases[normalized] ?? normalized;
+}
 
 function getStatusBadge(status: string) {
   const variants = {
@@ -181,170 +150,93 @@ function getStatusBadge(status: string) {
 }
 
 export function Reports({ onPageChange }: ReportsProps) {
-  const { schools } = useAuth();
+  const { schools, students, subjects } = useAuth();
   const [selectedSchool, setSelectedSchool] = useState("all");
   const [exportingKey, setExportingKey] = useState<string | null>(null);
   const [educationLevelFilter, setEducationLevelFilter] = useState<EducationLevelFilter>("all");
-  const consolidatedTableRef = useRef<HTMLDivElement>(null);
-  const subjectWiseTableRef = useRef<HTMLDivElement>(null);
+  const [lateFee] = useState(0);
 
-  const consolidatedRows = useMemo<UaceRow[]>(() => {
-    const defaultRows: UaceRow[] = [
-      {
-        "Ref No": "1",
-        "School Name": "AMITY SECONDARY SCHOOL",
-        District: "Kampala",
-        "Zone/Centre": "Central Zone",
-        "Registered Subjects": "12",
-        Telephone: "+256 700 101 001",
-        GP: "120",
-        "S/Maths": "118",
-        "S/ICT": "92",
-        Hist: "41",
-        Ent: "28",
-        Geog: "64",
-        IRE: "12",
-        CRE: "58",
-        LIT: "36",
-        Kiswa: "26",
-        Art: "18",
-        PHY: "52",
-        Chem: "49",
-        BIO: "55",
-        Maths: "88",
-        Agric: "21",
-        "F/N": "17",
-        TD: "14",
-        French: "9",
-        German: "0",
-        Arabic: "4",
-        Luganda: "31",
-        "Runy-Rukiga": "0",
-        Lusoga: "0",
-      },
-      {
-        "Ref No": "2",
-        "School Name": "Wakiso Hills College",
-        District: "Wakiso",
-        "Zone/Centre": "North Zone",
-        "Registered Subjects": "11",
-        Telephone: "+256 700 101 002",
-        GP: "98",
-        "S/Maths": "96",
-        "S/ICT": "74",
-        Hist: "33",
-        Ent: "19",
-        Geog: "52",
-        IRE: "8",
-        CRE: "49",
-        LIT: "25",
-        Kiswa: "18",
-        Art: "12",
-        PHY: "40",
-        Chem: "42",
-        BIO: "44",
-        Maths: "73",
-        Agric: "16",
-        "F/N": "13",
-        TD: "9",
-        French: "5",
-        German: "0",
-        Arabic: "0",
-        Luganda: "22",
-        "Runy-Rukiga": "10",
-        Lusoga: "0",
-      },
-      {
-        "Ref No": "3",
-        "School Name": "Entebbe High School",
-        District: "Entebbe",
-        "Zone/Centre": "South Zone",
-        "Registered Subjects": "10",
-        Telephone: "+256 700 101 003",
-        GP: "84",
-        "S/Maths": "81",
-        "S/ICT": "61",
-        Hist: "27",
-        Ent: "14",
-        Geog: "38",
-        IRE: "7",
-        CRE: "44",
-        LIT: "19",
-        Kiswa: "14",
-        Art: "11",
-        PHY: "31",
-        Chem: "28",
-        BIO: "35",
-        Maths: "59",
-        Agric: "13",
-        "F/N": "9",
-        TD: "7",
-        French: "0",
-        German: "0",
-        Arabic: "0",
-        Luganda: "0",
-        "Runy-Rukiga": "0",
-        Lusoga: "18",
-      },
-      {
-        "Ref No": "4",
-        "School Name": "Nansana Modern School",
-        District: "Wakiso",
-        "Zone/Centre": "West Zone",
-        "Registered Subjects": "9",
-        Telephone: "+256 700 101 004",
-        GP: "73",
-        "S/Maths": "70",
-        "S/ICT": "55",
-        Hist: "20",
-        Ent: "11",
-        Geog: "35",
-        IRE: "4",
-        CRE: "29",
-        LIT: "12",
-        Kiswa: "15",
-        Art: "9",
-        PHY: "28",
-        Chem: "17",
-        BIO: "24",
-        Maths: "51",
-        Agric: "14",
-        "F/N": "8",
-        TD: "6",
-        French: "0",
-        German: "0",
-        Arabic: "0",
-        Luganda: "19",
-        "Runy-Rukiga": "0",
-        Lusoga: "12",
-      },
-    ];
+  const consolidatedRows = useMemo<FormRow[]>(() => {
+    const filteredSchools = schools.filter((school) => {
+      if (educationLevelFilter === "all") return true;
+      return school.educationLevel === educationLevelFilter || school.educationLevel === "BOTH";
+    });
 
-    let filtered = schools.length > 0 ? defaultRows : [];
+    return filteredSchools.map((school, index) => {
+      const schoolStudents = students.filter((student) => student.schoolCode === school.code);
+      const registeredSubjects = new Set(schoolStudents.map((student) => student.subjectCode)).size;
+      const isUaceForm = educationLevelFilter === "UACE" || school.educationLevel === "UACE";
+      const subjectColumns = isUaceForm ? uaceSubjectColumns : uceSubjectColumns;
 
-    if (educationLevelFilter !== "all") {
-      filtered = filtered.filter((row) => {
-        const school = schools.find((s) => s.code === `WAK26-${String(row["Ref No"]).padStart(4, "0")}`);
-        if (!school) return true;
-        if (educationLevelFilter === "UCE") return school.educationLevel === "UCE" || school.educationLevel === "BOTH";
-        if (educationLevelFilter === "UACE") return school.educationLevel === "UACE" || school.educationLevel === "BOTH";
-        return true;
+      const subjectCounts = schoolStudents.reduce<Record<string, number>>((acc, student) => {
+        const key = mapSubjectCode(student.subjectCode);
+        acc[key] = (acc[key] ?? 0) + student.totalEntries;
+        return acc;
+      }, {});
+
+      const row: FormRow = {
+        refNo: index + 1,
+        schoolName: school.name,
+        district: school.district,
+        zone: school.zone,
+        registeredSubjects,
+        telephone: school.phone,
+      };
+
+      subjectColumns.forEach((subject) => {
+        const entries = subjectCounts[subject.key] ?? 0;
+        const p1 = Math.floor(entries * 0.35);
+        const p2 = Math.floor(entries * 0.25);
+        const p3 = Math.floor(entries * 0.2);
+        const p4 = entries - (p1 + p2 + p3);
+        row[`${subject.key}_entries`] = entries;
+        row[`${subject.key}_p1`] = p1;
+        row[`${subject.key}_p2`] = p2;
+        row[`${subject.key}_p3`] = p3;
+        row[`${subject.key}_p4`] = p4;
       });
-    }
 
-    return filtered;
-  }, [schools, educationLevelFilter]);
+      return row;
+    });
+  }, [schools, students, educationLevelFilter]);
+
+  const subjectWiseData = useMemo(
+    () =>
+      subjects.map((subject) => {
+        const subjectStudents = students.filter((student) => student.subjectCode === subject.code);
+        return {
+          subject: subject.name,
+          code: subject.code,
+          level: subject.educationLevel,
+          totalStudents: subjectStudents.length,
+          schools: new Set(subjectStudents.map((student) => student.schoolCode)).size,
+          average:
+            subjectStudents.length > 0
+              ? Math.round(
+                  subjectStudents.reduce((sum, student) => sum + student.totalEntries, 0) /
+                    subjectStudents.length,
+                )
+              : 0,
+        };
+      }),
+    [subjects, students],
+  );
 
   const selectedSchoolData =
     selectedSchool !== "all"
       ? schools.find((school) => school.code === selectedSchool)
       : undefined;
 
-  const selectedSchoolProfile =
-    selectedSchoolData &&
-    schoolReportProfiles[selectedSchoolData.code]
-      ? schoolReportProfiles[selectedSchoolData.code]
-      : undefined;
+  const selectedSchoolProfile = useMemo(() => {
+    if (!selectedSchoolData) return undefined;
+    const schoolStudents = students.filter((student) => student.schoolCode === selectedSchoolData.code);
+    return {
+      totalStudents: schoolStudents.length,
+      subjectsRegistered: new Set(schoolStudents.map((student) => student.subjectCode)).size,
+      reportNote: "Report generated from current frontend simulation state.",
+      lastUpdated: new Date().toLocaleDateString(),
+    };
+  }, [selectedSchoolData, students]);
 
   const summaryCards = [
     {
@@ -355,7 +247,7 @@ export function Reports({ onPageChange }: ReportsProps) {
     },
     {
       label: "Total Students",
-      value: schools.reduce((sum, school) => sum + school.students, 0),
+      value: students.length,
       className: "border-l-amber-500",
       valueClass: "text-slate-900",
     },
@@ -379,7 +271,41 @@ export function Reports({ onPageChange }: ReportsProps) {
   const isExporting = (format: "pdf" | "excel", reportType: string) =>
     exportingKey === buildExportKey(format, reportType);
 
-  const exportConsolidatedToPDF = (fileName: string) => {
+  const calculateFeeSummary = (rows: FormRow[]) => {
+    const totalStudents = rows.reduce((sum, row) => sum + Number(row.registeredSubjects || 0), 0);
+    const schoolFee = 25_000;
+    const studentFee = 27_000 * totalStudents;
+    const markingFee = rows.reduce((sum, row) => {
+      const entriesKeys = Object.keys(row).filter((key) => key.endsWith("_entries"));
+      return sum + entriesKeys.reduce((entrySum, key) => entrySum + Number(row[key] || 0), 0) * 100;
+    }, 0);
+    const totalAmount = schoolFee + studentFee + lateFee + markingFee;
+
+    return { schoolFee, studentFee, lateFee, markingFee, totalAmount, totalStudents };
+  };
+
+  const buildTemplateTable = (rows: FormRow[], subjectsColumns: FormColumn[]) =>
+    rows.map((row) => [
+      row.refNo,
+      row.schoolName,
+      row.district,
+      row.zone,
+      row.registeredSubjects,
+      row.telephone,
+      ...subjectsColumns.flatMap((subject) => [
+        row[`${subject.key}_entries`] ?? 0,
+        row[`${subject.key}_p1`] ?? 0,
+        row[`${subject.key}_p2`] ?? 0,
+        row[`${subject.key}_p3`] ?? 0,
+        row[`${subject.key}_p4`] ?? 0,
+      ]),
+    ]);
+
+  const generateOfficialFormPDF = (
+    level: "UACE" | "UCE",
+    rows: FormRow[],
+    fileName: string,
+  ) => {
     try {
       const pdf = new jsPDF({
         orientation: "landscape",
@@ -388,113 +314,478 @@ export function Reports({ onPageChange }: ReportsProps) {
       });
 
       const pageWidth = pdf.internal.pageSize.getWidth();
-      let yPos = 15;
+      let yPos = 12;
+      const subjectsColumns = level === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
+      const fee = calculateFeeSummary(rows);
 
-      // Title
-      pdf.setFontSize(16);
-      pdf.text("UACE Consolidated Report", pageWidth / 2, yPos, {
+      pdf.setFontSize(11);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`WAKISSHA JOINT MOCK ${level} SUMMARY 2026`, pageWidth / 2, yPos, {
         align: "center",
       });
-      yPos += 10;
+      yPos += 5;
 
-      // Metadata
-      pdf.setFontSize(10);
-      pdf.text(`WAKISSHA Exam Portal - ${new Date().toLocaleDateString()}`, 15, yPos);
-      yPos += 8;
-
-      // Table
-      const tableColumn = uaceHeaders.slice(0, 10);
-      const tableRows = consolidatedRows.map((row) =>
-        tableColumn.map((col) => row[col])
-      );
+      const headerRow = [
+        ...formBaseColumns.map((col) => col.label),
+        ...subjectsColumns.flatMap((subject) =>
+          entryColumns.map((entry) => `${subject.label}-${entry.label}`),
+        ),
+      ];
+      const bodyRows = buildTemplateTable(rows, subjectsColumns);
 
       autoTable(pdf, {
-        head: [tableColumn],
-        body: tableRows,
+        head: [headerRow],
+        body: bodyRows,
         startY: yPos,
-        margin: { left: 10, right: 10 },
-        columnStyles: {
-          0: { cellWidth: 8 },
-          1: { cellWidth: 25 },
-          2: { cellWidth: 15 },
-        },
+        margin: { left: 6, right: 6 },
         headStyles: {
-          fillColor: [22, 101, 174],
-          textColor: [255, 255, 255],
-          fontSize: 8,
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          lineWidth: 0.2,
+          lineColor: [0, 0, 0],
+          fontSize: 6,
           fontStyle: "bold",
         },
         bodyStyles: {
-          fontSize: 7,
-          textColor: [50, 50, 50],
-        },
-        alternateRowStyles: {
-          fillColor: [240, 245, 250],
+          lineWidth: 0.2,
+          lineColor: [0, 0, 0],
+          fontSize: 6,
+          textColor: [0, 0, 0],
         },
       });
 
+      const endY = (pdf as any).lastAutoTable.finalY + 5;
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`School Fee: UGX ${fee.schoolFee.toLocaleString()}`, 8, endY);
+      pdf.text(`Student Fee: UGX ${fee.studentFee.toLocaleString()}`, 60, endY);
+      pdf.text(`Late Fee: UGX ${fee.lateFee.toLocaleString()}`, 115, endY);
+      pdf.text(`Marking Fee: UGX ${fee.markingFee.toLocaleString()}`, 160, endY);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`TOTAL AMOUNT: UGX ${fee.totalAmount.toLocaleString()}`, 220, endY);
+
       pdf.save(`${fileName}.pdf`);
-      toast.success("PDF exported successfully");
+      toast.success(`${level} official form exported successfully`);
     } catch (error) {
       toast.error("Failed to export PDF");
       console.error(error);
     }
   };
 
-  const exportSubjectWiseToPDF = (fileName: string) => {
+  const generateUACEFormPDF = (rows: FormRow[], fileName: string) =>
+    generateOfficialFormPDF("UACE", rows, fileName);
+
+  const generateUCEFormPDF = (rows: FormRow[], fileName: string) =>
+    generateOfficialFormPDF("UCE", rows, fileName);
+
+  const generateReadableSummaryPDF = () => {
     try {
-      const pdf = new jsPDF();
+      const preferredSchool =
+        (selectedSchool !== "all"
+          ? schools.find((school) => school.code === selectedSchool)
+          : schools.find(
+              (school) =>
+                school.educationLevel === "UACE" || school.educationLevel === "BOTH",
+            )) ?? schools[0];
+
+      if (!preferredSchool) {
+        toast.error("No school data available");
+        return;
+      }
+
+      const row = consolidatedRows.find((record) => record.schoolName === preferredSchool.name);
+      if (!row) {
+        toast.error("No report data available for selected school");
+        return;
+      }
+
+      const schoolStudents = students.filter(
+        (student) => student.schoolCode === preferredSchool.code,
+      );
+      const totalEntries = uaceSubjectColumns.reduce(
+        (sum, subject) => sum + Number(row[`${subject.key}_entries`] || 0),
+        0,
+      );
+      const fee = calculateFeeSummary([row]);
+
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
-      let yPos = 15;
+      const margin = 14;
+      let y = 16;
 
-      // Title
-      pdf.setFontSize(16);
-      pdf.text("Subject-Wise Report", pageWidth / 2, yPos, { align: "center" });
-      yPos += 10;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(15);
+      pdf.text("WAKISSHA UACE SUMMARY REPORT 2026", pageWidth / 2, y, { align: "center" });
+      y += 8;
 
-      // Metadata
+      pdf.setFont("helvetica", "normal");
       pdf.setFontSize(10);
-      pdf.text(`WAKISSHA Exam Portal - ${new Date().toLocaleDateString()}`, 15, yPos);
-      yPos += 8;
+      pdf.text(`School Name: ${preferredSchool.name}`, margin, y);
+      y += 5;
+      pdf.text(`District: ${preferredSchool.district}`, margin, y);
+      y += 5;
+      pdf.text(`Zone: ${preferredSchool.zone}`, margin, y);
+      y += 5;
+      pdf.text(`Total Students: ${schoolStudents.length}`, margin, y);
+      y += 8;
 
-      // Table
-      const tableColumn = ["Subject", "Code", "Level", "Total Students", "Schools", "Average"];
-      const tableRows = subjectWiseData.map((row) => [
-        row.subject,
-        row.code,
-        row.level,
-        row.totalStudents.toString(),
-        row.schools.toString(),
-        row.average.toString(),
-      ]);
+      const subjectGroups = [
+        {
+          title: "Core Subjects",
+          keys: ["GP", "HIST", "ECON", "ENT", "MATH"],
+        },
+        {
+          title: "Sciences",
+          keys: ["PHY", "CHEM", "BIO", "AGRIC", "FN", "TD"],
+        },
+        {
+          title: "Languages",
+          keys: ["LIT", "KISWA", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA"],
+        },
+      ] as const;
 
+      for (const group of subjectGroups) {
+        if (y > 240) {
+          pdf.addPage();
+          y = 18;
+        }
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(11);
+        pdf.text(group.title, margin, y);
+        y += 5;
+
+        let xCol = margin;
+        let colY = y;
+        const colWidth = 86;
+
+        group.keys.forEach((key, index) => {
+          const subject = uaceSubjectColumns.find((subjectCol) => subjectCol.key === key);
+          if (!subject) return;
+
+          const metrics = [
+            ["Entries", String(row[`${key}_entries`] ?? 0)],
+            ["P1", String(row[`${key}_p1`] ?? 0)],
+            ["P2", String(row[`${key}_p2`] ?? 0)],
+            ["P3", String(row[`${key}_p3`] ?? 0)],
+            ["P4", String(row[`${key}_p4`] ?? 0)],
+          ];
+
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(9);
+          pdf.text(`SUBJECT: ${subject.label}`, xCol, colY);
+
+          autoTable(pdf, {
+            startY: colY + 1.5,
+            margin: { left: xCol, right: pageWidth - xCol - colWidth },
+            tableWidth: colWidth,
+            head: [["Metric", "Value"]],
+            body: metrics,
+            styles: {
+              fontSize: 8,
+              lineWidth: 0.2,
+              lineColor: [120, 120, 120],
+            },
+            headStyles: {
+              fillColor: [245, 247, 252],
+              textColor: [15, 23, 42],
+              fontStyle: "bold",
+            },
+          });
+
+          const endY = (pdf as any).lastAutoTable.finalY + 4;
+          const goNextColumn = index % 2 === 0;
+          if (goNextColumn) {
+            xCol = margin + colWidth + 8;
+          } else {
+            xCol = margin;
+            colY = endY;
+            if (colY > 235 && index < group.keys.length - 1) {
+              pdf.addPage();
+              colY = 18;
+            }
+          }
+        });
+
+        y = colY + 4;
+      }
+
+      if (y > 245) {
+        pdf.addPage();
+        y = 18;
+      }
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.text("Summary", margin, y);
+      y += 3;
       autoTable(pdf, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: yPos,
-        margin: { left: 15, right: 15 },
-        headStyles: {
-          fillColor: [22, 101, 174],
-          textColor: [255, 255, 255],
-          fontSize: 10,
-          fontStyle: "bold",
-        },
-        bodyStyles: {
-          fontSize: 9,
-          textColor: [50, 50, 50],
-        },
-        alternateRowStyles: {
-          fillColor: [240, 245, 250],
-        },
+        startY: y,
+        margin: { left: margin, right: margin },
+        head: [["Metric", "Value"]],
+        body: [
+          ["Total Students", String(schoolStudents.length)],
+          ["Total Entries", String(totalEntries)],
+          ["Total Subjects Registered", String(row.registeredSubjects ?? 0)],
+        ],
+        styles: { fontSize: 9, lineWidth: 0.2, lineColor: [120, 120, 120] },
+        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
       });
 
-      pdf.save(`${fileName}.pdf`);
-      toast.success("PDF exported successfully");
+      y = (pdf as any).lastAutoTable.finalY + 6;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.text("Fee Section", margin, y);
+      y += 3;
+      autoTable(pdf, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        head: [["Item", "Amount (UGX)"]],
+        body: [
+          ["School Fee", fee.schoolFee.toLocaleString()],
+          ["Student Fee", fee.studentFee.toLocaleString()],
+          ["Total Amount", fee.totalAmount.toLocaleString()],
+        ],
+        styles: { fontSize: 9, lineWidth: 0.2, lineColor: [120, 120, 120] },
+        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
+      });
+
+      pdf.save(`Readable-UACE-Summary-${preferredSchool.code}.pdf`);
+      toast.success("Readable summary PDF generated");
     } catch (error) {
-      toast.error("Failed to export PDF");
+      toast.error("Failed to generate readable summary PDF");
       console.error(error);
     }
   };
+
+  const getRowTotalEntries = (row: FormRow) =>
+    Object.keys(row)
+      .filter((key) => key.endsWith("_entries"))
+      .reduce((sum, key) => sum + Number(row[key] || 0), 0);
+
+  const generateReadableConsolidatedPDF = (rows: FormRow[], level: "UACE" | "UCE") => {
+    try {
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const margin = 14;
+      let y = 16;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(15);
+      pdf.text(`WAKISSHA ${level} CONSOLIDATED REPORT 2026`, 105, y, { align: "center" });
+      y += 8;
+
+      autoTable(pdf, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        head: [["Ref", "School", "District", "Zone", "Registered Subjects", "Total Entries"]],
+        body: rows.map((row) => [
+          String(row.refNo ?? ""),
+          String(row.schoolName ?? ""),
+          String(row.district ?? ""),
+          String(row.zone ?? ""),
+          String(row.registeredSubjects ?? 0),
+          String(getRowTotalEntries(row)),
+        ]),
+        styles: { fontSize: 9, lineWidth: 0.2, lineColor: [140, 140, 140] },
+        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
+      });
+
+      pdf.save(`Readable-${level}-Consolidated.pdf`);
+      toast.success("Readable consolidated PDF generated");
+    } catch (error) {
+      toast.error("Failed to export readable consolidated PDF");
+      console.error(error);
+    }
+  };
+
+  const generateReadableConsolidatedExcel = (rows: FormRow[], level: "UACE" | "UCE") => {
+    try {
+      const worksheet = XLSXUtils.json_to_sheet(
+        rows.map((row) => ({
+          Ref: row.refNo,
+          School: row.schoolName,
+          District: row.district,
+          Zone: row.zone,
+          RegisteredSubjects: row.registeredSubjects,
+          TotalEntries: getRowTotalEntries(row),
+        })),
+      );
+      const workbook = XLSXUtils.book_new();
+      XLSXUtils.book_append_sheet(workbook, worksheet, "Consolidated");
+      writeFile(workbook, `Readable-${level}-Consolidated.xlsx`);
+      toast.success("Readable consolidated Excel generated");
+    } catch (error) {
+      toast.error("Failed to export readable consolidated Excel");
+      console.error(error);
+    }
+  };
+
+  const generateReadableSubjectWisePDF = () => {
+    try {
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(15);
+      pdf.text("WAKISSHA SUBJECT-WISE REPORT 2026", 105, 16, { align: "center" });
+
+      autoTable(pdf, {
+        startY: 24,
+        margin: { left: 14, right: 14 },
+        head: [["Subject", "Code", "Level", "Total Students", "Schools", "Average Entries"]],
+        body: subjectWiseData.map((item) => [
+          item.subject,
+          item.code,
+          item.level,
+          String(item.totalStudents),
+          String(item.schools),
+          String(item.average),
+        ]),
+        styles: { fontSize: 9, lineWidth: 0.2, lineColor: [140, 140, 140] },
+        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
+      });
+
+      pdf.save("Readable-Subject-Wise-Report.pdf");
+      toast.success("Readable subject-wise PDF generated");
+    } catch (error) {
+      toast.error("Failed to export readable subject-wise PDF");
+      console.error(error);
+    }
+  };
+
+  const generateReadableSubjectWiseExcel = () => {
+    try {
+      const worksheet = XLSXUtils.json_to_sheet(subjectWiseData);
+      const workbook = XLSXUtils.book_new();
+      XLSXUtils.book_append_sheet(workbook, worksheet, "SubjectWise");
+      writeFile(workbook, "Readable-Subject-Wise-Report.xlsx");
+      toast.success("Readable subject-wise Excel generated");
+    } catch (error) {
+      toast.error("Failed to export readable subject-wise Excel");
+      console.error(error);
+    }
+  };
+
+  const generateReadableSingleSchoolPDF = () => {
+    try {
+      const selected = schools.find((school) => school.code === selectedSchool);
+      if (!selected) {
+        toast.error("Please select a school");
+        return;
+      }
+      const row = consolidatedRows.find((record) => record.schoolName === selected.name);
+      if (!row) {
+        toast.error("No data found for selected school");
+        return;
+      }
+
+      const subjectsColumns =
+        selected.educationLevel === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      let y = 16;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(15);
+      pdf.text("WAKISSHA SINGLE SCHOOL REPORT 2026", 105, y, { align: "center" });
+      y += 8;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.text(`School: ${selected.name}`, 14, y);
+      y += 5;
+      pdf.text(`Code: ${selected.code}   District: ${selected.district}   Zone: ${selected.zone}`, 14, y);
+      y += 7;
+
+      autoTable(pdf, {
+        startY: y,
+        margin: { left: 14, right: 14 },
+        head: [["Subject", "Entries", "P1", "P2", "P3", "P4"]],
+        body: subjectsColumns.map((subject) => [
+          subject.label,
+          String(row[`${subject.key}_entries`] ?? 0),
+          String(row[`${subject.key}_p1`] ?? 0),
+          String(row[`${subject.key}_p2`] ?? 0),
+          String(row[`${subject.key}_p3`] ?? 0),
+          String(row[`${subject.key}_p4`] ?? 0),
+        ]),
+        styles: { fontSize: 9, lineWidth: 0.2, lineColor: [140, 140, 140] },
+        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
+      });
+
+      pdf.save(`Readable-Single-School-${selected.code}.pdf`);
+      toast.success("Readable single school PDF generated");
+    } catch (error) {
+      toast.error("Failed to export readable single school PDF");
+      console.error(error);
+    }
+  };
+
+  const generateReadableSingleSchoolExcel = () => {
+    try {
+      const selected = schools.find((school) => school.code === selectedSchool);
+      if (!selected) {
+        toast.error("Please select a school");
+        return;
+      }
+      const row = consolidatedRows.find((record) => record.schoolName === selected.name);
+      if (!row) {
+        toast.error("No data found for selected school");
+        return;
+      }
+      const subjectsColumns =
+        selected.educationLevel === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
+      const worksheet = XLSXUtils.json_to_sheet(
+        subjectsColumns.map((subject) => ({
+          Subject: subject.label,
+          Entries: row[`${subject.key}_entries`] ?? 0,
+          P1: row[`${subject.key}_p1`] ?? 0,
+          P2: row[`${subject.key}_p2`] ?? 0,
+          P3: row[`${subject.key}_p3`] ?? 0,
+          P4: row[`${subject.key}_p4`] ?? 0,
+        })),
+      );
+      const workbook = XLSXUtils.book_new();
+      XLSXUtils.book_append_sheet(workbook, worksheet, "SingleSchool");
+      writeFile(workbook, `Readable-Single-School-${selected.code}.xlsx`);
+      toast.success("Readable single school Excel generated");
+    } catch (error) {
+      toast.error("Failed to export readable single school Excel");
+      console.error(error);
+    }
+  };
+
+  const generateOfficialFormExcel = (
+    level: "UACE" | "UCE",
+    rows: FormRow[],
+    fileName: string,
+  ) => {
+    try {
+      const subjectsColumns = level === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
+      const headerRow = [
+        ...formBaseColumns.map((col) => col.label),
+        ...subjectsColumns.flatMap((subject) =>
+          entryColumns.map((entry) => `${subject.label}-${entry.label}`),
+        ),
+      ];
+      const bodyRows = buildTemplateTable(rows, subjectsColumns);
+      const worksheet = XLSXUtils.aoa_to_sheet([
+        [`WAKISSHA JOINT MOCK ${level} SUMMARY 2026`],
+        headerRow,
+        ...bodyRows,
+      ]);
+      const workbook = XLSXUtils.book_new();
+      XLSXUtils.book_append_sheet(workbook, worksheet, "Sheet1");
+      writeFile(workbook, `${fileName}.xlsx`);
+      toast.success(`${level} official form exported successfully`);
+    } catch (error) {
+      toast.error("Failed to export Excel");
+      console.error(error);
+    }
+  };
+
+  const generateUACEFormExcel = (rows: FormRow[], fileName: string) =>
+    generateOfficialFormExcel("UACE", rows, fileName);
+
+  const generateUCEFormExcel = (rows: FormRow[], fileName: string) =>
+    generateOfficialFormExcel("UCE", rows, fileName);
 
   const exportSingleSchoolToPDF = (fileName: string) => {
     try {
@@ -504,61 +795,16 @@ export function Reports({ onPageChange }: ReportsProps) {
         return;
       }
 
-      const profileData =
-        schoolReportProfiles[selected.code] ||
-        schoolReportProfiles["WAK26-0001"];
-
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      let yPos = 15;
-
-      // Header
-      pdf.setFontSize(16);
-      pdf.text("Single School Report", pageWidth / 2, yPos, { align: "center" });
-      yPos += 10;
-
-      // School Details
-      pdf.setFontSize(11);
-      pdf.text(`School: ${selected.name}`, 15, yPos);
-      yPos += 7;
-      pdf.setFontSize(10);
-      pdf.text(`Code: ${selected.code}`, 15, yPos);
-      yPos += 6;
-      pdf.text(`District: ${selected.district}`, 15, yPos);
-      yPos += 6;
-      pdf.text(`Total Students: ${profileData.totalStudents}`, 15, yPos);
-      yPos += 6;
-      pdf.text(`Subjects Registered: ${profileData.subjectsRegistered}`, 15, yPos);
-      yPos += 6;
-      pdf.text(`Fees Status: ${selected.status}`, 15, yPos);
-      yPos += 6;
-      pdf.text(`Last Updated: ${profileData.lastUpdated}`, 15, yPos);
-      yPos += 10;
-
-      // Report Note
-      pdf.setFontSize(9);
-      pdf.text("Report Note:", 15, yPos);
-      yPos += 5;
-      const splitText = pdf.splitTextToSize(profileData.reportNote, 180);
-      pdf.text(splitText, 15, yPos);
-
-      pdf.save(`${fileName}.pdf`);
-      toast.success("PDF exported successfully");
+      const targetLevel: "UACE" | "UCE" =
+        selected.educationLevel === "UACE" ? "UACE" : "UCE";
+      const row = consolidatedRows.find((record) => record.schoolName === selected.name);
+      if (!row) {
+        toast.error("No data found for selected school");
+        return;
+      }
+      generateOfficialFormPDF(targetLevel, [row], fileName);
     } catch (error) {
       toast.error("Failed to export PDF");
-      console.error(error);
-    }
-  };
-
-  const exportToExcel = (data: any[], fileName: string) => {
-    try {
-      const worksheet = XLSXUtils.json_to_sheet(data);
-      const workbook = XLSXUtils.book_new();
-      XLSXUtils.book_append_sheet(workbook, worksheet, "Report");
-      writeFile(workbook, `${fileName}.xlsx`);
-      toast.success("Excel file exported successfully");
-    } catch (error) {
-      toast.error("Failed to export Excel");
       console.error(error);
     }
   };
@@ -570,96 +816,36 @@ export function Reports({ onPageChange }: ReportsProps) {
 
     try {
       if (reportType === "UACE Consolidated") {
+        const levelToExport: "UACE" | "UCE" =
+          educationLevelFilter === "UCE" ? "UCE" : "UACE";
+        const rowsForLevel = consolidatedRows.filter((row) => {
+          const school = schools.find((record) => record.name === row.schoolName);
+          if (!school) return false;
+          if (levelToExport === "UACE") {
+            return school.educationLevel === "UACE" || school.educationLevel === "BOTH";
+          }
+          return school.educationLevel === "UCE" || school.educationLevel === "BOTH";
+        });
         if (format === "pdf") {
-          exportConsolidatedToPDF("UACE-Consolidated-Report");
+          generateReadableConsolidatedPDF(rowsForLevel, levelToExport);
         } else {
-          exportToExcel(
-            consolidatedRows.map((row) => ({
-              "Ref No": row["Ref No"],
-              "School Name": row["School Name"],
-              District: row.District,
-              "Zone/Centre": row["Zone/Centre"],
-              GP: row.GP,
-              "S/Maths": row["S/Maths"],
-              Maths: row.Maths,
-              PHY: row.PHY,
-              Chem: row.Chem,
-              BIO: row.BIO,
-            })),
-            "UACE-Consolidated-Report"
-          );
+          generateReadableConsolidatedExcel(rowsForLevel, levelToExport);
         }
       } else if (reportType === "Subject-Wise") {
         if (format === "pdf") {
-          exportSubjectWiseToPDF("Subject-Wise-Report");
+          generateReadableSubjectWisePDF();
         } else {
-          exportToExcel(subjectWiseData, "Subject-Wise-Report");
+          generateReadableSubjectWiseExcel();
         }
       } else if (reportType === "Quick Summary") {
-        exportToExcel(
-          [
-            {
-              Metric: "Registered Schools",
-              Value: schools.length,
-            },
-            {
-              Metric: "Total Students",
-              Value: schools.reduce((sum, school) => sum + school.students, 0),
-            },
-            {
-              Metric: "Active Schools",
-              Value: schools.filter((s) => s.status === "active").length,
-            },
-          ],
-          "Quick-Summary"
-        );
+        generateUACEFormExcel(consolidatedRows, "UACE-quick-summary");
+      } else if (reportType === "Readable Summary") {
+        generateReadableSummaryPDF();
       } else if (reportType === "Single School") {
         if (format === "pdf") {
-          exportSingleSchoolToPDF("Single-School-Report");
+          generateReadableSingleSchoolPDF();
         } else {
-          const selected = schools.find((s) => s.code === selectedSchool);
-          if (selected) {
-            const profileData =
-              schoolReportProfiles[selected.code] ||
-              schoolReportProfiles["WAK26-0001"];
-            exportToExcel(
-              [
-                {
-                  Field: "School Name",
-                  Value: selected.name,
-                },
-                {
-                  Field: "School Code",
-                  Value: selected.code,
-                },
-                {
-                  Field: "District",
-                  Value: selected.district,
-                },
-                {
-                  Field: "Zone",
-                  Value: selected.zone,
-                },
-                {
-                  Field: "Total Students",
-                  Value: profileData.totalStudents,
-                },
-                {
-                  Field: "Subjects Registered",
-                  Value: profileData.subjectsRegistered,
-                },
-                {
-                  Field: "Fees Status",
-                  Value: selected.status,
-                },
-                {
-                  Field: "Last Updated",
-                  Value: profileData.lastUpdated,
-                },
-              ],
-              `Single-School-${selected.code}`
-            );
-          }
+          generateReadableSingleSchoolExcel();
         }
       }
     } finally {
@@ -668,13 +854,13 @@ export function Reports({ onPageChange }: ReportsProps) {
   };
 
   return (
-    <div className="flex flex-col w-full gap-6">
+    <div className="flex flex-col w-full gap-6 anim-fade-up">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
             Reporting Centre
           </p>
-          <h1 className="text-3xl font-bold text-slate-900">Reports</h1>
+          <h1 className="text-3xl font-bold text-shimmer">Reports</h1>
           <p className="max-w-3xl text-slate-500">
             Generate UACE consolidated exports, subject-wise breakdowns, and
             dynamic single-school reports for the Phase 1 frontend demo.
@@ -686,10 +872,10 @@ export function Reports({ onPageChange }: ReportsProps) {
           </Button>
           <Button
             variant="outline"
-            onClick={() => handleExport("pdf", "Quick Summary")}
-            disabled={isExporting("pdf", "Quick Summary")}
+            onClick={() => handleExport("pdf", "Readable Summary")}
+            disabled={isExporting("pdf", "Readable Summary")}
           >
-            {isExporting("pdf", "Quick Summary") ? (
+            {isExporting("pdf", "Readable Summary") ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Generating...
@@ -697,7 +883,7 @@ export function Reports({ onPageChange }: ReportsProps) {
             ) : (
               <>
                 <Download className="h-4 w-4" />
-                Quick Export
+                User-Friendly PDF
               </>
             )}
           </Button>
@@ -730,11 +916,10 @@ export function Reports({ onPageChange }: ReportsProps) {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <CardTitle className="text-slate-900">
-                    UACE Consolidated Report
+                    Official Summary Form ({educationLevelFilter === "UCE" ? "UCE" : "UACE"})
                   </CardTitle>
                   <CardDescription className="text-slate-500">
-                    Full subject-by-subject consolidated sheet formatted for
-                    WAKISSHA UACE reporting.
+                    Client template-locked export with fixed columns and fee section.
                   </CardDescription>
                 </div>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -790,29 +975,28 @@ export function Reports({ onPageChange }: ReportsProps) {
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="w-full max-w-full overflow-x-auto bg-white shadow-sm border border-slate-200 rounded-2xl" ref={consolidatedTableRef}>
+              <div className="w-full max-w-full overflow-x-auto bg-white shadow-sm border border-slate-200 rounded-2xl">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {uaceHeaders.map((header) => (
-                        <TableHead key={header} className="whitespace-nowrap">
-                          {header}
+                      {[...formBaseColumns, ...(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns)].map((header) => (
+                        <TableHead key={header.key} className="whitespace-nowrap">
+                          {header.label}
                         </TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {consolidatedRows.map((row) => (
-                      <TableRow key={row["Ref No"]}>
-                        {uaceHeaders.map((header) => (
-                          <TableCell
-                            key={`${row["Ref No"]}-${header}`}
-                            className={
-                              header === "School Name" ? "font-semibold text-slate-900" : ""
-                            }
-                          >
-                            {row[header]}
-                          </TableCell>
+                    {consolidatedRows.map((row, idx) => (
+                      <TableRow key={`${row.schoolName}-${idx}`}>
+                        <TableCell>{row.refNo}</TableCell>
+                        <TableCell className="font-semibold text-slate-900">{row.schoolName}</TableCell>
+                        <TableCell>{row.district}</TableCell>
+                        <TableCell>{row.zone}</TableCell>
+                        <TableCell>{row.registeredSubjects}</TableCell>
+                        <TableCell>{row.telephone}</TableCell>
+                        {(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns).map((subject) => (
+                          <TableCell key={`${subject.key}-${idx}`}>{row[`${subject.key}_entries`] ?? 0}</TableCell>
                         ))}
                       </TableRow>
                     ))}
@@ -875,7 +1059,7 @@ export function Reports({ onPageChange }: ReportsProps) {
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <div ref={subjectWiseTableRef}>
+              <div>
                 <Table>
                 <TableHeader>
                   <TableRow>

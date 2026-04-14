@@ -18,13 +18,7 @@ import {
 } from "../ui/dialog";
 import { useAuth, type SchoolRecord, type SchoolStatus } from "../auth-context";
 import { toast } from "sonner";
-import {
-  CreditCard,
-  Eye,
-  Loader2,
-  MailCheck,
-  ShieldCheck,
-} from "lucide-react";
+import { CreditCard, Eye, Loader2, MailCheck, ShieldCheck, KeyRound } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -78,6 +72,7 @@ export function PaymentsVerification({
   const { schools, updateSchoolStatus } = useAuth();
   const [activeFilter, setActiveFilter] = useState<"all" | SchoolStatus>("all");
   const [selectedSchool, setSelectedSchool] = useState<SchoolRecord | null>(null);
+  const [activationCode, setActivationCode] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const filteredSchools = useMemo(() => {
@@ -118,21 +113,31 @@ export function PaymentsVerification({
     });
   };
 
-  const handleVerifyAndActivate = () => {
+  const handleVerifyPayment = () => {
     if (!selectedSchool) return;
 
     setIsProcessing(true);
 
     setTimeout(() => {
-      const activationCode = buildActivationCode(selectedSchool.code);
-      updateSchoolStatus(selectedSchool.code, "active", activationCode);
+      const nextCode = buildActivationCode(selectedSchool.code);
+      updateSchoolStatus(selectedSchool.code, "verified");
+      setActivationCode(nextCode);
       setIsProcessing(false);
-      setSelectedSchool(null);
 
-      toast.success("Payment Verified. Activation code and email sent to the school.", {
-        description: `${selectedSchool.name} is now active with code ${activationCode}.`,
+      toast.success("Payment verified successfully.", {
+        description: `${selectedSchool.name} moved to verified status.`,
       });
     }, 1500);
+  };
+
+  const handleActivateSchool = () => {
+    if (!selectedSchool || !activationCode) return;
+    updateSchoolStatus(selectedSchool.code, "active", activationCode);
+    toast.success("School activated", {
+      description: `${selectedSchool.name} activated with code ${activationCode}.`,
+    });
+    setActivationCode("");
+    setSelectedSchool(null);
   };
 
   return (
@@ -244,7 +249,7 @@ export function PaymentsVerification({
                     {school.status === "payment_submitted" ? (
                       <Button size="sm" onClick={() => setSelectedSchool(school)}>
                         <ShieldCheck className="h-4 w-4" />
-                        Verify &amp; Activate
+                        Verify Payment
                       </Button>
                     ) : school.status === "active" ? (
                       <div className="text-sm text-slate-500">
@@ -271,6 +276,7 @@ export function PaymentsVerification({
         onOpenChange={(open) => {
           if (!isProcessing && !open) {
             setSelectedSchool(null);
+            setActivationCode("");
           }
         }}
       >
@@ -279,7 +285,9 @@ export function PaymentsVerification({
             <DialogTitle>Confirm Verification</DialogTitle>
             <DialogDescription>
               {selectedSchool
-                ? `Verify payment for ${selectedSchool.name} and activate the account with a generated activation code.`
+                ? activationCode
+                  ? `Payment verified for ${selectedSchool.name}. Confirm activation with generated code.`
+                  : `Verify payment for ${selectedSchool.name}.`
                 : "Verify this school payment submission."}
             </DialogDescription>
           </DialogHeader>
@@ -290,17 +298,23 @@ export function PaymentsVerification({
                 {isProcessing ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <CreditCard className="h-5 w-5" />
+                  activationCode ? <KeyRound className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />
                 )}
               </div>
               <div className="space-y-1">
                 <p className="font-semibold text-slate-900">
-                  {isProcessing ? "Processing verification..." : "Ready to activate"}
+                  {isProcessing
+                    ? "Processing verification..."
+                    : activationCode
+                      ? "Activation code generated"
+                      : "Ready to verify"}
                 </p>
                 <p className="text-sm text-slate-500">
                   {isProcessing
-                    ? "Reviewing payment proof, generating activation code, and preparing confirmation email."
-                    : "This will update the school status to active and send the activation details by email."}
+                    ? "Reviewing payment proof and updating payment status."
+                    : activationCode
+                      ? `Activation Code: ${activationCode}`
+                      : "This will update school status to verified."}
                 </p>
               </div>
             </div>
@@ -314,7 +328,10 @@ export function PaymentsVerification({
             >
               Cancel
             </Button>
-            <Button onClick={handleVerifyAndActivate} disabled={isProcessing}>
+            <Button
+              onClick={activationCode ? handleActivateSchool : handleVerifyPayment}
+              disabled={isProcessing}
+            >
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -322,8 +339,8 @@ export function PaymentsVerification({
                 </>
               ) : (
                 <>
-                  <ShieldCheck className="h-4 w-4" />
-                  Confirm Verification
+                  {activationCode ? <KeyRound className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                  {activationCode ? "Activate School" : "Confirm Verification"}
                 </>
               )}
             </Button>

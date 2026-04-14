@@ -26,39 +26,43 @@ interface SchoolDashboardProps {
 }
 
 export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
-  const { user } = useAuth();
+  const { user, students, subjects, zones } = useAuth();
+  const schoolStudents = students.filter((student) => student.schoolCode === user?.schoolCode);
+  const uceStudents = schoolStudents.filter((student) => student.examLevel === "UCE").length;
+  const uaceStudents = schoolStudents.filter((student) => student.examLevel === "UACE").length;
+  const schoolSubjectsCount = new Set(schoolStudents.map((student) => student.subjectCode)).size;
+  const zoneDetails = zones.find((zone) => zone.name === user?.zone);
 
   const stats = [
     {
       title: "Registered Students",
-      value: "85",
+      value: String(schoolStudents.length),
       subtitle: "Across all levels",
       icon: Users,
       borderClass: "border-l-red-600",
       iconClass: "bg-red-600/10 text-red-600",
     },
     {
-      title: "Selected Subjects",
-      value: "12",
-      subtitle: "Different subjects",
+      title: "UCE Students",
+      value: String(uceStudents),
+      subtitle: "O Level candidates",
       icon: BookOpen,
       borderClass: "border-l-amber-500",
       iconClass:
         "bg-amber-500/10 text-amber-600",
     },
     {
-      title: "Total Entries",
-      value: "247",
-      subtitle: "Individual entries",
+      title: "UACE Students",
+      value: String(uaceStudents),
+      subtitle: "A Level candidates",
       icon: CheckCircle,
       borderClass: "border-l-blue-500",
       iconClass: "bg-blue-500/10 text-blue-600",
     },
     {
-      title: "Payment Amount",
-      value: "2,550,000 UGX",
-      subtitle:
-        user?.status === "active" ? "Verified" : "Awaiting activation step",
+      title: "Subjects Count",
+      value: String(schoolSubjectsCount || subjects.length),
+      subtitle: "Unique selected subjects",
       icon: CreditCard,
       borderClass: "border-l-orange-500",
       iconClass:
@@ -121,14 +125,14 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const completionPercentage = (completedSteps / completionSteps.length) * 100;
 
   return (
-    <div className="flex flex-col w-full gap-6">
+    <div className="flex flex-col w-full gap-6 anim-fade-up">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
             School Workspace
           </p>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">School Dashboard</h1>
+            <h1 className="text-3xl font-bold text-shimmer">School Dashboard</h1>
             <p className="mt-2 max-w-2xl text-slate-500">
               Welcome back, {user?.name}. Track registration progress, subject
               entries, payment status, and your examination timetable from one
@@ -182,7 +186,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
           const Icon = stat.icon;
 
           return (
-            <Card key={stat.title} className={`border-l-4 ${stat.borderClass}`}>
+            <Card key={stat.title} className={`border-l-4 ${stat.borderClass} transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-md`}>
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-3">
@@ -375,16 +379,16 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
             </div>
             <div className="mt-4 flex items-start gap-4">
               <div className="h-14 w-14 rounded-full bg-white border border-blue-200 text-blue-600 flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                GN
+                {zoneDetails?.leaderName?.split(" ").map((name) => name[0]).slice(0, 2).join("") || "ZN"}
               </div>
               <div>
                 <p className="text-lg font-semibold text-slate-900">
-                  Ms. Grace Nalwanga
+                  {zoneDetails?.leaderName || "Zone Leader"}
                 </p>
-                <p className="text-sm text-slate-600 mt-1">Central Zone Coordinator</p>
+                <p className="text-sm text-slate-600 mt-1">{zoneDetails?.name || "Current Zone"} Coordinator</p>
                 <div className="mt-3 space-y-1 text-sm">
-                  <p className="text-slate-700"><span className="font-medium">Phone:</span> <a href="tel:+256700200115" className="text-blue-600 hover:underline">+256 700 200 115</a></p>
-                  <p className="text-slate-700"><span className="font-medium">Email:</span> <a href="mailto:grace.nalwanga@wakissha.org" className="text-blue-600 hover:underline">grace.nalwanga@wakissha.org</a></p>
+                  <p className="text-slate-700"><span className="font-medium">Phone:</span> <a href={`tel:${zoneDetails?.leaderPhone || ""}`} className="text-blue-600 hover:underline">{zoneDetails?.leaderPhone || "N/A"}</a></p>
+                  <p className="text-slate-700"><span className="font-medium">Email:</span> <a href={`mailto:${zoneDetails?.leaderEmail || ""}`} className="text-blue-600 hover:underline">{zoneDetails?.leaderEmail || "N/A"}</a></p>
                 </div>
               </div>
             </div>
@@ -401,14 +405,14 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
             </div>
             <div className="mt-4">
               <p className="text-lg font-semibold text-slate-900">
-                Secretariat Desk
+                {zoneDetails?.secretariatName || "Secretariat Desk"}
               </p>
               <p className="text-sm text-slate-600 mt-1">
                 Registration & Exam Support
               </p>
               <div className="mt-4 space-y-1 text-sm">
-                <p className="text-slate-700"><span className="font-medium">Phone:</span> <a href="tel:+256700100420" className="text-red-600 hover:underline">+256 700 100 420</a></p>
-                <p className="text-slate-700"><span className="font-medium">Email:</span> <a href="mailto:secretariat@wakissha.org" className="text-red-600 hover:underline">secretariat@wakissha.org</a></p>
+                <p className="text-slate-700"><span className="font-medium">Phone:</span> <a href={`tel:${zoneDetails?.secretariatPhone || ""}`} className="text-red-600 hover:underline">{zoneDetails?.secretariatPhone || "+256 700 100 420"}</a></p>
+                <p className="text-slate-700"><span className="font-medium">Email:</span> <a href={`mailto:${zoneDetails?.secretariatEmail || "secretariat@wakissha.org"}`} className="text-red-600 hover:underline">{zoneDetails?.secretariatEmail || "secretariat@wakissha.org"}</a></p>
               </div>
             </div>
           </div>
