@@ -37,7 +37,7 @@ import { useAuth } from "../auth-context";
 import { jsPDF } from "jspdf";
 import { utils as XLSXUtils, writeFile } from "xlsx";
 import html2canvas from "html2canvas";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 interface ReportsProps {
   onPageChange: (page: string) => void;
@@ -388,7 +388,6 @@ export function Reports({ onPageChange }: ReportsProps) {
       });
 
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
       let yPos = 15;
 
       // Title
@@ -404,13 +403,12 @@ export function Reports({ onPageChange }: ReportsProps) {
       yPos += 8;
 
       // Table
-      pdf.setFontSize(9);
-      const tableColumn = uaceHeaders.slice(0, 10); // Limit columns for readability
+      const tableColumn = uaceHeaders.slice(0, 10);
       const tableRows = consolidatedRows.map((row) =>
         tableColumn.map((col) => row[col])
       );
 
-      (pdf as any).autoTable({
+      autoTable(pdf, {
         head: [tableColumn],
         body: tableRows,
         startY: yPos,
@@ -470,7 +468,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         row.average.toString(),
       ]);
 
-      (pdf as any).autoTable({
+      autoTable(pdf, {
         head: [tableColumn],
         body: tableRows,
         startY: yPos,
