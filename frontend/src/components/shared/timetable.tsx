@@ -24,6 +24,9 @@ import {
   TableRow,
 } from "../ui/table";
 import { toast } from "sonner";
+import { useState } from "react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface TimetableProps {
   onPageChange: (page: string) => void;
@@ -359,8 +362,86 @@ function SchedulePanel({
 }
 
 export function Timetable({ onPageChange }: TimetableProps) {
-  const handleExport = (level: "UCE" | "UACE") => {
-    toast.success(`${level} timetable ready for demo download.`);
+  const [isExporting, setIsExporting] = useState<"UCE" | "UACE" | null>(null);
+
+  const handleExport = async (level: "UCE" | "UACE") => {
+    try {
+      setIsExporting(level);
+      const schedule = level === "UCE" ? uceSchedule : uaceSchedule;
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let yPos = 15;
+
+      // Header
+      pdf.setFontSize(18);
+      pdf.text(`${level} Examination Timetable`, pageWidth / 2, yPos, {
+        align: "center",
+      });
+      yPos += 8;
+
+      // Metadata
+      pdf.setFontSize(10);
+      pdf.text(`WAKISSHA - ${new Date().toLocaleDateString()}`, 15, yPos);
+      yPos += 8;
+
+      // Table
+      const tableColumns = [
+        "Date",
+        "Day",
+        "Subject",
+        "Code",
+        "Paper",
+        "Time",
+        "Duration",
+        "Venue",
+      ];
+      const tableRows = schedule.map((exam) => [
+        new Date(exam.date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        exam.day,
+        exam.subject,
+        exam.code,
+        exam.paper,
+        exam.time,
+        exam.duration,
+        exam.venue,
+      ]);
+
+      autoTable(pdf, {
+        head: [tableColumns],
+        body: tableRows,
+        startY: yPos,
+        margin: { left: 10, right: 10 },
+        headStyles: {
+          fillColor: level === "UCE" ? [59, 130, 246] : [34, 197, 94],
+          textColor: [255, 255, 255],
+          fontSize: 9,
+          fontStyle: "bold",
+        },
+        bodyStyles: {
+          fontSize: 8,
+        },
+        alternateRowStyles: {
+          fillColor: [240, 245, 250],
+        },
+        columnStyles: {
+          0: { cellWidth: 15 },
+          1: { cellWidth: 15 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 15 },
+        },
+      });
+
+      pdf.save(`${level}-timetable-${new Date().getTime()}.pdf`);
+      toast.success(`${level} timetable downloaded successfully`);
+    } catch (error) {
+      toast.error(`Failed to export ${level} timetable`);
+      console.error(error);
+    } finally {
+      setIsExporting(null);
+    }
   };
 
   return (
@@ -393,9 +474,13 @@ export function Timetable({ onPageChange }: TimetableProps) {
 
         <TabsContent value="uce" className="w-full space-y-6">
           <div className="flex justify-end">
-            <Button variant="outline" onClick={() => handleExport("UCE")}>
+            <Button
+              variant="outline"
+              onClick={() => handleExport("UCE")}
+              disabled={isExporting === "UCE"}
+            >
               <Download className="h-4 w-4" />
-              Export UCE PDF
+              {isExporting === "UCE" ? "Exporting..." : "Export UCE PDF"}
             </Button>
           </div>
           <SchedulePanel
@@ -407,9 +492,13 @@ export function Timetable({ onPageChange }: TimetableProps) {
 
         <TabsContent value="uace" className="w-full space-y-6">
           <div className="flex justify-end">
-            <Button variant="outline" onClick={() => handleExport("UACE")}>
+            <Button
+              variant="outline"
+              onClick={() => handleExport("UACE")}
+              disabled={isExporting === "UACE"}
+            >
               <Download className="h-4 w-4" />
-              Export UACE PDF
+              {isExporting === "UACE" ? "Exporting..." : "Export UACE PDF"}
             </Button>
           </div>
           <SchedulePanel
