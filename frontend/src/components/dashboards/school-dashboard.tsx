@@ -1,0 +1,410 @@
+import {
+  BookOpen,
+  CheckCircle,
+  Clock,
+  CreditCard,
+  AlertTriangle,
+  Calendar,
+  Upload,
+  Users,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Progress } from "../ui/progress";
+import { useAuth } from "../auth-context";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+
+interface SchoolDashboardProps {
+  onPageChange: (page: string) => void;
+}
+
+export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
+  const { user } = useAuth();
+
+  const stats = [
+    {
+      title: "Registered Students",
+      value: "85",
+      subtitle: "Across all levels",
+      icon: Users,
+      borderClass: "border-l-red-600",
+      iconClass: "bg-red-600/10 text-red-600 dark:bg-red-600/15 dark:text-red-400",
+    },
+    {
+      title: "Selected Subjects",
+      value: "12",
+      subtitle: "Different subjects",
+      icon: BookOpen,
+      borderClass: "border-l-amber-500",
+      iconClass:
+        "bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400",
+    },
+    {
+      title: "Total Entries",
+      value: "247",
+      subtitle: "Individual entries",
+      icon: CheckCircle,
+      borderClass: "border-l-blue-500",
+      iconClass: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400",
+    },
+    {
+      title: "Payment Amount",
+      value: "2,550,000 UGX",
+      subtitle:
+        user?.status === "active" ? "Verified" : "Awaiting activation step",
+      icon: CreditCard,
+      borderClass: "border-l-orange-500",
+      iconClass:
+        user?.status === "active"
+          ? "bg-green-500/10 text-green-600 dark:bg-green-500/15 dark:text-green-400"
+          : "bg-orange-500/10 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400",
+    },
+  ];
+
+  const subjectSummary = [
+    { subject: "Mathematics", code: "MATH101", entries: 45, level: "Advanced" },
+    {
+      subject: "English Language",
+      code: "ENG101",
+      entries: 52,
+      level: "Standard",
+    },
+    { subject: "Physics", code: "PHY101", entries: 28, level: "Advanced" },
+    { subject: "Chemistry", code: "CHEM101", entries: 31, level: "Advanced" },
+    { subject: "Biology", code: "BIO101", entries: 35, level: "Advanced" },
+    { subject: "History", code: "HIST101", entries: 22, level: "Standard" },
+  ];
+
+  const upcomingExams = [
+    {
+      subject: "Mathematics",
+      date: "2026-05-15",
+      time: "09:00 AM",
+      duration: "3 hours",
+    },
+    {
+      subject: "English Language",
+      date: "2026-05-16",
+      time: "09:00 AM",
+      duration: "2.5 hours",
+    },
+    {
+      subject: "Physics",
+      date: "2026-05-18",
+      time: "09:00 AM",
+      duration: "3 hours",
+    },
+  ];
+
+  const completionSteps = [
+    { label: "School Registration", completed: true },
+    { label: "Add Students", completed: true },
+    { label: "Subject Entries", completed: true },
+    {
+      label: "Payment Submission",
+      completed:
+        user?.status === "active" ||
+        user?.status === "verified" ||
+        user?.status === "payment_submitted",
+    },
+    { label: "Signed Form Upload", completed: user?.status === "active" },
+  ];
+
+  const completedSteps = completionSteps.filter((step) => step.completed).length;
+  const completionPercentage = (completedSteps / completionSteps.length) * 100;
+
+  return (
+    <div className="flex flex-col w-full gap-6">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-red-400">
+            School Workspace
+          </p>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">School Dashboard</h1>
+            <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">
+              Welcome back, {user?.name}. Track registration progress, subject
+              entries, payment status, and your examination timetable from one
+              place.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white dark:border-[#1e1e2e] dark:bg-[#13131e] px-4 py-3 text-sm text-slate-500 dark:text-[#94a3b8] shadow-sm">
+          Academic year:{" "}
+          <span className="font-semibold text-slate-900 dark:text-white">
+            {user?.academicYear ?? "2026"}
+          </span>
+        </div>
+      </div>
+
+      {user?.status === "pending" && (
+        <Alert variant="warning">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Account Pending Verification</AlertTitle>
+          <AlertDescription>
+            Your account is awaiting payment review. Some actions may remain
+            limited until verification is complete.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {user?.status === "verified" && (
+        <Alert variant="info">
+          <Clock className="h-4 w-4" />
+          <AlertTitle>Payment Confirmed</AlertTitle>
+          <AlertDescription>
+            Your payment has been confirmed and your school is awaiting final
+            activation.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {user?.status === "active" && (
+        <Alert variant="success">
+          <CheckCircle className="h-4 w-4" />
+          <AlertTitle>Portal Fully Active</AlertTitle>
+          <AlertDescription>
+            Your registration is complete and all school portal features are
+            available.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+
+          return (
+            <Card key={stat.title} className={`border-l-4 ${stat.borderClass}`}>
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                      {stat.title}
+                    </p>
+                    <div className="space-y-1">
+                      <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                        {stat.value}
+                      </p>
+                      <p className="text-sm text-slate-500 dark:text-[#94a3b8]">{stat.subtitle}</p>
+                    </div>
+                  </div>
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-2xl ${stat.iconClass}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-col w-full gap-6">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-slate-900 dark:text-white">Submission Progress</CardTitle>
+            <CardDescription className="text-slate-600 dark:text-slate-400">
+              Complete each step to finalise registration
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 dark:bg-[#13131e] dark:border-[#1e1e2e] p-4">
+              <div className="mb-3 flex items-center justify-between text-sm">
+                <span className="text-slate-600 dark:text-slate-400">Completion</span>
+                <span className="font-semibold text-slate-900 dark:text-white">
+                  {completedSteps}/{completionSteps.length}
+                </span>
+              </div>
+              <Progress value={completionPercentage} className="h-2.5" />
+            </div>
+
+            <div className="space-y-3">
+              {completionSteps.map((step, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] px-4 py-3 shadow-sm"
+                >
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                      step.completed
+                        ? "bg-green-500/10 text-green-600 dark:bg-green-500/15 dark:text-green-300"
+                        : "bg-slate-100 text-slate-500 dark:bg-white/[0.06] dark:text-slate-400"
+                    }`}
+                  >
+                    {step.completed ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <span className="text-xs font-semibold">{index + 1}</span>
+                    )}
+                  </div>
+                  <span
+                    className={`text-sm ${
+                      step.completed ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {user?.status !== "active" && (
+              <Button className="w-full" onClick={() => onPageChange("payment-status")}>
+                Continue Registration
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="w-full">
+          <CardHeader className="border-b border-border">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <CardTitle className="text-slate-900 dark:text-white">Selected Subjects</CardTitle>
+                <CardDescription className="text-slate-600 dark:text-slate-400">
+                  Overview of registered subject entries
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full lg:w-auto"
+                onClick={() => onPageChange("students")}
+              >
+                Manage Subject Entries
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-6">
+            {subjectSummary.map((item) => (
+              <div
+                key={item.code}
+                className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4 transition-colors hover:bg-slate-50 dark:hover:bg-[#1a1a26]"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-red-500" />
+                    <span className="truncate font-semibold text-slate-900 dark:text-white">
+                      {item.subject}
+                    </span>
+                    <Badge variant="secondary">{item.code}</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                    {item.level} Level
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-semibold text-slate-900 dark:text-white">
+                    {item.entries}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">entries</div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="w-full">
+        <CardHeader className="border-b border-border">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle className="text-slate-900 dark:text-white">Timetable Preview</CardTitle>
+              <CardDescription className="text-slate-600 dark:text-slate-400">
+                Upcoming examinations for your school
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange("timetable")}
+            >
+              View Full Timetable
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="grid gap-4 lg:grid-cols-3">
+            {upcomingExams.map((exam, index) => (
+              <div
+                key={index}
+                className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4 shadow-sm"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600 dark:bg-red-600/15 dark:text-red-400">
+                    <Calendar className="h-4 w-4" />
+                  </div>
+                  <Badge variant="info">Upcoming</Badge>
+                </div>
+                <h4 className="font-semibold text-slate-900 dark:text-white">{exam.subject}</h4>
+                <div className="mt-3 space-y-1 text-sm text-slate-600 dark:text-slate-400">
+                  <p>Date: {new Date(exam.date).toLocaleDateString()}</p>
+                  <p>Time: {exam.time}</p>
+                  <p>Duration: {exam.duration}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Button
+          variant="outline"
+          className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
+          onClick={() => onPageChange("add-student")}
+        >
+          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600 dark:bg-red-600/15 dark:text-red-400">
+            <Users className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="font-semibold text-foreground">Add Student</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Register a new candidate for examination entries
+            </div>
+          </div>
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
+          onClick={() => onPageChange("upload-pdf")}
+        >
+          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400">
+            <Upload className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="font-semibold text-foreground">Upload Signed Form</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Submit the authorised registration form for review
+            </div>
+          </div>
+        </Button>
+
+        <Button
+          variant="outline"
+          className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
+          onClick={() => onPageChange("reports")}
+        >
+          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
+            <CheckCircle className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="font-semibold text-foreground">My Reports</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Review school registration summaries and downloads
+            </div>
+          </div>
+        </Button>
+      </div>
+    </div>
+  );
+}

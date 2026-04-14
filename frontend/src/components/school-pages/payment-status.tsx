@@ -1,0 +1,298 @@
+import {
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  Download,
+  Upload,
+  Landmark,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { useAuth } from "../auth-context";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+
+interface PaymentStatusProps {
+  onPageChange: (page: string) => void;
+}
+
+function formatUGX(amount: number) {
+  return `${amount.toLocaleString()} UGX`;
+}
+
+export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
+  const { user } = useAuth();
+
+  const registrationFee = 500_000;
+  const perStudentFee = 30_000;
+  const totalStudents = 85;
+  const totalAmount = registrationFee + perStudentFee * totalStudents;
+
+  const paymentStatus = user?.status || "pending";
+
+  const getStatusContent = () => {
+    switch (paymentStatus) {
+      case "active":
+        return {
+          title: "Payment Verified",
+          description:
+            "Your payment has been approved and your school is fully activated in the portal.",
+          variant: "success" as const,
+          badgeVariant: "success" as const,
+          icon: CheckCircle,
+        };
+      case "verified":
+        return {
+          title: "Payment Confirmed",
+          description:
+            "Your payment is confirmed and awaiting final activation processing.",
+          variant: "info" as const,
+          badgeVariant: "info" as const,
+          icon: Clock,
+        };
+      case "payment_submitted":
+        return {
+          title: "Payment Submitted",
+          description:
+            "Your payment receipt has been submitted and is pending administrative review.",
+          variant: "warning" as const,
+          badgeVariant: "payment" as const,
+          icon: Clock,
+        };
+      default:
+        return {
+          title: "Payment Pending",
+          description:
+            "Please review the payment summary and submit your proof of payment to continue registration.",
+          variant: "warning" as const,
+          badgeVariant: "warning" as const,
+          icon: AlertTriangle,
+        };
+    }
+  };
+
+  const status = getStatusContent();
+  const StatusIcon = status.icon;
+
+  const instructions = [
+    {
+      title: "Bank Transfer",
+      description: "Send the total amount to the official WAKISSHA account.",
+      meta: [
+        "Account: 1234-5678-9012",
+        "Bank: Education Bank",
+        `Reference: ${user?.schoolCode}-2026`,
+      ],
+    },
+    {
+      title: "Upload Payment Proof",
+      description: "Upload your payment receipt or transaction confirmation.",
+      meta: ["PDF or scanned receipt", "Clearly visible amount and reference"],
+    },
+    {
+      title: "Await Verification",
+      description: "The administration reviews submissions within 24-48 hours.",
+      meta: ["Status will update in the portal", "Email confirmation follows"],
+    },
+  ];
+
+  return (
+    <div className="flex flex-col w-full gap-6">
+      <div className="space-y-2">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500 dark:text-red-400">
+          Finance & Activation
+        </p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Payment Status</h1>
+        <p className="max-w-2xl text-slate-600 dark:text-slate-300">
+          Review your payment summary, see your verification stage, and complete
+          any remaining finance requirements for activation.
+        </p>
+      </div>
+
+      <Alert variant={status.variant}>
+        <StatusIcon className="h-4 w-4" />
+        <AlertTitle>{status.title}</AlertTitle>
+        <AlertDescription>{status.description}</AlertDescription>
+      </Alert>
+
+      <div className="flex flex-col w-full gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-slate-900 dark:text-white">Payment Summary</CardTitle>
+            <CardDescription className="text-slate-600 dark:text-slate-400">
+              Breakdown of registration and student entry fees
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 dark:bg-[#13131e] dark:border-[#1e1e2e] p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-slate-900 dark:text-white">
+                      School Registration Fee
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      One-time portal registration
+                    </p>
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900 dark:text-white">
+                    {formatUGX(registrationFee)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 dark:bg-[#13131e] dark:border-[#1e1e2e] p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-slate-900 dark:text-white">Per Student Fee</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {formatUGX(perStudentFee)} x {totalStudents} students
+                    </p>
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900 dark:text-white">
+                    {formatUGX(perStudentFee * totalStudents)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-red-200 bg-red-50 dark:border-red-600/25 dark:bg-red-600/10 p-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.16em] text-red-600 dark:text-red-300">
+                    Total Amount
+                  </p>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                    {totalStudents} students registered
+                  </p>
+                </div>
+                <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                  {formatUGX(totalAmount)}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4 shadow-sm">
+              <div className="grid gap-3 text-sm md:grid-cols-2">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-600 dark:text-slate-400">Payment Status</span>
+                  <Badge variant={status.badgeVariant}>
+                    {paymentStatus.toUpperCase()}
+                  </Badge>
+                </div>
+                {paymentStatus !== "pending" && (
+                  <>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-slate-600 dark:text-slate-400">Submission Date</span>
+                      <span className="text-slate-900 dark:text-white">April 12, 2026</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 md:col-span-2">
+                      <span className="text-slate-600 dark:text-slate-400">Reference Number</span>
+                      <span className="font-mono text-slate-900 dark:text-white">
+                        PAY-2026-001-{user?.schoolCode}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-slate-900 dark:text-white">Payment Instructions</CardTitle>
+            <CardDescription className="text-slate-600 dark:text-slate-400">
+              Complete the following steps to activate your portal access
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {instructions.map((item, index) => (
+              <div
+                key={item.title}
+                className="rounded-2xl border border-slate-200 bg-white dark:bg-[#13131e] dark:border-[#1e1e2e] p-4 shadow-sm"
+              >
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600/10 text-sm font-semibold text-red-600 dark:bg-red-600/15 dark:text-red-400">
+                    {index + 1}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900 dark:text-white">{item.title}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{item.description}</p>
+                  </div>
+                </div>
+                <div className="space-y-1 pl-11 text-sm text-slate-500 dark:text-slate-400">
+                  {item.meta.map((line) => (
+                    <p key={line}>{line}</p>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <Landmark className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-300" />
+                <div>
+                  <p className="font-semibold text-slate-900 dark:text-white">Need help?</p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Contact finance support at{" "}
+                    <a
+                      href="mailto:payments@wakissha.org"
+                      className="text-red-600 hover:underline dark:text-red-400"
+                    >
+                      payments@wakissha.org
+                    </a>{" "}
+                    or call +256 700 000 000.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Button
+          variant="outline"
+          className="h-auto justify-between px-5 py-4"
+          onClick={() => window.print()}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
+              <Download className="h-5 w-5" />
+            </div>
+            <div className="text-left">
+              <div className="font-semibold text-slate-900 dark:text-white">Download Invoice</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                Save the payment summary as PDF
+              </div>
+            </div>
+          </div>
+        </Button>
+
+        {(paymentStatus === "pending" || paymentStatus === "payment_submitted") && (
+          <Button
+            className="h-auto justify-between px-5 py-4"
+            onClick={() => onPageChange("upload-pdf")}
+          >
+            <div className="flex items-center gap-3">
+              <Upload className="h-5 w-5" />
+              <div className="text-left">
+                <div className="font-semibold">Submit Payment Proof</div>
+                <div className="text-xs opacity-90">
+                  Upload receipt or confirmation
+                </div>
+              </div>
+            </div>
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}

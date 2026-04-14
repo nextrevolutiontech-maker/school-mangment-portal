@@ -1,0 +1,453 @@
+import {
+  Calendar,
+  Clock,
+  BookOpen,
+  Download,
+  MapPin,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { toast } from "sonner";
+
+interface TimetableProps {
+  onPageChange: (page: string) => void;
+}
+
+interface ScheduleRow {
+  date: string;
+  day: string;
+  subject: string;
+  code: string;
+  paper: string;
+  level: "UCE" | "UACE";
+  time: string;
+  duration: string;
+  venue: string;
+}
+
+const uceSchedule: ScheduleRow[] = [
+  {
+    date: "2026-05-12",
+    day: "Tuesday",
+    subject: "English Language",
+    code: "UCE-ENG",
+    paper: "Paper 1",
+    level: "UCE",
+    time: "09:00 AM - 11:30 AM",
+    duration: "2.5 hours",
+    venue: "Main Hall",
+  },
+  {
+    date: "2026-05-14",
+    day: "Thursday",
+    subject: "Mathematics",
+    code: "UCE-MTH",
+    paper: "Paper 1",
+    level: "UCE",
+    time: "09:00 AM - 11:30 AM",
+    duration: "2.5 hours",
+    venue: "Main Hall",
+  },
+  {
+    date: "2026-05-18",
+    day: "Monday",
+    subject: "Biology",
+    code: "UCE-BIO",
+    paper: "Paper 2",
+    level: "UCE",
+    time: "02:00 PM - 04:30 PM",
+    duration: "2.5 hours",
+    venue: "Science Block",
+  },
+  {
+    date: "2026-05-20",
+    day: "Wednesday",
+    subject: "History & Political Education",
+    code: "UCE-HIS",
+    paper: "Paper 1",
+    level: "UCE",
+    time: "09:00 AM - 11:30 AM",
+    duration: "2.5 hours",
+    venue: "Auditorium B",
+  },
+  {
+    date: "2026-05-22",
+    day: "Friday",
+    subject: "Geography",
+    code: "UCE-GEO",
+    paper: "Paper 1",
+    level: "UCE",
+    time: "09:00 AM - 11:30 AM",
+    duration: "2.5 hours",
+    venue: "Auditorium B",
+  },
+];
+
+const uaceSchedule: ScheduleRow[] = [
+  {
+    date: "2026-06-03",
+    day: "Wednesday",
+    subject: "General Paper",
+    code: "UACE-GP",
+    paper: "Paper 1",
+    level: "UACE",
+    time: "09:00 AM - 12:00 PM",
+    duration: "3 hours",
+    venue: "Main Hall",
+  },
+  {
+    date: "2026-06-05",
+    day: "Friday",
+    subject: "Subsidiary Mathematics",
+    code: "UACE-SM",
+    paper: "Paper 1",
+    level: "UACE",
+    time: "09:00 AM - 11:30 AM",
+    duration: "2.5 hours",
+    venue: "Main Hall",
+  },
+  {
+    date: "2026-06-09",
+    day: "Tuesday",
+    subject: "Physics",
+    code: "UACE-PHY",
+    paper: "Paper 2",
+    level: "UACE",
+    time: "09:00 AM - 12:00 PM",
+    duration: "3 hours",
+    venue: "Science Block",
+  },
+  {
+    date: "2026-06-11",
+    day: "Thursday",
+    subject: "Chemistry",
+    code: "UACE-CHE",
+    paper: "Paper 2",
+    level: "UACE",
+    time: "09:00 AM - 12:00 PM",
+    duration: "3 hours",
+    venue: "Science Block",
+  },
+  {
+    date: "2026-06-15",
+    day: "Monday",
+    subject: "Biology",
+    code: "UACE-BIO",
+    paper: "Paper 2",
+    level: "UACE",
+    time: "09:00 AM - 12:00 PM",
+    duration: "3 hours",
+    venue: "Science Block",
+  },
+  {
+    date: "2026-06-18",
+    day: "Thursday",
+    subject: "Geography",
+    code: "UACE-GEO",
+    paper: "Paper 1",
+    level: "UACE",
+    time: "02:00 PM - 05:00 PM",
+    duration: "3 hours",
+    venue: "Auditorium A",
+  },
+];
+
+function groupByDate(schedule: ScheduleRow[]) {
+  return schedule.reduce<Record<string, ScheduleRow[]>>((acc, exam) => {
+    if (!acc[exam.date]) {
+      acc[exam.date] = [];
+    }
+
+    acc[exam.date].push(exam);
+    return acc;
+  }, {});
+}
+
+function SchedulePanel({
+  title,
+  description,
+  schedule,
+}: {
+  title: string;
+  description: string;
+  schedule: ScheduleRow[];
+}) {
+  const groupedSchedule = groupByDate(schedule);
+  const statCards = [
+    {
+      label: "Total Papers",
+      value: schedule.length,
+      className: "border-l-red-600",
+      valueClass: "text-slate-900 dark:text-white",
+    },
+    {
+      label: "Start Date",
+      value: new Date(schedule[0].date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      className: "border-l-amber-500",
+      valueClass: "text-amber-600 dark:text-amber-300",
+    },
+    {
+      label: "End Date",
+      value: new Date(schedule[schedule.length - 1].date).toLocaleDateString(
+        "en-US",
+        {
+          month: "short",
+          day: "numeric",
+        },
+      ),
+      className: "border-l-blue-500",
+      valueClass: "text-blue-600 dark:text-blue-300",
+    },
+    {
+      label: "Exam Centres",
+      value: new Set(schedule.map((exam) => exam.venue)).size,
+      className: "border-l-green-500",
+      valueClass: "text-green-600 dark:text-green-300",
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {statCards.map((stat) => (
+          <Card key={stat.label} className={`border-l-4 ${stat.className}`}>
+            <CardContent className="pt-6">
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{stat.label}</p>
+              <p className={`mt-3 text-3xl font-bold ${stat.valueClass}`}>
+                {stat.value}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Tabs defaultValue="table" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="table">Table View</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="table">
+          <Card>
+            <CardHeader className="border-b border-border/70">
+              <CardTitle className="text-slate-900 dark:text-white">{title}</CardTitle>
+              <CardDescription className="text-slate-600 dark:text-slate-400">{description}</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Day</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Paper</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Venue</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {schedule.map((exam) => (
+                    <TableRow key={`${exam.code}-${exam.date}`}>
+                      <TableCell className="font-semibold text-slate-900 dark:text-white">
+                        {new Date(exam.date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell className="text-slate-900 dark:text-white">{exam.day}</TableCell>
+                      <TableCell className="font-medium text-slate-900 dark:text-white">
+                        {exam.subject}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{exam.code}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{exam.paper}</Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-900 dark:text-white">{exam.time}</TableCell>
+                      <TableCell className="text-slate-600 dark:text-slate-400">
+                        {exam.duration}
+                      </TableCell>
+                      <TableCell className="text-slate-900 dark:text-white">{exam.venue}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="calendar" className="w-full space-y-4">
+          {Object.entries(groupedSchedule).map(([date, exams]) => (
+            <Card key={date}>
+              <CardHeader className="border-b border-border/70">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600/15 text-red-400">
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-slate-900 dark:text-white">
+                      {new Date(date).toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
+                      {exams.length} paper{exams.length > 1 ? "s" : ""} scheduled
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-4 pt-6 lg:grid-cols-2">
+                {exams.map((exam) => (
+                  <div
+                    key={`${exam.code}-${exam.time}`}
+                    className="rounded-2xl border border-slate-200 dark:border-[#1e1e2e] bg-white dark:bg-[#13131e] p-4"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-red-400" />
+                      <h4 className="font-semibold text-slate-900 dark:text-white">{exam.subject}</h4>
+                      <Badge variant="outline">{exam.code}</Badge>
+                      <Badge variant="secondary">{exam.paper}</Badge>
+                    </div>
+                    <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>{exam.time}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>{exam.duration}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5" />
+                        <span>{exam.venue}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+export function Timetable({ onPageChange }: TimetableProps) {
+  const handleExport = (level: "UCE" | "UACE") => {
+    toast.success(`${level} timetable ready for demo download.`);
+  };
+
+  return (
+    <div className="flex flex-col w-full gap-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400 dark:text-red-400">
+            Examination Schedule
+          </p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            UCE &amp; UACE Timetable
+          </h1>
+          <p className="max-w-3xl text-slate-600 dark:text-slate-300">
+            Browse separate UCE and UACE examination schedules with table and
+            calendar views for planning, printing, and dashboard review.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button variant="outline" onClick={() => onPageChange("reports")}>
+            Go to Reports
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="uce" className="w-full space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="uce">UCE Timetable</TabsTrigger>
+          <TabsTrigger value="uace">UACE Timetable</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="uce" className="w-full space-y-6">
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => handleExport("UCE")}>
+              <Download className="h-4 w-4" />
+              Export UCE PDF
+            </Button>
+          </div>
+          <SchedulePanel
+            title="UCE Timetable"
+            description="Official UCE paper schedule for the current examination season."
+            schedule={uceSchedule}
+          />
+        </TabsContent>
+
+        <TabsContent value="uace" className="w-full space-y-6">
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => handleExport("UACE")}>
+              <Download className="h-4 w-4" />
+              Export UACE PDF
+            </Button>
+          </div>
+          <SchedulePanel
+            title="UACE Timetable"
+            description="Official UACE paper schedule with dedicated venues and sitting times."
+            schedule={uaceSchedule}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-white">Candidate Instructions</CardTitle>
+          <CardDescription>
+            Key reminders for schools, invigilators, and student candidates.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-3 text-sm text-slate-400">
+            <li className="rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3">
+              Schools should display both UCE and UACE schedules on noticeboards
+              at least one week before the first paper.
+            </li>
+            <li className="rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3">
+              Candidates must arrive at the assigned venue 30 minutes before
+              start time with valid identification.
+            </li>
+            <li className="rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3">
+              Practical and science papers should only be sat in approved rooms
+              listed on the timetable.
+            </li>
+            <li className="rounded-xl border border-white/6 bg-white/[0.02] px-4 py-3">
+              Any timetable changes will be communicated through the WAKISSHA
+              portal dashboard and school email.
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
