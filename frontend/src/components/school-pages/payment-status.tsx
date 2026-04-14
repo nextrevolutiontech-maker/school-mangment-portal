@@ -17,6 +17,10 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { useAuth } from "../auth-context";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { useState } from "react";
+import { toast } from "sonner";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface PaymentStatusProps {
   onPageChange: (page: string) => void;
@@ -28,6 +32,7 @@ function formatUGX(amount: number) {
 
 export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
   const { user } = useAuth();
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const registrationFee = 500_000;
   const perStudentFee = 30_000;
@@ -79,6 +84,94 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
 
   const status = getStatusContent();
   const StatusIcon = status.icon;
+
+  const downloadInvoice = async () => {
+    try {
+      setIsDownloading(true);
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let yPos = 15;
+
+      // Header
+      pdf.setFontSize(18);
+      pdf.text("WAKISSHA Payment Invoice", pageWidth / 2, yPos, {
+        align: "center",
+      });
+      yPos += 8;
+
+      // School Details
+      pdf.setFontSize(11);
+      pdf.text(`School: ${user?.name}`, 15, yPos);
+      yPos += 7;
+      pdf.setFontSize(10);
+      pdf.text(`School Code: ${user?.schoolCode}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`District: ${user?.district}`, 15, yPos);
+      yPos += 8;
+
+      // Invoice Details
+      const invoiceTableData = [
+        {
+          Item: "School Registration Fee",
+          Amount: `${formatUGX(registrationFee)}`,
+        },
+        {
+          Item: `Per Student Fee (${totalStudents} students)`,
+          Amount: `${formatUGX(perStudentFee * totalStudents)}`,
+        },
+      ];
+
+      autoTable(pdf, {
+        head: [["Description", "Amount"]],
+        body: invoiceTableData.map((row) => [row.Item, row.Amount]),
+        startY: yPos,
+        margin: { left: 15, right: 15 },
+        headStyles: {
+          fillColor: [220, 38, 38],
+          textColor: [255, 255, 255],
+          fontSize: 11,
+          fontStyle: "bold",
+        },
+        bodyStyles: {
+          fontSize: 10,
+        },
+      });
+
+      yPos = (pdf as any).lastAutoTable.finalY + 10;
+
+      // Total
+      pdf.setFontSize(12);
+      pdf.setFont(undefined, "bold");
+      pdf.text(`Total Amount: ${formatUGX(totalAmount)}`, 15, yPos);
+      yPos += 8;
+
+      // Payment Status
+      pdf.setFontSize(10);
+      pdf.setFont(undefined, "normal");
+      pdf.text(`Status: ${paymentStatus.toUpperCase()}`, 15, yPos);
+      yPos += 6;
+      pdf.text(`Date Generated: ${new Date().toLocaleDateString()}`, 15, yPos);
+      yPos += 8;
+
+      // Bank Details
+      pdf.setFontSize(9);
+      pdf.text("Bank Details:", 15, yPos);
+      yPos += 5;
+      pdf.text("Account: 1234-5678-9012", 15, yPos);
+      yPos += 4;
+      pdf.text("Bank: Education Bank", 15, yPos);
+      yPos += 4;
+      pdf.text(`Reference: ${user?.schoolCode}-2026`, 15, yPos);
+
+      pdf.save(`payment-invoice-${user?.schoolCode}.pdf`);
+      toast.success("Invoice downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download invoice");
+      console.error(error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const instructions = [
     {
@@ -261,14 +354,17 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
         <Button
           variant="outline"
           className="h-auto justify-between px-5 py-4"
-          onClick={() => window.print()}
+          onClick={downloadInvoice}
+          disabled={isDownloading}
         >
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
               <Download className="h-5 w-5" />
             </div>
             <div className="text-left">
-              <div className="font-semibold text-slate-900">Download Invoice</div>
+              <div className="font-semibold text-slate-900">
+                {isDownloading ? "Generating..." : "Download Invoice"}
+              </div>
               <div className="text-xs text-slate-500">
                 Save the payment summary as PDF
               </div>

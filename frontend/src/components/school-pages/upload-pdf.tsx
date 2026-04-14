@@ -21,6 +21,8 @@ import { useAuth } from "../auth-context";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { toast } from "sonner";
 import { Progress } from "../ui/progress";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface UploadPDFProps {
   onPageChange: (page: string) => void;
@@ -30,6 +32,7 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
   const { user, submitSchoolDocuments } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [documentsSubmitted, setDocumentsSubmitted] = useState(
     user?.status === "payment_submitted" ||
@@ -157,10 +160,93 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
     }, 180);
   };
 
-  const handleGeneratePDF = () => {
-    toast.success("PDF Generated", {
-      description: "Filled summary form is ready for printing and signing.",
-    });
+  const handleGeneratePDF = async () => {
+    try {
+      setIsGeneratingPDF(true);
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let yPos = 15;
+
+      // Header
+      pdf.setFontSize(16);
+      pdf.text("WAKISSHA Summary Form", pageWidth / 2, yPos, {
+        align: "center",
+      });
+      yPos += 8;
+
+      // School Details
+      pdf.setFontSize(11);
+      pdf.text(`School: ${user?.name}`, 15, yPos);
+      yPos += 6;
+      pdf.setFontSize(10);
+      pdf.text(`School Code: ${user?.schoolCode}`, 15, yPos);
+      yPos += 5;
+      pdf.text(`District: ${user?.district}`, 15, yPos);
+      yPos += 5;
+      pdf.text(`Academic Year: ${user?.academicYear}`, 15, yPos);
+      yPos += 8;
+
+      // Student Summary Table
+      const studentTableData = [
+        ["Total Enrolled Students", "85"],
+        ["Subjects Registered", "12"],
+        ["Total Entries", "247"],
+        ["Payment Status", user?.status?.toUpperCase() || "PENDING"],
+      ];
+
+      autoTable(pdf, {
+        head: [["Description", "Value"]],
+        body: studentTableData,
+        startY: yPos,
+        margin: { left: 15, right: 15 },
+        headStyles: {
+          fillColor: [220, 38, 38],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          fontStyle: "bold",
+        },
+        bodyStyles: {
+          fontSize: 9,
+        },
+      });
+
+      yPos = (pdf as any).lastAutoTable.finalY + 10;
+
+      // Instructions
+      pdf.setFontSize(11);
+      pdf.setFont(undefined, "bold");
+      pdf.text("Instructions for Signing:", 15, yPos);
+      yPos += 6;
+      pdf.setFontSize(9);
+      pdf.setFont(undefined, "normal");
+
+      const instructions = [
+        "1. Print this form on official school letterhead",
+        "2. Sign at the designated area using authorized signature",
+        "3. Apply the official school stamp/seal",
+        "4. Attach payment proof as supporting document",
+        "5. Scan all documents as a single PDF file",
+        "6. Upload the scanned PDF via the portal",
+      ];
+
+      instructions.forEach((instruction) => {
+        pdf.text(instruction, 15, yPos);
+        yPos += 5;
+      });
+
+      yPos += 5;
+      pdf.setFontSize(8);
+      pdf.text(`Generated on: ${new Date().toLocaleString()}`, 15, yPos);
+      pdf.text("Please review all details before signing.", 15, yPos + 4);
+
+      pdf.save(`summary-form-${user?.schoolCode}.pdf`);
+      toast.success("Summary form generated successfully");
+    } catch (error) {
+      toast.error("Failed to generate PDF");
+      console.error(error);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   const steps = [
@@ -225,10 +311,11 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
               <Button
                 variant="outline"
                 onClick={handleGeneratePDF}
+                disabled={isGeneratingPDF}
                 className="w-full lg:w-auto"
               >
                 <Download className="h-4 w-4" />
-                Download PDF
+                {isGeneratingPDF ? "Generating..." : "Download PDF"}
               </Button>
             </div>
 
