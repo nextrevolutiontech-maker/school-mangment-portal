@@ -39,9 +39,8 @@ interface ScheduleRow {
   code: string;
   paper: string;
   level: "UCE" | "UACE";
-  time: string;
+  period: "Morning" | "Afternoon"; // Morning or Afternoon instead of time
   duration: string;
-  venue: string;
 }
 
 const uceSchedule: ScheduleRow[] = [
@@ -49,56 +48,51 @@ const uceSchedule: ScheduleRow[] = [
     date: "2026-05-12",
     day: "Tuesday",
     subject: "English Language",
-    code: "UCE-ENG",
+    code: "112",
     paper: "Paper 1",
     level: "UCE",
-    time: "09:00 AM - 11:30 AM",
+    period: "Morning",
     duration: "2.5 hours",
-    venue: "Main Hall",
   },
   {
     date: "2026-05-14",
     day: "Thursday",
     subject: "Mathematics",
-    code: "UCE-MTH",
+    code: "456",
     paper: "Paper 1",
     level: "UCE",
-    time: "09:00 AM - 11:30 AM",
+    period: "Morning",
     duration: "2.5 hours",
-    venue: "Main Hall",
   },
   {
     date: "2026-05-18",
     day: "Monday",
     subject: "Biology",
-    code: "UCE-BIO",
+    code: "553",
     paper: "Paper 2",
     level: "UCE",
-    time: "02:00 PM - 04:30 PM",
+    period: "Afternoon",
     duration: "2.5 hours",
-    venue: "Science Block",
   },
   {
     date: "2026-05-20",
     day: "Wednesday",
     subject: "History & Political Education",
-    code: "UCE-HIS",
+    code: "241",
     paper: "Paper 1",
     level: "UCE",
-    time: "09:00 AM - 11:30 AM",
+    period: "Morning",
     duration: "2.5 hours",
-    venue: "Auditorium B",
   },
   {
     date: "2026-05-22",
     day: "Friday",
     subject: "Geography",
-    code: "UCE-GEO",
+    code: "273",
     paper: "Paper 1",
     level: "UCE",
-    time: "09:00 AM - 11:30 AM",
+    period: "Morning",
     duration: "2.5 hours",
-    venue: "Auditorium B",
   },
 ];
 
@@ -107,67 +101,61 @@ const uaceSchedule: ScheduleRow[] = [
     date: "2026-06-03",
     day: "Wednesday",
     subject: "General Paper",
-    code: "UACE-GP",
+    code: "101",
     paper: "Paper 1",
     level: "UACE",
-    time: "09:00 AM - 12:00 PM",
+    period: "Morning",
     duration: "3 hours",
-    venue: "Main Hall",
   },
   {
     date: "2026-06-05",
     day: "Friday",
     subject: "Subsidiary Mathematics",
-    code: "UACE-SM",
+    code: "475",
     paper: "Paper 1",
     level: "UACE",
-    time: "09:00 AM - 11:30 AM",
+    period: "Morning",
     duration: "2.5 hours",
-    venue: "Main Hall",
   },
   {
     date: "2026-06-09",
     day: "Tuesday",
     subject: "Physics",
-    code: "UACE-PHY",
+    code: "525",
     paper: "Paper 2",
     level: "UACE",
-    time: "09:00 AM - 12:00 PM",
+    period: "Morning",
     duration: "3 hours",
-    venue: "Science Block",
   },
   {
     date: "2026-06-11",
     day: "Thursday",
     subject: "Chemistry",
-    code: "UACE-CHE",
+    code: "535",
     paper: "Paper 2",
     level: "UACE",
-    time: "09:00 AM - 12:00 PM",
+    period: "Morning",
     duration: "3 hours",
-    venue: "Science Block",
   },
   {
     date: "2026-06-15",
     day: "Monday",
     subject: "Biology",
-    code: "UACE-BIO",
+    code: "545",
     paper: "Paper 2",
     level: "UACE",
-    time: "09:00 AM - 12:00 PM",
+    period: "Morning",
     duration: "3 hours",
-    venue: "Science Block",
   },
   {
     date: "2026-06-18",
     day: "Thursday",
     subject: "Geography",
-    code: "UACE-GEO",
+    code: "230",
     paper: "Paper 1",
     level: "UACE",
-    time: "02:00 PM - 05:00 PM",
+    period: "Afternoon",
     duration: "3 hours",
-    venue: "Auditorium A",
   },
 ];
 
@@ -259,40 +247,32 @@ function SchedulePanel({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Day</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Paper</TableHead>
-                    <TableHead>Time</TableHead>
+                    <TableHead>Day & Date</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Subject & Paper</TableHead>
                     <TableHead>Duration</TableHead>
-                    <TableHead>Venue</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {schedule.map((exam) => (
                     <TableRow key={`${exam.code}-${exam.date}`}>
                       <TableCell className="font-semibold text-slate-900">
+                        {exam.day},{" "}
                         {new Date(exam.date).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
+                          year: "numeric",
                         })}
                       </TableCell>
-                      <TableCell className="text-slate-900">{exam.day}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{exam.period}</Badge>
+                      </TableCell>
                       <TableCell className="font-medium text-slate-900">
-                        {exam.subject}
+                        {exam.code}/{exam.paper.split(" ")[1]} {exam.subject}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{exam.code}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{exam.paper}</Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-900">{exam.time}</TableCell>
                       <TableCell className="text-slate-500">
                         {exam.duration}
                       </TableCell>
-                      <TableCell className="text-slate-900">{exam.venue}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
