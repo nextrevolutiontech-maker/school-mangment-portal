@@ -283,20 +283,29 @@ export function Reports({ onPageChange }: ReportsProps) {
   const subjectWiseData = useMemo(
     () =>
       subjects.map((subject) => {
-        const subjectStudents = scopedStudents.filter((student) => student.subjectCode === subject.code);
+        // Flatten students - each student might have this subject multiple times, count unique
+        const subjectStudents = new Set<string>();
+        scopedStudents.forEach((student) => {
+          if (student.subjects.some((s) => s.subjectCode === subject.code)) {
+            subjectStudents.add(student.id);
+          }
+        });
+
+        const totalStudentCount = subjectStudents.size;
+        const schools = new Set<string>();
+        scopedStudents.forEach((student) => {
+          if (student.subjects.some((s) => s.subjectCode === subject.code)) {
+            schools.add(student.schoolCode);
+          }
+        });
+
         return {
           subject: subject.name,
           code: subject.code,
           level: subject.educationLevel,
-          totalStudents: subjectStudents.length,
-          schools: new Set(subjectStudents.map((student) => student.schoolCode)).size,
-          average:
-            subjectStudents.length > 0
-              ? Math.round(
-                  subjectStudents.reduce((sum, student) => sum + student.totalEntries, 0) /
-                    subjectStudents.length,
-                )
-              : 0,
+          totalStudents: totalStudentCount,
+          schools: schools.size,
+          average: totalStudentCount > 0 ? Math.round(totalStudentCount / Math.max(schools.size, 1)) : 0,
         };
       }),
     [subjects, scopedStudents],
@@ -304,7 +313,10 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const subjectStudentsList = useMemo(() => {
     if (selectedSubjectCode === "all") return scopedStudents;
-    return scopedStudents.filter((student) => student.subjectCode === selectedSubjectCode);
+    // Filter students that have the selected subject
+    return scopedStudents.filter((student) =>
+      student.subjects.some((s) => s.subjectCode === selectedSubjectCode)
+    );
   }, [scopedStudents, selectedSubjectCode]);
 
   const selectedSchoolData =
@@ -371,15 +383,6 @@ export function Reports({ onPageChange }: ReportsProps) {
     });
 
     return row;
-  };
-
-  const getPaperSelectionText = (student: (typeof scopedStudents)[number]) => {
-    const papers: string[] = [];
-    if (student.entry1 > 0) papers.push("P1");
-    if (student.entry2 > 0) papers.push("P2");
-    if (student.entry3 > 0) papers.push("P3");
-    if (student.entry4 > 0) papers.push("P4");
-    return papers.length > 0 ? papers.join(", ") : "-";
   };
 
   const summaryCards = [
@@ -1201,15 +1204,18 @@ export function Reports({ onPageChange }: ReportsProps) {
       autoTable(pdf, {
         startY: 34,
         margin: { left: 12, right: 12 },
-        head: [["Reg No", "Student Name", "Subject Code", "Subject Name", "Papers", "Total"]],
-        body: rows.map((student) => [
-          student.registrationNumber,
-          student.studentName,
-          student.subjectCode,
-          student.subjectName,
-          getPaperSelectionText(student),
-          String(student.totalEntries),
-        ]),
+        head: [["Reg No", "Student Name", "Subject Code", "Subject Name", "Papers"]],
+        body: rows.flatMap((student) =>
+          student.subjects.map((subj) => [
+            student.registrationNumber,
+            student.studentName,
+            subj.subjectCode,
+            subj.subjectName,
+            [subj.entry1 && "P1", subj.entry2 && "P2", subj.entry3 && "P3", subj.entry4 && "P4"]
+              .filter(Boolean)
+              .join(", ") || "-",
+          ])
+        ),
         styles: { fontSize: 8.2, lineWidth: 0.2, lineColor: [120, 120, 120] },
         headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
       });
@@ -1235,15 +1241,18 @@ export function Reports({ onPageChange }: ReportsProps) {
           student.examLevel === selectedSchoolReportLevel,
       );
       const worksheet = XLSXUtils.json_to_sheet(
-        rows.map((student) => ({
-          RegistrationNumber: student.registrationNumber,
-          StudentName: student.studentName,
-          ExamLevel: student.examLevel,
-          SubjectCode: student.subjectCode,
-          SubjectName: student.subjectName,
-          PapersSelected: getPaperSelectionText(student),
-          TotalEntries: student.totalEntries,
-        })),
+        rows.flatMap((student) =>
+          student.subjects.map((subj) => ({
+            RegistrationNumber: student.registrationNumber,
+            StudentName: student.studentName,
+            ExamLevel: student.examLevel,
+            SubjectCode: subj.subjectCode,
+            SubjectName: subj.subjectName,
+            PapersSelected: [subj.entry1 && "P1", subj.entry2 && "P2", subj.entry3 && "P3", subj.entry4 && "P4"]
+              .filter(Boolean)
+              .join(", ") || "-",
+          }))
+        ),
       );
       const workbook = XLSXUtils.book_new();
       XLSXUtils.book_append_sheet(workbook, worksheet, "StudentsList");
@@ -1616,7 +1625,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                           <TableCell className="font-mono text-xs">{student.registrationNumber}</TableCell>
                           <TableCell className="font-semibold text-slate-900">{student.studentName}</TableCell>
                           <TableCell>{student.schoolName}</TableCell>
-                          <TableCell>{student.subjectCode}</TableCell>
+                          <TableCell>{selectedSubjectCode === "all" ? "All" : selectedSubjectCode}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
