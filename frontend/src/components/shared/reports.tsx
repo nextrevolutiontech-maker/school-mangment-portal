@@ -50,7 +50,7 @@ type FormColumn = {
 };
 
 const formBaseColumns: FormColumn[] = [
-  { key: "refNo", label: "Ref No." },
+  { key: "refNo", label: "Ref" },
   { key: "schoolName", label: "Name of school" },
   { key: "district", label: "District" },
   { key: "zone", label: "Zone / Centre" },
@@ -102,14 +102,6 @@ const uceSubjectColumns: FormColumn[] = [
   { key: "LUGANDA", label: "Luganda" },
   { key: "RUNY", label: "Runy-Rukiga" },
   { key: "LUSOGA", label: "Lusoga" },
-];
-
-const entryColumns: FormColumn[] = [
-  { key: "entries", label: "Entries" },
-  { key: "p1", label: "P1" },
-  { key: "p2", label: "P2" },
-  { key: "p3", label: "P3" },
-  { key: "p4", label: "P4" },
 ];
 
 type FormRow = Record<string, string | number>;
@@ -250,27 +242,28 @@ export function Reports({ onPageChange }: ReportsProps) {
 
     return filteredSchools.map((school, index) => {
       const schoolStudents = scopedStudents.filter((student) => student.schoolCode === school.code);
-      const registeredSubjects = new Set(schoolStudents.map((student) => student.subjectCode)).size;
+      const registeredSubjects = new Set(
+        schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))
+      ).size;
+
+      // Determine which subject columns to use based on education level
       const isUaceForm = educationLevelFilter === "UACE" || school.educationLevel === "UACE";
       const subjectColumns = isUaceForm ? uaceSubjectColumns : uceSubjectColumns;
 
+      // Calculate total students per subject (not entries or papers)
       const subjectCounts = schoolStudents.reduce<
-        Record<string, { entries: number; p1: number; p2: number; p3: number; p4: number }>
+        Record<string, number>
       >((acc, student) => {
-        const key = mapSubjectCode(student.subjectCode);
-        if (!acc[key]) {
-          acc[key] = { entries: 0, p1: 0, p2: 0, p3: 0, p4: 0 };
-        }
-        acc[key].entries += student.totalEntries;
-        acc[key].p1 += student.entry1;
-        acc[key].p2 += student.entry2;
-        acc[key].p3 += student.entry3;
-        acc[key].p4 += student.entry4;
+        // For each subject the student is taking, increment the count
+        student.subjects.forEach((subj) => {
+          const key = mapSubjectCode(subj.subjectCode);
+          acc[key] = (acc[key] || 0) + 1;
+        });
         return acc;
       }, {});
 
       const row: FormRow = {
-        refNo: index + 1,
+        refNo: school.code, // Use school code as reference
         schoolName: school.name,
         district: school.district,
         zone: school.zone,
@@ -278,19 +271,9 @@ export function Reports({ onPageChange }: ReportsProps) {
         telephone: school.phone,
       };
 
+      // Add subject columns with student counts (not entry breakdowns)
       subjectColumns.forEach((subject) => {
-        const metrics = subjectCounts[subject.key] ?? {
-          entries: 0,
-          p1: 0,
-          p2: 0,
-          p3: 0,
-          p4: 0,
-        };
-        row[`${subject.key}_entries`] = metrics.entries;
-        row[`${subject.key}_p1`] = metrics.p1;
-        row[`${subject.key}_p2`] = metrics.p2;
-        row[`${subject.key}_p3`] = metrics.p3;
-        row[`${subject.key}_p4`] = metrics.p4;
+        row[subject.key] = subjectCounts[subject.key] ?? 0;
       });
 
       return row;
@@ -360,43 +343,31 @@ export function Reports({ onPageChange }: ReportsProps) {
       (student) => student.schoolCode === schoolCode && student.examLevel === level,
     );
     const subjectColumns = level === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
+
+    // Calculate total students per subject
     const subjectCounts = schoolStudents.reduce<
-      Record<string, { entries: number; p1: number; p2: number; p3: number; p4: number }>
+      Record<string, number>
     >((acc, student) => {
-      const key = mapSubjectCode(student.subjectCode);
-      if (!acc[key]) {
-        acc[key] = { entries: 0, p1: 0, p2: 0, p3: 0, p4: 0 };
-      }
-      acc[key].entries += student.totalEntries;
-      acc[key].p1 += student.entry1;
-      acc[key].p2 += student.entry2;
-      acc[key].p3 += student.entry3;
-      acc[key].p4 += student.entry4;
+      student.subjects.forEach((subj) => {
+        const key = mapSubjectCode(subj.subjectCode);
+        acc[key] = (acc[key] || 0) + 1;
+      });
       return acc;
     }, {});
 
     const row: FormRow = {
-      refNo: 1,
+      refNo: school.code,
       schoolName: school.name,
       district: school.district,
       zone: school.zone,
-      registeredSubjects: new Set(schoolStudents.map((student) => student.subjectCode)).size,
+      registeredSubjects: new Set(
+        schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))
+      ).size,
       telephone: school.phone,
     };
 
     subjectColumns.forEach((subject) => {
-      const metrics = subjectCounts[subject.key] ?? {
-        entries: 0,
-        p1: 0,
-        p2: 0,
-        p3: 0,
-        p4: 0,
-      };
-      row[`${subject.key}_entries`] = metrics.entries;
-      row[`${subject.key}_p1`] = metrics.p1;
-      row[`${subject.key}_p2`] = metrics.p2;
-      row[`${subject.key}_p3`] = metrics.p3;
-      row[`${subject.key}_p4`] = metrics.p4;
+      row[subject.key] = subjectCounts[subject.key] ?? 0;
     });
 
     return row;
@@ -449,8 +420,11 @@ export function Reports({ onPageChange }: ReportsProps) {
     const schoolFee = 25_000;
     const studentFee = 27_000 * totalStudents;
     const markingFee = rows.reduce((sum, row) => {
-      const entriesKeys = Object.keys(row).filter((key) => key.endsWith("_entries"));
-      return sum + entriesKeys.reduce((entrySum, key) => entrySum + Number(row[key] || 0), 0) * 100;
+      const subjectCount = Object.keys(row).filter(key =>
+        uaceSubjectColumns.some(col => col.key === key) ||
+        uceSubjectColumns.some(col => col.key === key)
+      ).reduce((acc, key) => acc + Number(row[key] || 0), 0);
+      return sum + subjectCount * 100;
     }, 0);
     const totalAmount = schoolFee + studentFee + lateFee + markingFee;
 
@@ -465,13 +439,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       row.zone,
       row.registeredSubjects,
       row.telephone,
-      ...subjectsColumns.flatMap((subject) => [
-        row[`${subject.key}_entries`] ?? 0,
-        row[`${subject.key}_p1`] ?? 0,
-        row[`${subject.key}_p2`] ?? 0,
-        row[`${subject.key}_p3`] ?? 0,
-        row[`${subject.key}_p4`] ?? 0,
-      ]),
+      ...subjectsColumns.map((subject) => row[subject.key] ?? 0),
     ]);
 
   const generateOfficialFormPDF = (
@@ -550,15 +518,11 @@ export function Reports({ onPageChange }: ReportsProps) {
         const officialSubjectRows = getOfficialSubjectRows(level);
         
         autoTable(pdf, {
-          head: [["CODE", "SUBJECT NAME", "ENTRIES", "P1", "P2", "P3", "P4"]],
+          head: [["CODE", "SUBJECT NAME", "STUDENTS"]],
           body: officialSubjectRows.map((subject) => [
             subject.code,
             subject.name,
-            String(row[`${subject.key}_entries`] ?? 0),
-            formatPaperCell(row[`${subject.key}_p1`]),
-            formatPaperCell(row[`${subject.key}_p2`]),
-            formatPaperCell(row[`${subject.key}_p3`]),
-            formatPaperCell(row[`${subject.key}_p4`]),
+            String(row[mapSubjectCode(subject.key)] ?? 0),
           ]),
           startY: yPos,
           margin: { left: margin, right: margin, top: 5 },
@@ -566,10 +530,6 @@ export function Reports({ onPageChange }: ReportsProps) {
             0: { cellWidth: 16, halign: "center" },
             1: { cellWidth: 100 },
             2: { cellWidth: 18, halign: "center" },
-            3: { cellWidth: 14, halign: "center" },
-            4: { cellWidth: 14, halign: "center" },
-            5: { cellWidth: 14, halign: "center" },
-            6: { cellWidth: 14, halign: "center" },
           },
           headStyles: {
             fillColor: [41, 128, 185],
@@ -632,7 +592,7 @@ export function Reports({ onPageChange }: ReportsProps) {
           String(row.zone),
           String(row.registeredSubjects),
           String(row.telephone),
-          ...subjectsColumns.map((subject) => String(row[`${subject.key}_entries`] ?? 0)),
+          ...subjectsColumns.map((subject) => String(row[subject.key] ?? 0)),
         ]);
 
         // Calculate totals
@@ -645,7 +605,7 @@ export function Reports({ onPageChange }: ReportsProps) {
           "",
           ...subjectsColumns.map((subject) =>
             String(
-              rows.reduce((sum, row) => sum + Number(row[`${subject.key}_entries`] ?? 0), 0)
+              rows.reduce((sum, row) => sum + Number(row[subject.key] ?? 0), 0)
             )
           ),
         ];
@@ -870,11 +830,7 @@ export function Reports({ onPageChange }: ReportsProps) {
           if (!subject) return;
 
           const metrics = [
-            ["Entries", String(row[`${key}_entries`] ?? 0)],
-            ["P1", String(row[`${key}_p1`] ?? 0)],
-            ["P2", String(row[`${key}_p2`] ?? 0)],
-            ["P3", String(row[`${key}_p3`] ?? 0)],
-            ["P4", String(row[`${key}_p4`] ?? 0)],
+            ["Students", String(row[key] ?? 0)],
           ];
 
           pdf.setFont("helvetica", "bold");
@@ -964,10 +920,13 @@ export function Reports({ onPageChange }: ReportsProps) {
     }
   };
 
-  const getRowTotalEntries = (row: FormRow) =>
-    Object.keys(row)
-      .filter((key) => key.endsWith("_entries"))
-      .reduce((sum, key) => sum + Number(row[key] || 0), 0);
+  const getRowTotalEntries = (row: FormRow) => {
+    const subjectKeys = [
+      ...uaceSubjectColumns.map(col => col.key),
+      ...uceSubjectColumns.map(col => col.key)
+    ];
+    return subjectKeys.reduce((sum, key) => sum + Number(row[key] || 0), 0);
+  };
 
   const generateReadableConsolidatedPDF = (rows: FormRow[], level: "UACE" | "UCE") => {
     try {
@@ -1103,14 +1062,10 @@ export function Reports({ onPageChange }: ReportsProps) {
       autoTable(pdf, {
         startY: y,
         margin: { left: 14, right: 14 },
-        head: [["Subject", "Entries", "P1", "P2", "P3", "P4"]],
+        head: [["Subject", "Students"]],
         body: subjectsColumns.map((subject) => [
           subject.label,
-          String(row[`${subject.key}_entries`] ?? 0),
-          String(row[`${subject.key}_p1`] ?? 0),
-          String(row[`${subject.key}_p2`] ?? 0),
-          String(row[`${subject.key}_p3`] ?? 0),
-          String(row[`${subject.key}_p4`] ?? 0),
+          String(row[subject.key] ?? 0),
         ]),
         styles: { fontSize: 9, lineWidth: 0.2, lineColor: [140, 140, 140] },
         headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
@@ -1141,11 +1096,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       const worksheet = XLSXUtils.json_to_sheet(
         subjectsColumns.map((subject) => ({
           Subject: subject.label,
-          Entries: row[`${subject.key}_entries`] ?? 0,
-          P1: row[`${subject.key}_p1`] ?? 0,
-          P2: row[`${subject.key}_p2`] ?? 0,
-          P3: row[`${subject.key}_p3`] ?? 0,
-          P4: row[`${subject.key}_p4`] ?? 0,
+          Students: row[subject.key] ?? 0,
         })),
       );
       const workbook = XLSXUtils.book_new();
@@ -1167,9 +1118,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       const subjectsColumns = level === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
       const headerRow = [
         ...formBaseColumns.map((col) => col.label),
-        ...subjectsColumns.flatMap((subject) =>
-          entryColumns.map((entry) => `${subject.label}-${entry.label}`),
-        ),
+        ...subjectsColumns.map((subject) => subject.label),
       ];
       const bodyRows = buildTemplateTable(rows, subjectsColumns);
       const worksheet = XLSXUtils.aoa_to_sheet([
@@ -1523,7 +1472,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                         <TableCell>{row.registeredSubjects}</TableCell>
                         <TableCell>{row.telephone}</TableCell>
                         {(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns).map((subject) => (
-                          <TableCell key={`${subject.key}-${idx}`}>{row[`${subject.key}_entries`] ?? 0}</TableCell>
+                          <TableCell key={`${subject.key}-${idx}`}>{row[subject.key] ?? 0}</TableCell>
                         ))}
                       </TableRow>
                     ))}
