@@ -3,19 +3,19 @@
 :root {
   --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-size: 16px;
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #ffffff;
+  --foreground: #1a202c;
   --card: #ffffff;
   --card-foreground: #1a202c;
   --popover: #ffffff;
   --popover-foreground: #1a202c;
-  --primary: #1e3a8a;
+  --primary: #0066cc;
   --primary-foreground: #ffffff;
-  --secondary: #2563eb;
-  --secondary-foreground: #ffffff;
-  --muted: #eef2ff;
-  --muted-foreground: #64748b;
-  --accent: #f59e0b;
+  --secondary: #f5f7fa;
+  --secondary-foreground: #1a202c;
+  --muted: #f1f5f9;
+  --muted-foreground: #718096;
+  --accent: #0066cc;
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
@@ -31,7 +31,7 @@
   --switch-background: #cbd5e1;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #2563eb;
+  --ring: #0066cc;
   --chart-1: #0066cc;
   --chart-2: #16a34a;
   --chart-3: #718096;
@@ -40,12 +40,12 @@
   --radius: 0.9rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #1a202c;
-  --sidebar-primary: #1e3a8a;
+  --sidebar-primary: #0066cc;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f5f7fa;
   --sidebar-accent-foreground: #1a202c;
   --sidebar-border: #e2e8f0;
-  --sidebar-ring: #2563eb;
+  --sidebar-ring: #0066cc;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
@@ -110,13 +110,12 @@
 
   body {
     @apply text-slate-900;
-    background-color: #f8fafc;
+    background-color: #f5f7fa;
     font-family: var(--font-sans);
     min-height: 100vh;
     background-image:
-      radial-gradient(circle at top, rgba(37, 99, 235, 0.08), transparent 30%),
-      radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.05), transparent 20%),
-      linear-gradient(180deg, #f6f9ff 0%, #f8fafc 100%);
+      radial-gradient(circle at top right, rgba(0, 102, 204, 0.04), transparent 40%),
+      linear-gradient(180deg, #ffffff 0%, #f5f7fa 100%);
   }
 
   ::selection {
@@ -179,7 +178,7 @@
   }
 
   .text-shimmer {
-    background: linear-gradient(90deg, #1e3a8a, #2563eb, #1e3a8a);
+    background: linear-gradient(90deg, #0066cc, #004da6, #0066cc);
     background-size: 220% auto;
     -webkit-background-clip: text;
     background-clip: text;
