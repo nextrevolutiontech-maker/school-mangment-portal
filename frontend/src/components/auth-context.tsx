@@ -8,13 +8,19 @@ import {
 import type { Zone } from "../types/zone";
 import type { Subject } from "../types/subject";
 
-export type UserRole = "admin" | "school";
+export type UserRole = "admin" | "school" | "super_admin";
 export type SchoolStatus =
   | "pending"
   | "payment_submitted"
   | "verified"
   | "active";
 export type EducationLevel = "UCE" | "UACE" | "BOTH";
+
+// Predetermined class levels - managed by super admin only
+export const CLASS_LEVELS = {
+  UCE: ["S.1", "S.2", "S.3", "S.4"],
+  UACE: ["S.5", "S.6"],
+} as const;
 
 export interface User {
   id: string;
@@ -80,6 +86,7 @@ interface NewSchoolInput {
   zone_id: string;
   schoolLogo?: string;
   contactPerson?: string;
+  contactDesignation?: string;
 }
 
 interface AuthContextType {
@@ -111,6 +118,21 @@ interface AuthContextType {
     entry4: number;
     totalEntries: number;
   }) => void;
+  addSubject: (subject: {
+    name: string;
+    code: string;
+    educationLevel: "UCE" | "UACE" | "BOTH";
+    optional: boolean;
+  }) => void;
+  updateSubject: (
+    subjectId: string,
+    updates: {
+      name: string;
+      code: string;
+      educationLevel: "UCE" | "UACE" | "BOTH";
+      optional: boolean;
+    },
+  ) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -126,8 +148,8 @@ const adminUser: User = {
 const initialZones: Zone[] = [
   {
     id: "zone-1",
-    name: "Central Zone",
-    district: "Kampala",
+    name: "AGGREY ZONE",
+    district: "Wakiso",
     leaderName: "Mr. Robert Kasigire",
     leaderPhone: "+256 757 123 456",
     leaderEmail: "robert.kasigire@wakissha.org",
@@ -137,7 +159,7 @@ const initialZones: Zone[] = [
   },
   {
     id: "zone-2",
-    name: "North Zone",
+    name: "BULOBA ZONE",
     district: "Wakiso",
     leaderName: "Dr. Henry Musoke",
     leaderPhone: "+256 757 345 678",
@@ -148,7 +170,7 @@ const initialZones: Zone[] = [
   },
   {
     id: "zone-3",
-    name: "South Zone",
+    name: "BWEYOGERERE ZONE",
     district: "Entebbe",
     leaderName: "Prof. Sarah Nakamya",
     leaderPhone: "+256 757 567 890",
@@ -159,7 +181,7 @@ const initialZones: Zone[] = [
   },
   {
     id: "zone-4",
-    name: "West Zone",
+    name: "ENTEBBE ZONE",
     district: "Wakiso",
     leaderName: "Mr. Patrick Lubega",
     leaderPhone: "+256 757 789 012",
@@ -170,7 +192,7 @@ const initialZones: Zone[] = [
   },
   {
     id: "zone-5",
-    name: "Eastern Zone",
+    name: "KITENDE ZONE",
     district: "Mukono",
     leaderName: "Mr. David Otim",
     leaderPhone: "+256 757 901 234",
@@ -181,7 +203,7 @@ const initialZones: Zone[] = [
   },
   {
     id: "zone-6",
-    name: "Northern Region",
+    name: "MATUGGA ZONE",
     district: "Jinja",
     leaderName: "Mr. Edgar Kamya",
     leaderPhone: "+256 758 112 233",
@@ -192,8 +214,8 @@ const initialZones: Zone[] = [
   },
   {
     id: "zone-7",
-    name: "Fort Portal Zone",
-    district: "Fort Portal",
+    name: "NADDANGIRA ZONE",
+    district: "Wakiso",
     leaderName: "Mr. Julius Mugyenyi",
     leaderPhone: "+256 758 334 445",
     leaderEmail: "julius.mugyenyi@wakissha.org",
@@ -203,8 +225,8 @@ const initialZones: Zone[] = [
   },
   {
     id: "zone-8",
-    name: "Mbarara Zone",
-    district: "Mbarara",
+    name: "NANSANA ZONE",
+    district: "Wakiso",
     leaderName: "Mr. Amos Bazira",
     leaderPhone: "+256 758 556 667",
     leaderEmail: "amos.bazira@wakissha.org",
@@ -212,21 +234,57 @@ const initialZones: Zone[] = [
     secretariatPhone: "+256 758 667 778",
     secretariatEmail: "teresa.byamukama@wakissha.org",
   },
+  {
+    id: "zone-9",
+    name: "NSANGI ZONE",
+    district: "Wakiso",
+    leaderName: "Mr. Samuel Ssenyonga",
+    leaderPhone: "+256 759 111 222",
+    leaderEmail: "samuel.ssenyonga@wakissha.org",
+    secretariatName: "Ms. Brenda Namata",
+    secretariatPhone: "+256 759 222 333",
+    secretariatEmail: "brenda.namata@wakissha.org",
+  },
+  {
+    id: "zone-10",
+    name: "WAMPEEWO ZONE",
+    district: "Wakiso",
+    leaderName: "Mr. Peter Mugisha",
+    leaderPhone: "+256 759 333 444",
+    leaderEmail: "peter.mugisha@wakissha.org",
+    secretariatName: "Ms. Lydia Namirembe",
+    secretariatPhone: "+256 759 444 555",
+    secretariatEmail: "lydia.namirembe@wakissha.org",
+  },
 ];
 
 const initialSubjects: Subject[] = [
-  { id: "subj-1", name: "Mathematics", code: "MTH", educationLevel: "BOTH", optional: false },
-  { id: "subj-2", name: "English Language", code: "ENG", educationLevel: "BOTH", optional: false },
-  { id: "subj-3", name: "Physics", code: "PHY", educationLevel: "UCE", optional: false },
-  { id: "subj-4", name: "Chemistry", code: "CHM", educationLevel: "BOTH", optional: false },
-  { id: "subj-5", name: "Biology", code: "BIO", educationLevel: "BOTH", optional: false },
-  { id: "subj-6", name: "History", code: "HIS", educationLevel: "BOTH", optional: true },
-  { id: "subj-7", name: "Geography", code: "GEO", educationLevel: "BOTH", optional: true },
-  { id: "subj-8", name: "Computer Science", code: "CPS", educationLevel: "BOTH", optional: true },
-  { id: "subj-9", name: "Literature in English", code: "LIT", educationLevel: "UACE", optional: true },
-  { id: "subj-10", name: "General Paper", code: "GP", educationLevel: "UACE", optional: false },
-  { id: "subj-11", name: "Economics", code: "ECN", educationLevel: "UACE", optional: true },
-  { id: "subj-12", name: "Entrepreneurship", code: "ETP", educationLevel: "UACE", optional: true },
+  { id: "subj-1", name: "English", code: "ENG", educationLevel: "UCE", optional: false },
+  { id: "subj-2", name: "Literature in English", code: "LIT", educationLevel: "UCE", optional: true },
+  { id: "subj-3", name: "Kiswahili", code: "KISWA", educationLevel: "BOTH", optional: true },
+  { id: "subj-4", name: "Christian Religious Education", code: "CRE", educationLevel: "BOTH", optional: true },
+  { id: "subj-5", name: "Islamic Religious Education", code: "IRE", educationLevel: "BOTH", optional: true },
+  { id: "subj-6", name: "History and Political Education", code: "HIST", educationLevel: "UCE", optional: true },
+  { id: "subj-7", name: "Geography", code: "GEOG", educationLevel: "BOTH", optional: true },
+  { id: "subj-8", name: "French", code: "FRENCH", educationLevel: "BOTH", optional: true },
+  { id: "subj-9", name: "German", code: "GERMAN", educationLevel: "BOTH", optional: true },
+  { id: "subj-10", name: "Arabic", code: "ARABIC", educationLevel: "BOTH", optional: true },
+  { id: "subj-11", name: "Luganda", code: "LUGANDA", educationLevel: "BOTH", optional: true },
+  { id: "subj-12", name: "Runyankole / Rukiga", code: "RUNY", educationLevel: "BOTH", optional: true },
+  { id: "subj-13", name: "Lusoga", code: "LUSOGA", educationLevel: "BOTH", optional: true },
+  { id: "subj-14", name: "Mathematics", code: "MATH", educationLevel: "BOTH", optional: false },
+  { id: "subj-15", name: "Agriculture", code: "AGRIC", educationLevel: "BOTH", optional: true },
+  { id: "subj-16", name: "Physics", code: "PHY", educationLevel: "BOTH", optional: true },
+  { id: "subj-17", name: "Chemistry", code: "CHEM", educationLevel: "BOTH", optional: true },
+  { id: "subj-18", name: "Biology", code: "BIO", educationLevel: "BOTH", optional: true },
+  { id: "subj-19", name: "Art and Design", code: "ART", educationLevel: "BOTH", optional: true },
+  { id: "subj-20", name: "Nutrition and Food Technology", code: "FN", educationLevel: "UCE", optional: true },
+  { id: "subj-21", name: "Technical and Design", code: "TD", educationLevel: "BOTH", optional: true },
+  { id: "subj-22", name: "ICT", code: "CPS", educationLevel: "UCE", optional: true },
+  { id: "subj-23", name: "Entrepreneurship", code: "ENT", educationLevel: "BOTH", optional: true },
+  { id: "subj-24", name: "General Paper", code: "GP", educationLevel: "UACE", optional: false },
+  { id: "subj-25", name: "Subsidiary Mathematics", code: "SUB_MATHS", educationLevel: "UACE", optional: true },
+  { id: "subj-26", name: "Subsidiary ICT", code: "SUB_ICT", educationLevel: "UACE", optional: true },
 ];
 
 const initialSchools: SchoolRecord[] = [
@@ -238,7 +296,7 @@ const initialSchools: SchoolRecord[] = [
     phone: "+256 700 101 001",
     address: "Plot 12 Kampala Road, Kampala",
     district: "Kampala",
-    zone: "Central Zone",
+    zone: "AGGREY ZONE",
     zone_id: "zone-1",
     educationLevel: "UCE" as const,
     academicYear: "2026",
@@ -257,7 +315,7 @@ const initialSchools: SchoolRecord[] = [
     phone: "+256 700 101 002",
     address: "Mityana Road, Wakiso",
     district: "Wakiso",
-    zone: "North Zone",
+    zone: "BULOBA ZONE",
     zone_id: "zone-2",
     educationLevel: "UACE" as const,
     academicYear: "2026",
@@ -276,7 +334,7 @@ const initialSchools: SchoolRecord[] = [
     phone: "+256 700 101 003",
     address: "Airport Road, Entebbe",
     district: "Entebbe",
-    zone: "South Zone",
+    zone: "BWEYOGERERE ZONE",
     zone_id: "zone-3",
     educationLevel: "BOTH" as const,
     academicYear: "2026",
@@ -295,7 +353,7 @@ const initialSchools: SchoolRecord[] = [
     phone: "+256 700 101 004",
     address: "Hoima Road, Nansana",
     district: "Wakiso",
-    zone: "West Zone",
+    zone: "ENTEBBE ZONE",
     zone_id: "zone-4",
     educationLevel: "UCE" as const,
     academicYear: "2026",
@@ -395,7 +453,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [schools, setSchools] = useState<SchoolRecord[]>(initialSchools);
   const [students, setStudents] = useState<StudentRecord[]>(initialStudents);
   const [zones] = useState<Zone[]>(initialZones);
-  const [subjects] = useState<Subject[]>(initialSubjects);
+  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
 
   useEffect(() => {
     if (!user || user.role !== "school" || !user.schoolCode) return;
@@ -433,7 +491,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const addSchool = (newSchool: NewSchoolInput) => {
     const nextNumber = schools.length + 1;
     const schoolCode = `WAK26-${String(nextNumber).padStart(4, "0")}`;
-    const zone = initialZones.find((z) => z.id === newSchool.zone_id) || initialZones[0];
+    const zone = initialZones.find((z) => z.id === newSchool.zone_id);
+    const resolvedZone = zone ?? initialZones[0];
 
     const school: SchoolRecord = {
       id: String(nextNumber + 1),
@@ -442,8 +501,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: newSchool.email,
       phone: newSchool.phone,
       address: newSchool.address,
-      district: zone.district,
-      zone: zone.name,
+      district: zone ? resolvedZone.district : "Unassigned",
+      zone: zone ? resolvedZone.name : "UNASSIGNED ZONE",
       zone_id: newSchool.zone_id,
       educationLevel: newSchool.educationLevel,
       academicYear: "2026",
@@ -455,6 +514,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       activationCode: "",
       schoolLogo: newSchool.schoolLogo,
       contactPerson: newSchool.contactPerson,
+      contactDesignation: newSchool.contactDesignation,
     };
 
     schoolPasswords[schoolCode] = "demo123";
@@ -539,6 +599,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const addSubject: AuthContextType["addSubject"] = (subject) => {
+    setSubjects((prev) => {
+      const normalizedCode = subject.code.trim().toUpperCase();
+      if (prev.some((item) => item.code.toUpperCase() === normalizedCode)) {
+        return prev;
+      }
+
+      return [
+        ...prev,
+        {
+          id: `subj-${prev.length + 1}`,
+          name: subject.name.trim(),
+          code: normalizedCode,
+          educationLevel: subject.educationLevel,
+          optional: subject.optional,
+        },
+      ];
+    });
+  };
+
+  const updateSubject: AuthContextType["updateSubject"] = (subjectId, updates) => {
+    setSubjects((prev) => {
+      const normalizedCode = updates.code.trim().toUpperCase();
+      const duplicate = prev.some(
+        (item) => item.id !== subjectId && item.code.toUpperCase() === normalizedCode,
+      );
+      if (duplicate) return prev;
+
+      return prev.map((subject) =>
+        subject.id === subjectId
+          ? {
+              ...subject,
+              name: updates.name.trim(),
+              code: normalizedCode,
+              educationLevel: updates.educationLevel,
+              optional: updates.optional,
+            }
+          : subject,
+      );
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -554,6 +656,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         submitSchoolDocuments,
         updateSchoolStatus,
         addStudentEntry,
+        addSubject,
+        updateSubject,
       }}
     >
       {children}

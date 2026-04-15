@@ -12,6 +12,7 @@ import { PaymentStatus } from "./components/school-pages/payment-status";
 import { UploadPDF } from "./components/school-pages/upload-pdf";
 import { Timetable } from "./components/shared/timetable";
 import { Reports } from "./components/shared/reports";
+import { SubjectsManagement } from "./components/subjects/subjects-management";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
@@ -68,7 +69,7 @@ function AppContent() {
         case "reports":
           return <Reports onPageChange={handlePageChange} />;
         case "subjects":
-          return renderPlaceholder("Subjects Management - Coming in Phase 2");
+          return <SubjectsManagement onPageChange={handlePageChange} />;
         case "academic-year":
           return renderPlaceholder("Academic Year Management - Coming in Phase 2");
         case "timetable":

@@ -1,0 +1,267 @@
+import { useMemo, useState } from "react";
+import { BookOpen, PencilLine, PlusCircle, ShieldCheck } from "lucide-react";
+import { useAuth } from "../auth-context";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Badge } from "../ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { toast } from "sonner";
+
+interface SubjectsManagementProps {
+  onPageChange: (page: string) => void;
+}
+
+export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
+  const { subjects, addSubject, updateSubject } = useAuth();
+  const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
+  const [newSubject, setNewSubject] = useState({
+    name: "",
+    code: "",
+    educationLevel: "UCE" as "UCE" | "UACE" | "BOTH",
+    optional: "yes" as "yes" | "no",
+  });
+
+  const stats = useMemo(
+    () => [
+      { label: "Total Standard Subjects", value: subjects.length },
+      {
+        label: "UCE Subjects",
+        value: subjects.filter((subject) => subject.educationLevel === "UCE" || subject.educationLevel === "BOTH").length,
+      },
+      {
+        label: "UACE Subjects",
+        value: subjects.filter((subject) => subject.educationLevel === "UACE" || subject.educationLevel === "BOTH").length,
+      },
+    ],
+    [subjects],
+  );
+
+  const handleSubmitSubject = () => {
+    if (!newSubject.name.trim() || !newSubject.code.trim()) {
+      toast.error("Subject name and code are required");
+      return;
+    }
+
+    const exists = subjects.some(
+      (subject) =>
+        subject.code.toUpperCase() === newSubject.code.trim().toUpperCase() &&
+        subject.id !== editingSubjectId,
+    );
+    if (exists) {
+      toast.error("This subject code already exists");
+      return;
+    }
+
+    if (editingSubjectId) {
+      updateSubject(editingSubjectId, {
+        name: newSubject.name,
+        code: newSubject.code,
+        educationLevel: newSubject.educationLevel,
+        optional: newSubject.optional === "yes",
+      });
+    } else {
+      addSubject({
+        name: newSubject.name,
+        code: newSubject.code,
+        educationLevel: newSubject.educationLevel,
+        optional: newSubject.optional === "yes",
+      });
+    }
+
+    setNewSubject({
+      name: "",
+      code: "",
+      educationLevel: "UCE",
+      optional: "yes",
+    });
+    setEditingSubjectId(null);
+
+    toast.success(
+      editingSubjectId
+        ? "Standard subject updated successfully"
+        : "Standard subject added to admin registry",
+    );
+  };
+
+  return (
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 anim-fade-up">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
+            Subjects Registry
+          </p>
+          <h1 className="text-3xl font-bold text-shimmer">Subjects Management</h1>
+          <p className="max-w-3xl text-slate-500">
+            Association admin sets up the standard subject list here. Schools only select from this registry when registering students for UCE or UACE.
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => onPageChange("students")}>
+          Go to Student Entries
+        </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {stats.map((item) => (
+          <Card key={item.label} className="border-l-4 border-l-blue-500">
+            <CardContent className="pt-6">
+              <p className="text-sm text-slate-500">{item.label}</p>
+              <p className="mt-2 text-3xl font-bold text-slate-900">{item.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader className="border-b border-slate-200">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle>Association-Controlled Subject Setup</CardTitle>
+              <CardDescription>
+                Only admin should define and edit standard subject names and
+                subject codes. Once saved here, they become visible to all
+                schools for the matching level.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-4 pt-6 md:grid-cols-2 xl:grid-cols-4">
+          <div className="space-y-2">
+            <Label htmlFor="subjectName">Subject Name</Label>
+            <Input
+              id="subjectName"
+              placeholder="e.g. Economics"
+              value={newSubject.name}
+              onChange={(event) => setNewSubject({ ...newSubject, name: event.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="subjectCode">Standard Code</Label>
+            <Input
+              id="subjectCode"
+              placeholder="e.g. ECON"
+              value={newSubject.code}
+              onChange={(event) => setNewSubject({ ...newSubject, code: event.target.value.toUpperCase() })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Education Level</Label>
+            <Select
+              value={newSubject.educationLevel}
+              onValueChange={(value: "UCE" | "UACE" | "BOTH") =>
+                setNewSubject({ ...newSubject, educationLevel: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="UCE">UCE</SelectItem>
+                <SelectItem value="UACE">UACE</SelectItem>
+                <SelectItem value="BOTH">Both Levels</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Subject Type</Label>
+            <Select
+              value={newSubject.optional}
+              onValueChange={(value: "yes" | "no") => setNewSubject({ ...newSubject, optional: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no">Core / Required</SelectItem>
+                <SelectItem value="yes">Optional</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2 xl:col-span-4 flex justify-end">
+            <Button onClick={handleSubmitSubject}>
+              <PlusCircle className="h-4 w-4" />
+              {editingSubjectId ? "Save Subject Changes" : "Add Standard Subject"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+              <BookOpen className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle>Registered Standard Subjects</CardTitle>
+              <CardDescription>
+                These are the subjects schools see when entering student registrations.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Subject Name</TableHead>
+                  <TableHead>Level</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {subjects.map((subject) => (
+                  <TableRow key={subject.id}>
+                    <TableCell className="font-mono text-xs">{subject.code}</TableCell>
+                    <TableCell className="font-semibold text-slate-900">{subject.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{subject.educationLevel}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={subject.optional ? "outline" : "success"}>
+                        {subject.optional ? "Optional" : "Required"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingSubjectId(subject.id);
+                          setNewSubject({
+                            name: subject.name,
+                            code: subject.code,
+                            educationLevel: subject.educationLevel,
+                            optional: subject.optional ? "yes" : "no",
+                          });
+                        }}
+                      >
+                        <PencilLine className="h-4 w-4" />
+                        Edit
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

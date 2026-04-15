@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FileSpreadsheet,
   FileText,
@@ -60,20 +60,21 @@ const formBaseColumns: FormColumn[] = [
 
 const uaceSubjectColumns: FormColumn[] = [
   { key: "GP", label: "GP" },
-  { key: "HIST", label: "Hist" },
-  { key: "ECON", label: "Econ" },
+  { key: "SUB_MATHS", label: "Sub Maths" },
+  { key: "SUB_ICT", label: "Sub ICT" },
+  { key: "HIST", label: "History" },
   { key: "ENT", label: "Ent" },
   { key: "IRE", label: "IRE" },
   { key: "CRE", label: "CRE" },
-  { key: "GEOG", label: "Geog" },
-  { key: "LIT", label: "LIT" },
-  { key: "KISWA", label: "Kiswa" },
+  { key: "GEOG", label: "Geography" },
+  { key: "LIT", label: "Literature" },
+  { key: "KISWA", label: "Kiswahili" },
   { key: "ART", label: "Art" },
-  { key: "PHY", label: "PHY" },
-  { key: "CHEM", label: "Chem" },
-  { key: "BIO", label: "BIO" },
+  { key: "PHY", label: "Physics" },
+  { key: "CHEM", label: "Chemistry" },
+  { key: "BIO", label: "Biology" },
   { key: "MATH", label: "Maths" },
-  { key: "AGRIC", label: "Agric" },
+  { key: "AGRIC", label: "Agriculture" },
   { key: "FN", label: "F/N" },
   { key: "TD", label: "TD" },
   { key: "FRENCH", label: "French" },
@@ -113,6 +114,65 @@ const entryColumns: FormColumn[] = [
 
 type FormRow = Record<string, string | number>;
 
+type OfficialSubjectRow = {
+  key: string;
+  code: string;
+  name: string;
+};
+
+const uceOfficialSubjectRows: OfficialSubjectRow[] = [
+  { key: "ENG", code: "112", name: "ENGLISH" },
+  { key: "LIT", code: "208", name: "LIT ENG" },
+  { key: "KISWA", code: "336", name: "KISWAHILI" },
+  { key: "CRE", code: "223", name: "CRE" },
+  { key: "IRE", code: "225", name: "IRE" },
+  { key: "HIST", code: "241", name: "HISTORY & POL. EDUC." },
+  { key: "GEOG", code: "273", name: "GEOGRAPHY" },
+  { key: "FRENCH", code: "314", name: "FRENCH" },
+  { key: "GERMAN", code: "309", name: "GERMAN" },
+  { key: "ARABIC", code: "337", name: "ARABIC" },
+  { key: "LUGANDA", code: "335", name: "LUGANDA" },
+  { key: "RUNY", code: "345", name: "RUNYANKOLE / RUKIGA" },
+  { key: "LUSOGA", code: "355", name: "LUSOGA" },
+  { key: "MATH", code: "456", name: "MATHEMATICS" },
+  { key: "AGRIC", code: "527", name: "AGRICULTURE" },
+  { key: "PHY", code: "535", name: "PHYSICS" },
+  { key: "CHEM", code: "545", name: "CHEMISTRY" },
+  { key: "BIO", code: "553", name: "BIOLOGY" },
+  { key: "ART", code: "612", name: "ART & DESIGN" },
+  { key: "FN", code: "662", name: "NUTRITION & FOOD TECH." },
+  { key: "TD", code: "745", name: "TECH. & DESIGN" },
+  { key: "CPS", code: "840", name: "ICT" },
+  { key: "ENT", code: "845", name: "ENTREPRENEURSHIP" },
+];
+
+const uaceOfficialSubjectRows: OfficialSubjectRow[] = [
+  { key: "GP", code: "101", name: "GENERAL PAPER" },
+  { key: "SUB_MATHS", code: "475", name: "SUBSIDIARY MATHEMATICS" },
+  { key: "SUB_ICT", code: "610", name: "SUBSIDIARY ICT" },
+  { key: "HIST", code: "210", name: "HISTORY" },
+  { key: "ENT", code: "268", name: "ENTREPRENEURSHIP" },
+  { key: "IRE", code: "224", name: "IRE" },
+  { key: "CRE", code: "221", name: "CRE" },
+  { key: "GEOG", code: "230", name: "GEOGRAPHY" },
+  { key: "LIT", code: "220", name: "LITERATURE IN ENGLISH" },
+  { key: "KISWA", code: "340", name: "KISWAHILI" },
+  { key: "ART", code: "615", name: "FINE ART" },
+  { key: "PHY", code: "525", name: "PHYSICS" },
+  { key: "CHEM", code: "535", name: "CHEMISTRY" },
+  { key: "BIO", code: "545", name: "BIOLOGY" },
+  { key: "MATH", code: "475", name: "MATHEMATICS" },
+  { key: "AGRIC", code: "515", name: "AGRICULTURE" },
+  { key: "FN", code: "635", name: "FOOD & NUTRITION" },
+  { key: "TD", code: "680", name: "TECHNICAL DRAWING" },
+  { key: "FRENCH", code: "351", name: "FRENCH" },
+  { key: "GERMAN", code: "358", name: "GERMAN" },
+  { key: "ARABIC", code: "361", name: "ARABIC" },
+  { key: "LUGANDA", code: "380", name: "LUGANDA" },
+  { key: "RUNY", code: "383", name: "RUNYAKITARA" },
+  { key: "LUSOGA", code: "386", name: "LUSOGA" },
+];
+
 function mapSubjectCode(subjectCode: string) {
   const normalized = subjectCode.toUpperCase();
   const aliases: Record<string, string> = {
@@ -120,7 +180,7 @@ function mapSubjectCode(subjectCode: string) {
     MTH: "MATH",
     CPS: "CPS",
     ETP: "ENT",
-    ECN: "ECON",
+    ECN: "ENT",
     GEO: "GEOG",
     HIS: "HIST",
     CHM: "CHEM",
@@ -132,6 +192,15 @@ function mapSubjectCode(subjectCode: string) {
     IRE: "IRE",
   };
   return aliases[normalized] ?? normalized;
+}
+
+function getOfficialSubjectRows(level: "UACE" | "UCE") {
+  return level === "UACE" ? uaceOfficialSubjectRows : uceOfficialSubjectRows;
+}
+
+function formatPaperCell(value: unknown) {
+  const numeric = Number(value ?? 0);
+  return numeric > 0 ? String(numeric) : "-";
 }
 
 function getStatusBadge(status: string) {
@@ -150,27 +219,53 @@ function getStatusBadge(status: string) {
 }
 
 export function Reports({ onPageChange }: ReportsProps) {
-  const { schools, students, subjects } = useAuth();
+  const { user, schools, students, subjects } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const scopedSchools =
+    user?.role === "school"
+      ? schools.filter((school) => school.code === user.schoolCode)
+      : schools;
+  const scopedStudents =
+    user?.role === "school"
+      ? students.filter((student) => student.schoolCode === user.schoolCode)
+      : students;
   const [selectedSchool, setSelectedSchool] = useState("all");
+  const [selectedSubjectCode, setSelectedSubjectCode] = useState("all");
+  const [selectedSchoolReportLevel, setSelectedSchoolReportLevel] = useState<"UCE" | "UACE">("UCE");
   const [exportingKey, setExportingKey] = useState<string | null>(null);
   const [educationLevelFilter, setEducationLevelFilter] = useState<EducationLevelFilter>("all");
   const [lateFee] = useState(0);
 
+  useEffect(() => {
+    if (user?.role === "school" && user.schoolCode) {
+      setSelectedSchool(user.schoolCode);
+    }
+  }, [user?.role, user?.schoolCode]);
+
   const consolidatedRows = useMemo<FormRow[]>(() => {
-    const filteredSchools = schools.filter((school) => {
+    const filteredSchools = scopedSchools.filter((school) => {
       if (educationLevelFilter === "all") return true;
       return school.educationLevel === educationLevelFilter || school.educationLevel === "BOTH";
     });
 
     return filteredSchools.map((school, index) => {
-      const schoolStudents = students.filter((student) => student.schoolCode === school.code);
+      const schoolStudents = scopedStudents.filter((student) => student.schoolCode === school.code);
       const registeredSubjects = new Set(schoolStudents.map((student) => student.subjectCode)).size;
       const isUaceForm = educationLevelFilter === "UACE" || school.educationLevel === "UACE";
       const subjectColumns = isUaceForm ? uaceSubjectColumns : uceSubjectColumns;
 
-      const subjectCounts = schoolStudents.reduce<Record<string, number>>((acc, student) => {
+      const subjectCounts = schoolStudents.reduce<
+        Record<string, { entries: number; p1: number; p2: number; p3: number; p4: number }>
+      >((acc, student) => {
         const key = mapSubjectCode(student.subjectCode);
-        acc[key] = (acc[key] ?? 0) + student.totalEntries;
+        if (!acc[key]) {
+          acc[key] = { entries: 0, p1: 0, p2: 0, p3: 0, p4: 0 };
+        }
+        acc[key].entries += student.totalEntries;
+        acc[key].p1 += student.entry1;
+        acc[key].p2 += student.entry2;
+        acc[key].p3 += student.entry3;
+        acc[key].p4 += student.entry4;
         return acc;
       }, {});
 
@@ -184,26 +279,28 @@ export function Reports({ onPageChange }: ReportsProps) {
       };
 
       subjectColumns.forEach((subject) => {
-        const entries = subjectCounts[subject.key] ?? 0;
-        const p1 = Math.floor(entries * 0.35);
-        const p2 = Math.floor(entries * 0.25);
-        const p3 = Math.floor(entries * 0.2);
-        const p4 = entries - (p1 + p2 + p3);
-        row[`${subject.key}_entries`] = entries;
-        row[`${subject.key}_p1`] = p1;
-        row[`${subject.key}_p2`] = p2;
-        row[`${subject.key}_p3`] = p3;
-        row[`${subject.key}_p4`] = p4;
+        const metrics = subjectCounts[subject.key] ?? {
+          entries: 0,
+          p1: 0,
+          p2: 0,
+          p3: 0,
+          p4: 0,
+        };
+        row[`${subject.key}_entries`] = metrics.entries;
+        row[`${subject.key}_p1`] = metrics.p1;
+        row[`${subject.key}_p2`] = metrics.p2;
+        row[`${subject.key}_p3`] = metrics.p3;
+        row[`${subject.key}_p4`] = metrics.p4;
       });
 
       return row;
     });
-  }, [schools, students, educationLevelFilter]);
+  }, [scopedSchools, scopedStudents, educationLevelFilter]);
 
   const subjectWiseData = useMemo(
     () =>
       subjects.map((subject) => {
-        const subjectStudents = students.filter((student) => student.subjectCode === subject.code);
+        const subjectStudents = scopedStudents.filter((student) => student.subjectCode === subject.code);
         return {
           subject: subject.name,
           code: subject.code,
@@ -219,47 +316,123 @@ export function Reports({ onPageChange }: ReportsProps) {
               : 0,
         };
       }),
-    [subjects, students],
+    [subjects, scopedStudents],
   );
+
+  const subjectStudentsList = useMemo(() => {
+    if (selectedSubjectCode === "all") return scopedStudents;
+    return scopedStudents.filter((student) => student.subjectCode === selectedSubjectCode);
+  }, [scopedStudents, selectedSubjectCode]);
 
   const selectedSchoolData =
     selectedSchool !== "all"
-      ? schools.find((school) => school.code === selectedSchool)
+      ? scopedSchools.find((school) => school.code === selectedSchool)
       : undefined;
+
+  useEffect(() => {
+    if (!selectedSchoolData) return;
+    if (selectedSchoolData.educationLevel === "UACE") {
+      setSelectedSchoolReportLevel("UACE");
+    } else if (selectedSchoolData.educationLevel === "UCE") {
+      setSelectedSchoolReportLevel("UCE");
+    }
+  }, [selectedSchoolData?.code, selectedSchoolData?.educationLevel]);
 
   const selectedSchoolProfile = useMemo(() => {
     if (!selectedSchoolData) return undefined;
-    const schoolStudents = students.filter((student) => student.schoolCode === selectedSchoolData.code);
+    const schoolStudents = scopedStudents.filter((student) => student.schoolCode === selectedSchoolData.code);
     return {
       totalStudents: schoolStudents.length,
       subjectsRegistered: new Set(schoolStudents.map((student) => student.subjectCode)).size,
       reportNote: "Report generated from current frontend simulation state.",
       lastUpdated: new Date().toLocaleDateString(),
     };
-  }, [selectedSchoolData, students]);
+  }, [selectedSchoolData, scopedStudents]);
+
+  const buildSingleSchoolRow = (
+    schoolCode: string,
+    level: "UACE" | "UCE",
+  ): FormRow | undefined => {
+    const school = scopedSchools.find((record) => record.code === schoolCode);
+    if (!school) return undefined;
+
+    const schoolStudents = scopedStudents.filter(
+      (student) => student.schoolCode === schoolCode && student.examLevel === level,
+    );
+    const subjectColumns = level === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
+    const subjectCounts = schoolStudents.reduce<
+      Record<string, { entries: number; p1: number; p2: number; p3: number; p4: number }>
+    >((acc, student) => {
+      const key = mapSubjectCode(student.subjectCode);
+      if (!acc[key]) {
+        acc[key] = { entries: 0, p1: 0, p2: 0, p3: 0, p4: 0 };
+      }
+      acc[key].entries += student.totalEntries;
+      acc[key].p1 += student.entry1;
+      acc[key].p2 += student.entry2;
+      acc[key].p3 += student.entry3;
+      acc[key].p4 += student.entry4;
+      return acc;
+    }, {});
+
+    const row: FormRow = {
+      refNo: 1,
+      schoolName: school.name,
+      district: school.district,
+      zone: school.zone,
+      registeredSubjects: new Set(schoolStudents.map((student) => student.subjectCode)).size,
+      telephone: school.phone,
+    };
+
+    subjectColumns.forEach((subject) => {
+      const metrics = subjectCounts[subject.key] ?? {
+        entries: 0,
+        p1: 0,
+        p2: 0,
+        p3: 0,
+        p4: 0,
+      };
+      row[`${subject.key}_entries`] = metrics.entries;
+      row[`${subject.key}_p1`] = metrics.p1;
+      row[`${subject.key}_p2`] = metrics.p2;
+      row[`${subject.key}_p3`] = metrics.p3;
+      row[`${subject.key}_p4`] = metrics.p4;
+    });
+
+    return row;
+  };
+
+  const getPaperSelectionText = (student: (typeof scopedStudents)[number]) => {
+    const papers: string[] = [];
+    if (student.entry1 > 0) papers.push("P1");
+    if (student.entry2 > 0) papers.push("P2");
+    if (student.entry3 > 0) papers.push("P3");
+    if (student.entry4 > 0) papers.push("P4");
+    return papers.length > 0 ? papers.join(", ") : "-";
+  };
 
   const summaryCards = [
     {
       label: "Registered Schools",
-      value: schools.length,
+      value: scopedSchools.length,
       className: "border-l-red-600",
       valueClass: "text-slate-900",
     },
     {
       label: "Total Students",
-      value: students.length,
+      value: scopedStudents.length,
       className: "border-l-amber-500",
       valueClass: "text-slate-900",
     },
     {
       label: "Active Schools",
-      value: schools.filter((school) => school.status === "active").length,
+      value: scopedSchools.filter((school) => school.status === "active").length,
       className: "border-l-green-500",
       valueClass: "text-slate-900",
     },
     {
       label: "Payment Submitted",
-      value: schools.filter((school) => school.status === "payment_submitted").length,
+      value: scopedSchools.filter((school) => school.status === "payment_submitted").length,
       className: "border-l-blue-500",
       valueClass: "text-slate-900",
     },
@@ -305,6 +478,18 @@ export function Reports({ onPageChange }: ReportsProps) {
     level: "UACE" | "UCE",
     rows: FormRow[],
     fileName: string,
+    schoolContext?: {
+      name: string;
+      code: string;
+      district: string;
+      zone: string;
+      telephone: string;
+      contactPerson?: string;
+      contactDesignation?: string;
+      contactEmail?: string;
+      academicYear?: string;
+      totalCandidates?: number;
+    },
   ) => {
     try {
       const pdf = new jsPDF({
@@ -314,55 +499,276 @@ export function Reports({ onPageChange }: ReportsProps) {
       });
 
       const pageWidth = pdf.internal.pageSize.getWidth();
-      let yPos = 12;
+      const margin = 10;
+      let yPos = 15;
       const subjectsColumns = level === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
       const fee = calculateFeeSummary(rows);
 
-      pdf.setFontSize(11);
+      // Title
+      pdf.setFontSize(14);
       pdf.setFont("helvetica", "bold");
       pdf.text(`WAKISSHA JOINT MOCK ${level} SUMMARY 2026`, pageWidth / 2, yPos, {
         align: "center",
       });
-      yPos += 5;
+      yPos += 8;
 
-      const headerRow = [
-        ...formBaseColumns.map((col) => col.label),
-        ...subjectsColumns.flatMap((subject) =>
-          entryColumns.map((entry) => `${subject.label}-${entry.label}`),
-        ),
+      // Header info with better spacing
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      const totalCandidates =
+        schoolContext?.totalCandidates ??
+        rows.reduce((sum, row) => sum + Number(row.registeredSubjects || 0), 0);
+      
+      pdf.text(`YEAR: ${schoolContext?.academicYear ?? "2026"}`, margin, yPos);
+      pdf.text(`TOTAL CANDIDATES: ${totalCandidates}`, 100, yPos);
+      yPos += 6;
+
+      if (schoolContext) {
+        pdf.setFont("helvetica", "bold");
+        pdf.text("SCHOOL DETAILS", margin, yPos);
+        yPos += 5;
+        
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.5);
+        pdf.text(`School: ${schoolContext.name}`, margin + 2, yPos);
+        yPos += 4;
+        pdf.text(`Reference: ${schoolContext.code} | District: ${schoolContext.district}`, margin + 2, yPos);
+        yPos += 4;
+        pdf.text(`Zone: ${schoolContext.zone} | Phone: ${schoolContext.telephone}`, margin + 2, yPos);
+        yPos += 4;
+        
+        if (schoolContext.contactPerson) {
+          pdf.text(`Contact: ${schoolContext.contactPerson} (${schoolContext.contactDesignation || "Head"})`, margin + 2, yPos);
+          yPos += 4;
+        }
+        
+        yPos += 3;
+      }
+
+      if (schoolContext && rows.length === 1) {
+        const row = rows[0];
+        const officialSubjectRows = getOfficialSubjectRows(level);
+        
+        autoTable(pdf, {
+          head: [["CODE", "SUBJECT NAME", "ENTRIES", "P1", "P2", "P3", "P4"]],
+          body: officialSubjectRows.map((subject) => [
+            subject.code,
+            subject.name,
+            String(row[`${subject.key}_entries`] ?? 0),
+            formatPaperCell(row[`${subject.key}_p1`]),
+            formatPaperCell(row[`${subject.key}_p2`]),
+            formatPaperCell(row[`${subject.key}_p3`]),
+            formatPaperCell(row[`${subject.key}_p4`]),
+          ]),
+          startY: yPos,
+          margin: { left: margin, right: margin, top: 5 },
+          columnStyles: {
+            0: { cellWidth: 16, halign: "center" },
+            1: { cellWidth: 100 },
+            2: { cellWidth: 18, halign: "center" },
+            3: { cellWidth: 14, halign: "center" },
+            4: { cellWidth: 14, halign: "center" },
+            5: { cellWidth: 14, halign: "center" },
+            6: { cellWidth: 14, halign: "center" },
+          },
+          headStyles: {
+            fillColor: [41, 128, 185],
+            textColor: [255, 255, 255],
+            lineWidth: 0.5,
+            lineColor: [41, 128, 185],
+            fontSize: 10,
+            fontStyle: "bold",
+            halign: "center",
+            padding: 4,
+          },
+          bodyStyles: {
+            lineWidth: 0.3,
+            lineColor: [200, 200, 200],
+            fontSize: 9,
+            textColor: [0, 0, 0],
+            padding: 3,
+          },
+          alternateRowStyles: {
+            fillColor: [245, 250, 255],
+          },
+        });
+      } else {
+        // Multi-school consolidated report - PLAIN BLACK AND WHITE FORM
+        // Calculate optimal column widths
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const margins = 5;
+        const usableWidth = pageWidth - (margins * 2);
+        
+        // Base columns with proper widths for readability
+        const baseColWidths = {
+          ref: 7,
+          school: 30,
+          district: 15,
+          zone: 16,
+          subs: 14,
+          phone: 14,
+        };
+        const baseColsTotal = Object.values(baseColWidths).reduce((a, b) => a + b, 0);
+        
+        // Subject columns - calculate to fill remaining space
+        const subjectColWidth = (usableWidth - baseColsTotal) / subjectsColumns.length;
+        
+        // Build header row with exact column names from reference image
+        const headerRow = [
+          "Ref No",
+          "Name of School",
+          "District",
+          "Zone / Centre",
+          "Registered Subjects",
+          "Telephone",
+          ...subjectsColumns.map((s) => s.label),
+        ];
+
+        // Build body rows
+        const bodyRows = rows.map((row) => [
+          String(row.refNo),
+          String(row.schoolName),
+          String(row.district),
+          String(row.zone),
+          String(row.registeredSubjects),
+          String(row.telephone),
+          ...subjectsColumns.map((subject) => String(row[`${subject.key}_entries`] ?? 0)),
+        ]);
+
+        // Calculate totals
+        const totalRow = [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ...subjectsColumns.map((subject) =>
+            String(
+              rows.reduce((sum, row) => sum + Number(row[`${subject.key}_entries`] ?? 0), 0)
+            )
+          ),
+        ];
+
+        // Combine all rows
+        const allRows = [...bodyRows, totalRow];
+
+        // Build column styles - PLAIN BLACK AND WHITE
+        const columnStyles: any = {
+          0: { cellWidth: baseColWidths.ref, halign: "center", fontSize: 8, padding: 1.5 },
+          1: { cellWidth: baseColWidths.school, halign: "left", fontSize: 8, padding: 1.5 },
+          2: { cellWidth: baseColWidths.district, halign: "center", fontSize: 8, padding: 1.5 },
+          3: { cellWidth: baseColWidths.zone, halign: "center", fontSize: 8, padding: 1.5 },
+          4: { cellWidth: baseColWidths.subs, halign: "center", fontSize: 8, padding: 1.5 },
+          5: { cellWidth: baseColWidths.phone, halign: "center", fontSize: 8, padding: 1.5 },
+        };
+
+        // Add subject column styles
+        subjectsColumns.forEach((_, idx) => {
+          columnStyles[6 + idx] = {
+            cellWidth: subjectColWidth,
+            halign: "center",
+            fontSize: 7,
+            padding: 1,
+          };
+        });
+
+        // Create plain black and white table
+        autoTable(pdf, {
+          head: [headerRow],
+          body: allRows,
+          startY: yPos,
+          margin: { left: margins, right: margins },
+          columnStyles: columnStyles,
+          headStyles: {
+            fillColor: [255, 255, 255], // White background
+            textColor: [0, 0, 0], // Black text
+            lineWidth: 0.5,
+            lineColor: [0, 0, 0], // Black borders
+            fontSize: 8,
+            fontStyle: "bold",
+            halign: "center",
+            valign: "middle",
+            padding: 1.5,
+          },
+          bodyStyles: {
+            lineWidth: 0.5,
+            lineColor: [0, 0, 0], // Black borders
+            fontSize: 7,
+            textColor: [0, 0, 0], // Black text
+            padding: 1,
+            fillColor: [255, 255, 255], // White background
+          },
+          alternateRowStyles: {
+            fillColor: [255, 255, 255], // Keep white, no alternating colors
+          },
+          didParseCell: (data: any) => {
+            // Make TOTAL row bold
+            if (data.row.index === allRows.length - 1) {
+              data.cell.styles.fontStyle = "bold";
+              data.cell.styles.lineWidth = 0.5;
+            }
+          },
+        });
+      }
+
+      // Fee summary - always on current or new page
+      const lastTableY = (pdf as any).lastAutoTable?.finalY ?? 200;
+      let feeSummaryY = lastTableY + 12;
+
+      if (feeSummaryY > 250) {
+        pdf.addPage();
+        feeSummaryY = 20;
+      }
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(12);
+      pdf.text("FEE SUMMARY", margin, feeSummaryY);
+      feeSummaryY += 7;
+      
+      const feeSummaryData = [
+        ["School Fee", `UGX ${fee.schoolFee.toLocaleString()}`],
+        ["Student Fee", `UGX ${fee.studentFee.toLocaleString()}`],
+        ["Late Fee", `UGX ${fee.lateFee.toLocaleString()}`],
+        ["Marking Fee", `UGX ${fee.markingFee.toLocaleString()}`],
       ];
-      const bodyRows = buildTemplateTable(rows, subjectsColumns);
-
+      
       autoTable(pdf, {
-        head: [headerRow],
-        body: bodyRows,
-        startY: yPos,
-        margin: { left: 6, right: 6 },
+        head: [["Description", "Amount"]],
+        body: feeSummaryData,
+        startY: feeSummaryY,
+        margin: { left: margin, right: pageWidth - margin - 100 },
+        tableWidth: 100,
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 40 },
+        },
         headStyles: {
-          fillColor: [255, 255, 255],
-          textColor: [0, 0, 0],
-          lineWidth: 0.2,
-          lineColor: [0, 0, 0],
-          fontSize: 6,
+          fillColor: [255, 255, 255], // White background
+          textColor: [0, 0, 0], // Black text
+          fontSize: 10,
           fontStyle: "bold",
+          lineWidth: 0.5,
+          lineColor: [0, 0, 0], // Black borders
+          padding: 3,
         },
         bodyStyles: {
-          lineWidth: 0.2,
-          lineColor: [0, 0, 0],
-          fontSize: 6,
-          textColor: [0, 0, 0],
+          fontSize: 10,
+          textColor: [0, 0, 0], // Black text
+          padding: 2,
+          lineWidth: 0.5,
+          lineColor: [0, 0, 0], // Black borders
+          fillColor: [255, 255, 255], // White background
+        },
+        alternateRowStyles: {
+          fillColor: [255, 255, 255], // Keep white
         },
       });
-
-      const endY = (pdf as any).lastAutoTable.finalY + 5;
-      pdf.setFontSize(8);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(`School Fee: UGX ${fee.schoolFee.toLocaleString()}`, 8, endY);
-      pdf.text(`Student Fee: UGX ${fee.studentFee.toLocaleString()}`, 60, endY);
-      pdf.text(`Late Fee: UGX ${fee.lateFee.toLocaleString()}`, 115, endY);
-      pdf.text(`Marking Fee: UGX ${fee.markingFee.toLocaleString()}`, 160, endY);
+      
+      const totalEndY = (pdf as any).lastAutoTable.finalY + 5;
+      pdf.setFontSize(12);
       pdf.setFont("helvetica", "bold");
-      pdf.text(`TOTAL AMOUNT: UGX ${fee.totalAmount.toLocaleString()}`, 220, endY);
+      pdf.text(`TOTAL AMOUNT: UGX ${fee.totalAmount.toLocaleString()}`, margin, totalEndY);
 
       pdf.save(`${fileName}.pdf`);
       toast.success(`${level} official form exported successfully`);
@@ -382,11 +788,11 @@ export function Reports({ onPageChange }: ReportsProps) {
     try {
       const preferredSchool =
         (selectedSchool !== "all"
-          ? schools.find((school) => school.code === selectedSchool)
-          : schools.find(
+          ? scopedSchools.find((school) => school.code === selectedSchool)
+          : scopedSchools.find(
               (school) =>
                 school.educationLevel === "UACE" || school.educationLevel === "BOTH",
-            )) ?? schools[0];
+            )) ?? scopedSchools[0];
 
       if (!preferredSchool) {
         toast.error("No school data available");
@@ -399,7 +805,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         return;
       }
 
-      const schoolStudents = students.filter(
+      const schoolStudents = scopedStudents.filter(
         (student) => student.schoolCode === preferredSchool.code,
       );
       const totalEntries = uaceSubjectColumns.reduce(
@@ -666,7 +1072,7 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const generateReadableSingleSchoolPDF = () => {
     try {
-      const selected = schools.find((school) => school.code === selectedSchool);
+      const selected = scopedSchools.find((school) => school.code === selectedSchool);
       if (!selected) {
         toast.error("Please select a school");
         return;
@@ -720,7 +1126,7 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const generateReadableSingleSchoolExcel = () => {
     try {
-      const selected = schools.find((school) => school.code === selectedSchool);
+      const selected = scopedSchools.find((school) => school.code === selectedSchool);
       if (!selected) {
         toast.error("Please select a school");
         return;
@@ -789,22 +1195,113 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const exportSingleSchoolToPDF = (fileName: string) => {
     try {
-      const selected = schools.find((s) => s.code === selectedSchool);
+      const selected = scopedSchools.find((s) => s.code === selectedSchool);
       if (!selected) {
         toast.error("Please select a school");
         return;
       }
 
-      const targetLevel: "UACE" | "UCE" =
-        selected.educationLevel === "UACE" ? "UACE" : "UCE";
-      const row = consolidatedRows.find((record) => record.schoolName === selected.name);
+      const targetLevel: "UACE" | "UCE" = selectedSchoolReportLevel;
+      const row = buildSingleSchoolRow(selected.code, targetLevel);
       if (!row) {
         toast.error("No data found for selected school");
         return;
       }
-      generateOfficialFormPDF(targetLevel, [row], fileName);
+      const schoolStudents = scopedStudents.filter(
+        (student) => student.schoolCode === selected.code && student.examLevel === targetLevel,
+      );
+      generateOfficialFormPDF(targetLevel, [row], fileName, {
+        name: selected.name,
+        code: selected.code,
+        district: selected.district,
+        zone: selected.zone,
+        telephone: selected.phone,
+        contactPerson: selected.contactPerson,
+        contactDesignation: selected.contactDesignation,
+        contactEmail: selected.email,
+        academicYear: selected.academicYear,
+        totalCandidates: schoolStudents.length,
+      });
     } catch (error) {
       toast.error("Failed to export PDF");
+      console.error(error);
+    }
+  };
+
+  const exportSelectedSchoolStudentsPDF = () => {
+    try {
+      const selected = scopedSchools.find((s) => s.code === selectedSchool);
+      if (!selected) {
+        toast.error("Please select a school");
+        return;
+      }
+      const rows = scopedStudents.filter(
+        (student) =>
+          student.schoolCode === selected.code &&
+          student.examLevel === selectedSchoolReportLevel,
+      );
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(14);
+      pdf.text("WAKISSHA STUDENTS REGISTERED LIST", 105, 16, { align: "center" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.text(`School: ${selected.name}`, 14, 24);
+      pdf.text(`Level: ${selectedSchoolReportLevel}   Academic Year: ${selected.academicYear}`, 14, 29);
+
+      autoTable(pdf, {
+        startY: 34,
+        margin: { left: 12, right: 12 },
+        head: [["Reg No", "Student Name", "Subject Code", "Subject Name", "Papers", "Total"]],
+        body: rows.map((student) => [
+          student.registrationNumber,
+          student.studentName,
+          student.subjectCode,
+          student.subjectName,
+          getPaperSelectionText(student),
+          String(student.totalEntries),
+        ]),
+        styles: { fontSize: 8.2, lineWidth: 0.2, lineColor: [120, 120, 120] },
+        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
+      });
+
+      pdf.save(`Students-List-${selected.code}-${selectedSchoolReportLevel}.pdf`);
+      toast.success("Students list PDF exported");
+    } catch (error) {
+      toast.error("Failed to export students list PDF");
+      console.error(error);
+    }
+  };
+
+  const exportSelectedSchoolStudentsExcel = () => {
+    try {
+      const selected = scopedSchools.find((s) => s.code === selectedSchool);
+      if (!selected) {
+        toast.error("Please select a school");
+        return;
+      }
+      const rows = scopedStudents.filter(
+        (student) =>
+          student.schoolCode === selected.code &&
+          student.examLevel === selectedSchoolReportLevel,
+      );
+      const worksheet = XLSXUtils.json_to_sheet(
+        rows.map((student) => ({
+          RegistrationNumber: student.registrationNumber,
+          StudentName: student.studentName,
+          ExamLevel: student.examLevel,
+          SubjectCode: student.subjectCode,
+          SubjectName: student.subjectName,
+          PapersSelected: getPaperSelectionText(student),
+          TotalEntries: student.totalEntries,
+        })),
+      );
+      const workbook = XLSXUtils.book_new();
+      XLSXUtils.book_append_sheet(workbook, worksheet, "StudentsList");
+      writeFile(workbook, `Students-List-${selected.code}-${selectedSchoolReportLevel}.xlsx`);
+      toast.success("Students list Excel exported");
+    } catch (error) {
+      toast.error("Failed to export students list Excel");
       console.error(error);
     }
   };
@@ -819,7 +1316,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         const levelToExport: "UACE" | "UCE" =
           educationLevelFilter === "UCE" ? "UCE" : "UACE";
         const rowsForLevel = consolidatedRows.filter((row) => {
-          const school = schools.find((record) => record.name === row.schoolName);
+          const school = scopedSchools.find((record) => record.name === row.schoolName);
           if (!school) return false;
           if (levelToExport === "UACE") {
             return school.educationLevel === "UACE" || school.educationLevel === "BOTH";
@@ -827,9 +1324,17 @@ export function Reports({ onPageChange }: ReportsProps) {
           return school.educationLevel === "UCE" || school.educationLevel === "BOTH";
         });
         if (format === "pdf") {
-          generateReadableConsolidatedPDF(rowsForLevel, levelToExport);
+          if (levelToExport === "UACE") {
+            generateUACEFormPDF(rowsForLevel, "UACE-summary-form");
+          } else {
+            generateUCEFormPDF(rowsForLevel, "UCE-summary-form");
+          }
         } else {
-          generateReadableConsolidatedExcel(rowsForLevel, levelToExport);
+          if (levelToExport === "UACE") {
+            generateUACEFormExcel(rowsForLevel, "UACE-summary-form");
+          } else {
+            generateUCEFormExcel(rowsForLevel, "UCE-summary-form");
+          }
         }
       } else if (reportType === "Subject-Wise") {
         if (format === "pdf") {
@@ -843,9 +1348,30 @@ export function Reports({ onPageChange }: ReportsProps) {
         generateReadableSummaryPDF();
       } else if (reportType === "Single School") {
         if (format === "pdf") {
-          generateReadableSingleSchoolPDF();
+          exportSingleSchoolToPDF("Single-School-Report");
         } else {
-          generateReadableSingleSchoolExcel();
+          const selected = scopedSchools.find((s) => s.code === selectedSchool);
+          if (!selected) {
+            toast.error("Please select a school");
+            return;
+          }
+          const row = buildSingleSchoolRow(selected.code, selectedSchoolReportLevel);
+          if (!row) {
+            toast.error("No data found for selected school");
+            return;
+          }
+          const levelToExport: "UACE" | "UCE" = selectedSchoolReportLevel;
+          if (levelToExport === "UACE") {
+            generateUACEFormExcel([row], `Single-School-${selected.code}`);
+          } else {
+            generateUCEFormExcel([row], `Single-School-${selected.code}`);
+          }
+        }
+      } else if (reportType === "School Students List") {
+        if (format === "pdf") {
+          exportSelectedSchoolStudentsPDF();
+        } else {
+          exportSelectedSchoolStudentsExcel();
         }
       }
     } finally {
@@ -854,7 +1380,7 @@ export function Reports({ onPageChange }: ReportsProps) {
   };
 
   return (
-    <div className="flex flex-col w-full gap-6 anim-fade-up">
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 anim-fade-up">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
@@ -903,13 +1429,14 @@ export function Reports({ onPageChange }: ReportsProps) {
         ))}
       </div>
 
-      <Tabs defaultValue="consolidated" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="consolidated">Consolidated</TabsTrigger>
+      <Tabs defaultValue={isAdmin ? "consolidated" : "subject-wise"} className="space-y-4">
+        <TabsList className={`grid w-full ${isAdmin ? "grid-cols-3" : "grid-cols-2"}`}>
+          {isAdmin && <TabsTrigger value="consolidated">Consolidated</TabsTrigger>}
           <TabsTrigger value="subject-wise">Subject-Wise</TabsTrigger>
           <TabsTrigger value="school-wise">Single School Report</TabsTrigger>
         </TabsList>
 
+        {isAdmin && (
         <TabsContent value="consolidated">
           <Card>
             <CardHeader className="border-b border-slate-200">
@@ -1006,6 +1533,7 @@ export function Reports({ onPageChange }: ReportsProps) {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         <TabsContent value="subject-wise">
           <Card>
@@ -1058,7 +1586,27 @@ export function Reports({ onPageChange }: ReportsProps) {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 space-y-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <Select value={selectedSubjectCode} onValueChange={setSelectedSubjectCode}>
+                  <SelectTrigger className="w-full lg:w-[320px]">
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Subjects</SelectItem>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject.code} value={subject.code}>
+                        {subject.name} ({subject.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="text-sm text-slate-500">
+                  Students in selected subject:{" "}
+                  <span className="font-semibold text-slate-900">{subjectStudentsList.length}</span>
+                </div>
+              </div>
+
               <div>
                 <Table>
                 <TableHeader>
@@ -1093,6 +1641,39 @@ export function Reports({ onPageChange }: ReportsProps) {
                 </TableBody>
               </Table>
               </div>
+
+              <Card className="border border-slate-200 shadow-none hover:shadow-none hover:translate-y-0">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Students List (Selected Subject)</CardTitle>
+                  <CardDescription>
+                    {selectedSubjectCode === "all"
+                      ? "Showing all students in your current scope."
+                      : "Showing students doing the selected subject."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Reg Number</TableHead>
+                        <TableHead>Student Name</TableHead>
+                        <TableHead>School</TableHead>
+                        <TableHead>Subject</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {subjectStudentsList.map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell className="font-mono text-xs">{student.registrationNumber}</TableCell>
+                          <TableCell className="font-semibold text-slate-900">{student.studentName}</TableCell>
+                          <TableCell>{student.schoolName}</TableCell>
+                          <TableCell>{student.subjectCode}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1104,23 +1685,60 @@ export function Reports({ onPageChange }: ReportsProps) {
                 <div>
                   <CardTitle className="text-slate-900">Single School Report</CardTitle>
                   <CardDescription className="text-slate-500">
-                    Select a school to view a simulated reporting breakdown for
-                    the frontend demo.
+                    Export the official school summary form with school details
+                    and subject registration data.
                   </CardDescription>
                 </div>
-                <Select value={selectedSchool} onValueChange={setSelectedSchool}>
-                  <SelectTrigger className="w-full lg:w-[320px]">
-                    <SelectValue placeholder="Select school" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Choose a school</SelectItem>
-                    {schools.map((school) => (
-                      <SelectItem key={school.code} value={school.code}>
-                        {school.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isAdmin ? (
+                  <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row">
+                    <Select value={selectedSchool} onValueChange={setSelectedSchool}>
+                      <SelectTrigger className="w-full lg:w-[320px]">
+                        <SelectValue placeholder="Select school" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Choose a school</SelectItem>
+                        {scopedSchools.map((school) => (
+                          <SelectItem key={school.code} value={school.code}>
+                            {school.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={selectedSchoolReportLevel}
+                      onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
+                    >
+                      <SelectTrigger className="w-full lg:w-[180px]">
+                        <SelectValue placeholder="Level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UCE">UCE Form</SelectItem>
+                        <SelectItem value="UACE">UACE Form</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row">
+                    <div className="w-full lg:w-[320px] rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500">
+                      School:{" "}
+                      <span className="font-semibold text-slate-900">
+                        {scopedSchools[0]?.name || user?.schoolCode}
+                      </span>
+                    </div>
+                    <Select
+                      value={selectedSchoolReportLevel}
+                      onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
+                    >
+                      <SelectTrigger className="w-full lg:w-[180px]">
+                        <SelectValue placeholder="Level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UCE">UCE Form</SelectItem>
+                        <SelectItem value="UACE">UACE Form</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="pt-6">
@@ -1213,7 +1831,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                     </Card>
                   </div>
 
-                  <div className="flex justify-end gap-2">
+                  <div className="flex flex-wrap justify-end gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1247,6 +1865,42 @@ export function Reports({ onPageChange }: ReportsProps) {
                         <>
                           <FileSpreadsheet className="h-4 w-4" />
                           Export Excel
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExport("pdf", "School Students List")}
+                      disabled={isExporting("pdf", "School Students List")}
+                    >
+                      {isExporting("pdf", "School Students List") ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4" />
+                          Students List PDF
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExport("excel", "School Students List")}
+                      disabled={isExporting("excel", "School Students List")}
+                    >
+                      {isExporting("excel", "School Students List") ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileSpreadsheet className="h-4 w-4" />
+                          Students List Excel
                         </>
                       )}
                     </Button>

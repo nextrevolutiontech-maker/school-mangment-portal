@@ -230,9 +230,9 @@ function SchedulePanel({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
         {statCards.map((stat) => (
-          <Card key={stat.label} className={`border-l-4 ${stat.className}`}>
+          <Card key={stat.label} className={`h-full border-l-4 ${stat.className}`}>
             <CardContent className="pt-6">
               <p className="text-sm font-medium text-slate-500">{stat.label}</p>
               <p className={`mt-3 text-3xl font-bold ${stat.valueClass}`}>
@@ -445,7 +445,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
   };
 
   return (
-    <div className="flex flex-col w-full gap-6">
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">

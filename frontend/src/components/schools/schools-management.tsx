@@ -77,6 +77,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
     zone_id: "zone-1",
     schoolLogo: "",
     contactPerson: "",
+    contactDesignation: "",
   });
 
   const filteredSchools = useMemo(() => {
@@ -132,6 +133,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
       zone_id: "zone-1",
       schoolLogo: "",
       contactPerson: "",
+      contactDesignation: "",
     });
     setLogoPreview("");
     setLogoFile(null);
@@ -295,6 +297,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="unknown">I don't know (Admin will allocate)</SelectItem>
                     {zones.map((zone) => (
                       <SelectItem key={zone.id} value={zone.id}>
                         {zone.name}
@@ -302,6 +305,9 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-slate-500">
+                  If a school does not know its zone, select "I don't know". WAKISSHA admin will allocate the correct zone.
+                </p>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="schoolLogo">School Logo (Optional)</Label>
@@ -339,6 +345,20 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                     setNewSchool({
                       ...newSchool,
                       contactPerson: event.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="contactDesignation">Contact Designation (Optional)</Label>
+                <Input
+                  id="contactDesignation"
+                  placeholder="e.g. Head Teacher / Director of Studies"
+                  value={newSchool.contactDesignation}
+                  onChange={(event) =>
+                    setNewSchool({
+                      ...newSchool,
+                      contactDesignation: event.target.value,
                     })
                   }
                 />

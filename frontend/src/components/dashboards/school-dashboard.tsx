@@ -125,7 +125,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const completionPercentage = (completedSteps / completionSteps.length) * 100;
 
   return (
-    <div className="flex flex-col w-full gap-6 anim-fade-up">
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 anim-fade-up">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
@@ -181,12 +181,12 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </Alert>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
-            <Card key={stat.title} className={`border-l-4 ${stat.borderClass} transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-md`}>
+            <Card key={stat.title} className={`h-full border-l-4 ${stat.borderClass} transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-md`}>
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-3">
