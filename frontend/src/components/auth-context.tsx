@@ -60,21 +60,29 @@ export interface SchoolRecord {
   contactDesignation?: string;
 }
 
+export interface StudentSubjectEntry {
+  subjectId: string;
+  subjectCode: string; // Standard code like 456/1, 612/1
+  subjectName: string;
+  paper: "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4";
+  entry1: boolean;
+  entry2: boolean;
+  entry3: boolean;
+  entry4: boolean;
+}
+
 export interface StudentRecord {
   id: string;
-  registrationNumber: string;
+  registrationNumber: string; // Format: WAK/YY-SCHOOLCODE/STUDENTNO
   studentName: string;
+  classLevel: "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6";
   examLevel: "UCE" | "UACE";
-  classLevel: string;
-  subjectCode: string;
-  subjectName: string;
-  entry1: number;
-  entry2: number;
-  entry3: number;
-  entry4: number;
-  totalEntries: number;
   schoolCode: string;
   schoolName: string;
+  academicYear: string;
+  subjects: StudentSubjectEntry[];
+  totalEntries: number; // Sum of all checked entries
+  registrationDate: string;
 }
 
 interface NewSchoolInput {
@@ -108,14 +116,8 @@ interface AuthContextType {
   addStudentEntry: (entry: {
     schoolCode: string;
     studentName: string;
-    examLevel: "UCE" | "UACE";
-    classLevel: string;
-    subjectCode: string;
-    subjectName: string;
-    entry1: number;
-    entry2: number;
-    entry3: number;
-    entry4: number;
+    classLevel: "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6";
+    subjects: StudentSubjectEntry[];
     totalEntries: number;
   }) => void;
   addSubject: (subject: {
@@ -570,21 +572,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const schoolName =
         schools.find((school) => school.code === entry.schoolCode)?.name ?? entry.schoolCode;
 
+      // Determine exam level based on class level
+      const examLevel: "UCE" | "UACE" =
+        ["S.1", "S.2", "S.3", "S.4"].includes(entry.classLevel) ? "UCE" : "UACE";
+
       const newStudent: StudentRecord = {
         id: `student-${Date.now()}`,
         registrationNumber,
         studentName: entry.studentName,
-        examLevel: entry.examLevel,
-        classLevel: entry.classLevel,
-        subjectCode: entry.subjectCode,
-        subjectName: entry.subjectName,
-        entry1: entry.entry1,
-        entry2: entry.entry2,
-        entry3: entry.entry3,
-        entry4: entry.entry4,
+        classLevel: entry.classLevel as "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6",
+        examLevel,
+        subjects: entry.subjects,
         totalEntries: entry.totalEntries,
         schoolCode: entry.schoolCode,
         schoolName,
+        academicYear: "2026",
+        registrationDate: new Date().toISOString().split("T")[0],
       };
 
       return [...prev, newStudent];
