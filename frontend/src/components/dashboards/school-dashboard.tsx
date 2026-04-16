@@ -30,7 +30,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const schoolStudents = students.filter((student) => student.schoolCode === user?.schoolCode);
   const uceStudents = schoolStudents.filter((student) => student.examLevel === "UCE").length;
   const uaceStudents = schoolStudents.filter((student) => student.examLevel === "UACE").length;
-  const schoolSubjectsCount = new Set(schoolStudents.map((student) => student.subjectCode)).size;
+  const schoolSubjectsCount = new Set(schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))).size;
   const zoneDetails = zones.find((zone) => zone.name === user?.zone);
 
   const stats = [

@@ -81,6 +81,7 @@ function AppContent() {
       }
     }
 
+    // School user routes - strict access control
     switch (currentPage) {
       case "dashboard":
         return <SchoolDashboard onPageChange={handlePageChange} />;
@@ -100,6 +101,13 @@ function AppContent() {
         return <Reports onPageChange={handlePageChange} />;
       case "profile":
         return renderPlaceholder("School Profile - Coming in Phase 2");
+      // Block admin pages from school users
+      case "schools":
+      case "payments":
+      case "subjects":
+      case "academic-year":
+      case "settings":
+        return renderPlaceholder("Access Denied - Admin Only");
       default:
         return <SchoolDashboard onPageChange={handlePageChange} />;
     }

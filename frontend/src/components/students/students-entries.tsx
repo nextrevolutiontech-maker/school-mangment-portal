@@ -64,6 +64,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [schoolFilter, setSchoolFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Form state
   const [studentName, setStudentName] = useState("");
@@ -71,10 +72,6 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
   const [schoolCode, setSchoolCode] = useState(user?.role === "school" ? user.schoolCode ?? "WAK26-0001" : "WAK26-0001");
   const [selectedSubjects, setSelectedSubjects] = useState<{
     [subjectId: string]: {
-      entry1: boolean;
-      entry2: boolean;
-      entry3: boolean;
-      entry4: boolean;
       paper: "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4";
     };
   }>({});
@@ -91,28 +88,20 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     );
   }, [subjects, examLevel]);
 
-  // Calculate total entries
+  // Calculate total entries - one entry per subject selected
   const calculateTotalEntries = () => {
-    let total = 0;
-    Object.values(selectedSubjects).forEach((subject) => {
-      if (subject.entry1) total++;
-      if (subject.entry2) total++;
-      if (subject.entry3) total++;
-      if (subject.entry4) total++;
-    });
-    return total;
+    return Object.keys(selectedSubjects).length;
   };
 
-  // Toggle subject entry
-  const toggleEntry = (
+  // Update paper selection for a subject
+  const setPaper = (
     subjectId: string,
-    entryNum: "entry1" | "entry2" | "entry3" | "entry4"
+    paper: "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4"
   ) => {
     setSelectedSubjects((prev) => ({
       ...prev,
       [subjectId]: {
-        ...prev[subjectId],
-        [entryNum]: !prev[subjectId]?.[entryNum],
+        paper,
       },
     }));
   };
@@ -126,14 +115,10 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
         delete newState[subjectId];
         return newState;
       } else {
-        // Add subject with all entries unchecked
+        // Add subject with Paper 1 as default
         return {
           ...prev,
           [subjectId]: {
-            entry1: false,
-            entry2: false,
-            entry3: false,
-            entry4: false,
             paper: "Paper 1",
           },
         };
@@ -150,32 +135,29 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
       errors.push("At least one subject must be selected");
     }
 
-    const totalEntries = calculateTotalEntries();
-    if (totalEntries === 0) {
-      errors.push("At least one entry must be checked");
-    }
-
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
     }
 
-    // Build subjects array
+    // Build subjects array with correct structure
     const subjectsArray: StudentSubjectEntry[] = Object.entries(
       selectedSubjects
-    ).map(([subjectId, entries]) => {
+    ).map(([subjectId, data]) => {
       const subject = subjects.find((s) => s.id === subjectId);
       return {
         subjectId,
         subjectCode: subject?.code || "",
         subjectName: subject?.name || "",
-        paper: entries.paper,
-        entry1: entries.entry1,
-        entry2: entries.entry2,
-        entry3: entries.entry3,
-        entry4: entries.entry4,
+        paper: data.paper,
+        entry1: false,
+        entry2: false,
+        entry3: false,
+        entry4: false,
       };
     });
+
+    const totalEntries = calculateTotalEntries();
 
     addStudentEntry({
       schoolCode,
@@ -311,23 +293,23 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
 
               {/* Subject Selection */}
               <div className="space-y-3 md:col-span-2">
-                <Label>Select Subjects *</Label>
+                <Label>Select Subjects & Papers *</Label>
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    Check subjects to select them. Then mark Entry 1-4 for how many students take each subject.
+                    Check subjects to select them. Then choose which paper (1, 2, 3, or 4) the student will take for each subject.
                   </AlertDescription>
                 </Alert>
               </div>
 
-              {/* Subject List with Entry Checkboxes */}
+              {/* Subject List with Paper Selection */}
               <div className="md:col-span-2 space-y-3 max-h-96 overflow-y-auto border border-slate-200 rounded-lg p-4">
                 {filteredSubjects.length === 0 ? (
                   <p className="text-sm text-slate-500">No subjects available for {examLevel}</p>
                 ) : (
                   filteredSubjects.map((subject) => (
                     <div key={subject.id} className="border-b pb-3 last:border-b-0">
-                      <div className="flex items-start gap-3 mb-2">
+                      <div className="flex items-start gap-3 mb-3">
                         <Checkbox
                           id={subject.id}
                           checked={!!selectedSubjects[subject.id]}
@@ -347,26 +329,26 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                         )}
                       </div>
 
-                      {/* Entry Checkboxes (shown only if subject is selected) */}
+                      {/* Paper Selection (shown only if subject is selected) */}
                       {selectedSubjects[subject.id] && (
-                        <div className="ml-6 pl-3 border-l-2 border-slate-200 space-y-2">
-                          <div className="grid grid-cols-4 gap-2">
-                            {(["entry1", "entry2", "entry3", "entry4"] as const).map((entry) => (
-                              <div key={entry} className="flex items-center gap-2">
-                                <Checkbox
-                                  id={`${subject.id}-${entry}`}
-                                  checked={selectedSubjects[subject.id]?.[entry] || false}
-                                  onCheckedChange={() => toggleEntry(subject.id, entry)}
-                                />
-                                <Label
-                                  htmlFor={`${subject.id}-${entry}`}
-                                  className="text-xs cursor-pointer"
-                                >
-                                  {entry.replace("entry", "Entry ")}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
+                        <div className="ml-6 pl-3 border-l-2 border-slate-200">
+                          <Label className="text-xs font-semibold text-slate-600 mb-2 block">
+                            Select Paper:
+                          </Label>
+                          <Select 
+                            value={selectedSubjects[subject.id]?.paper || "Paper 1"} 
+                            onValueChange={(value: any) => setPaper(subject.id, value)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Paper 1">Paper 1</SelectItem>
+                              <SelectItem value="Paper 2">Paper 2</SelectItem>
+                              <SelectItem value="Paper 3">Paper 3</SelectItem>
+                              <SelectItem value="Paper 4">Paper 4</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
                     </div>
@@ -378,7 +360,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
               <div className="md:col-span-2">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-slate-600">
-                    Total Entries: <span className="font-bold text-blue-600">{calculateTotalEntries()}</span>
+                    Subjects Selected: <span className="font-bold text-blue-600">{calculateTotalEntries()}</span>
                   </p>
                 </div>
               </div>

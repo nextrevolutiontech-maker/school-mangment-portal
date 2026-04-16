@@ -62,7 +62,20 @@ function getStatusBadge(status: SchoolStatus) {
 }
 
 export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
-  const { schools, zones, addSchool, updateSchoolStatus } = useAuth();
+  const { user, schools, zones, addSchool, updateSchoolStatus } = useAuth();
+
+  // Permission check - admin only
+  if (user?.role !== "admin") {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-center">
+          <h2 className="mb-2 text-xl font-bold text-slate-900">Access Denied</h2>
+          <p className="text-slate-500">Only administrators can manage schools.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);

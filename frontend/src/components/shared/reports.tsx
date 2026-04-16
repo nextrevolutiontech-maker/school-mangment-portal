@@ -243,7 +243,7 @@ export function Reports({ onPageChange }: ReportsProps) {
     return filteredSchools.map((school, index) => {
       const schoolStudents = scopedStudents.filter((student) => student.schoolCode === school.code);
       const registeredSubjects = new Set(
-        schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))
+        schoolStudents.flatMap((student) => student.subjects?.map((s) => s.subjectCode) ?? [])
       ).size;
 
       // Determine which subject columns to use based on education level
@@ -255,7 +255,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         Record<string, number>
       >((acc, student) => {
         // For each subject the student is taking, increment the count
-        student.subjects.forEach((subj) => {
+        student.subjects?.forEach((subj) => {
           const key = mapSubjectCode(subj.subjectCode);
           acc[key] = (acc[key] || 0) + 1;
         });
@@ -286,7 +286,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         // Flatten students - each student might have this subject multiple times, count unique
         const subjectStudents = new Set<string>();
         scopedStudents.forEach((student) => {
-          if (student.subjects.some((s) => s.subjectCode === subject.code)) {
+          if (student.subjects?.some((s) => s.subjectCode === subject.code)) {
             subjectStudents.add(student.id);
           }
         });
@@ -294,7 +294,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         const totalStudentCount = subjectStudents.size;
         const schools = new Set<string>();
         scopedStudents.forEach((student) => {
-          if (student.subjects.some((s) => s.subjectCode === subject.code)) {
+          if (student.subjects?.some((s) => s.subjectCode === subject.code)) {
             schools.add(student.schoolCode);
           }
         });
@@ -315,7 +315,7 @@ export function Reports({ onPageChange }: ReportsProps) {
     if (selectedSubjectCode === "all") return scopedStudents;
     // Filter students that have the selected subject
     return scopedStudents.filter((student) =>
-      student.subjects.some((s) => s.subjectCode === selectedSubjectCode)
+      student.subjects?.some((s) => s.subjectCode === selectedSubjectCode)
     );
   }, [scopedStudents, selectedSubjectCode]);
 
@@ -338,7 +338,7 @@ export function Reports({ onPageChange }: ReportsProps) {
     const schoolStudents = scopedStudents.filter((student) => student.schoolCode === selectedSchoolData.code);
     return {
       totalStudents: schoolStudents.length,
-      subjectsRegistered: new Set(schoolStudents.map((student) => student.subjectCode)).size,
+      subjectsRegistered: new Set(schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))).size,
       reportNote: "Report generated from current frontend simulation state.",
       lastUpdated: new Date().toLocaleDateString(),
     };
@@ -360,7 +360,7 @@ export function Reports({ onPageChange }: ReportsProps) {
     const subjectCounts = schoolStudents.reduce<
       Record<string, number>
     >((acc, student) => {
-      student.subjects.forEach((subj) => {
+      student.subjects?.forEach((subj) => {
         const key = mapSubjectCode(subj.subjectCode);
         acc[key] = (acc[key] || 0) + 1;
       });
@@ -373,7 +373,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       district: school.district,
       zone: school.zone,
       registeredSubjects: new Set(
-        schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))
+        schoolStudents.flatMap((student) => student.subjects?.map((s) => s.subjectCode) ?? [])
       ).size,
       telephone: school.phone,
     };
@@ -471,267 +471,131 @@ export function Reports({ onPageChange }: ReportsProps) {
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const margin = 10;
-      let yPos = 15;
-      const subjectsColumns = level === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
-      const fee = calculateFeeSummary(rows);
+      let yPos = 10;
 
-      // Title
-      pdf.setFontSize(14);
+      // Title - Simple, no styling
+      pdf.setFontSize(12);
       pdf.setFont("helvetica", "bold");
-      pdf.text(`WAKISSHA JOINT MOCK ${level} SUMMARY 2026`, pageWidth / 2, yPos, {
-        align: "center",
-      });
-      yPos += 8;
-
-      // Header info with better spacing
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9);
-      const totalCandidates =
-        schoolContext?.totalCandidates ??
-        rows.reduce((sum, row) => sum + Number(row.registeredSubjects || 0), 0);
-      
-      pdf.text(`YEAR: ${schoolContext?.academicYear ?? "2026"}`, margin, yPos);
-      pdf.text(`TOTAL CANDIDATES: ${totalCandidates}`, 100, yPos);
+      pdf.text(`WAKISSHA JOINT MOCK EXAMINATIONS ${level} - 2026`, margin, yPos);
       yPos += 6;
 
+      // School details header (if single school context)
       if (schoolContext) {
         pdf.setFont("helvetica", "bold");
-        pdf.text("SCHOOL DETAILS", margin, yPos);
-        yPos += 5;
-        
+        pdf.setFontSize(10);
+        pdf.text("SCHOOL INFORMATION", margin, yPos);
+        yPos += 4;
+
         pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(8.5);
+        pdf.setFontSize(9);
         pdf.text(`School: ${schoolContext.name}`, margin + 2, yPos);
-        yPos += 4;
-        pdf.text(`Reference: ${schoolContext.code} | District: ${schoolContext.district}`, margin + 2, yPos);
-        yPos += 4;
-        pdf.text(`Zone: ${schoolContext.zone} | Phone: ${schoolContext.telephone}`, margin + 2, yPos);
-        yPos += 4;
-        
-        if (schoolContext.contactPerson) {
-          pdf.text(`Contact: ${schoolContext.contactPerson} (${schoolContext.contactDesignation || "Head"})`, margin + 2, yPos);
-          yPos += 4;
-        }
-        
         yPos += 3;
+        pdf.text(`Code: ${schoolContext.code} | District: ${schoolContext.district}`, margin + 2, yPos);
+        yPos += 3;
+        pdf.text(`Zone: ${schoolContext.zone} | Phone: ${schoolContext.telephone}`, margin + 2, yPos);
+        yPos += 3;
+        if (schoolContext.contactEmail) {
+          pdf.text(`Email: ${schoolContext.contactEmail}`, margin + 2, yPos);
+          yPos += 3;
+        }
+        const totalCandidates = schoolContext.totalCandidates ?? rows.reduce((sum, row) => sum + Number(row.registeredSubjects || 0), 0);
+        pdf.text(`Total Candidates: ${totalCandidates}`, margin + 2, yPos);
+        yPos += 5;
       }
 
-      if (schoolContext && rows.length === 1) {
-        const row = rows[0];
-        const officialSubjectRows = getOfficialSubjectRows(level);
-        
-        autoTable(pdf, {
-          head: [["CODE", "SUBJECT NAME", "STUDENTS"]],
-          body: officialSubjectRows.map((subject) => [
-            subject.code,
-            subject.name,
-            String(row[mapSubjectCode(subject.key)] ?? 0),
-          ]),
-          startY: yPos,
-          margin: { left: margin, right: margin, top: 5 },
-          columnStyles: {
-            0: { cellWidth: 16, halign: "center" },
-            1: { cellWidth: 100 },
-            2: { cellWidth: 18, halign: "center" },
-          },
-          headStyles: {
-            fillColor: [41, 128, 185],
-            textColor: [255, 255, 255],
-            lineWidth: 0.5,
-            lineColor: [41, 128, 185],
-            fontSize: 10,
-            fontStyle: "bold",
-            halign: "center",
-            padding: 4,
-          },
-          bodyStyles: {
-            lineWidth: 0.3,
-            lineColor: [200, 200, 200],
-            fontSize: 9,
-            textColor: [0, 0, 0],
-            padding: 3,
-          },
-          alternateRowStyles: {
-            fillColor: [245, 250, 255],
-          },
-        });
-      } else {
-        // Multi-school consolidated report - PLAIN BLACK AND WHITE FORM
-        // Calculate optimal column widths
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const margins = 5;
-        const usableWidth = pageWidth - (margins * 2);
-        
-        // Base columns with proper widths for readability
-        const baseColWidths = {
-          ref: 7,
-          school: 30,
-          district: 15,
-          zone: 16,
-          subs: 14,
-          phone: 14,
-        };
-        const baseColsTotal = Object.values(baseColWidths).reduce((a, b) => a + b, 0);
-        
-        // Subject columns - calculate to fill remaining space
-        const subjectColWidth = (usableWidth - baseColsTotal) / subjectsColumns.length;
-        
-        // Build header row with exact column names from reference image
-        const headerRow = [
-          "Ref No",
-          "Name of School",
-          "District",
-          "Zone / Centre",
-          "Registered Subjects",
-          "Telephone",
-          ...subjectsColumns.map((s) => s.label),
-        ];
+      // Get subject list and build data for table
+      const subjectsColumns = level === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
 
-        // Build body rows
-        const bodyRows = rows.map((row) => [
-          String(row.refNo),
-          String(row.schoolName),
-          String(row.district),
-          String(row.zone),
-          String(row.registeredSubjects),
-          String(row.telephone),
-          ...subjectsColumns.map((subject) => String(row[subject.key] ?? 0)),
-        ]);
-
-        // Calculate totals
-        const totalRow = [
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          ...subjectsColumns.map((subject) =>
-            String(
-              rows.reduce((sum, row) => sum + Number(row[subject.key] ?? 0), 0)
-            )
-          ),
-        ];
-
-        // Combine all rows
-        const allRows = [...bodyRows, totalRow];
-
-        // Build column styles - PLAIN BLACK AND WHITE
-        const columnStyles: any = {
-          0: { cellWidth: baseColWidths.ref, halign: "center", fontSize: 8, padding: 1.5 },
-          1: { cellWidth: baseColWidths.school, halign: "left", fontSize: 8, padding: 1.5 },
-          2: { cellWidth: baseColWidths.district, halign: "center", fontSize: 8, padding: 1.5 },
-          3: { cellWidth: baseColWidths.zone, halign: "center", fontSize: 8, padding: 1.5 },
-          4: { cellWidth: baseColWidths.subs, halign: "center", fontSize: 8, padding: 1.5 },
-          5: { cellWidth: baseColWidths.phone, halign: "center", fontSize: 8, padding: 1.5 },
-        };
-
-        // Add subject column styles
-        subjectsColumns.forEach((_, idx) => {
-          columnStyles[6 + idx] = {
-            cellWidth: subjectColWidth,
-            halign: "center",
-            fontSize: 7,
-            padding: 1,
-          };
-        });
-
-        // Create plain black and white table
-        autoTable(pdf, {
-          head: [headerRow],
-          body: allRows,
-          startY: yPos,
-          margin: { left: margins, right: margins },
-          columnStyles: columnStyles,
-          headStyles: {
-            fillColor: [255, 255, 255], // White background
-            textColor: [0, 0, 0], // Black text
-            lineWidth: 0.5,
-            lineColor: [0, 0, 0], // Black borders
-            fontSize: 8,
-            fontStyle: "bold",
-            halign: "center",
-            valign: "middle",
-            padding: 1.5,
-          },
-          bodyStyles: {
-            lineWidth: 0.5,
-            lineColor: [0, 0, 0], // Black borders
-            fontSize: 7,
-            textColor: [0, 0, 0], // Black text
-            padding: 1,
-            fillColor: [255, 255, 255], // White background
-          },
-          alternateRowStyles: {
-            fillColor: [255, 255, 255], // Keep white, no alternating colors
-          },
-          didParseCell: (data: any) => {
-            // Make TOTAL row bold
-            if (data.row.index === allRows.length - 1) {
-              data.cell.styles.fontStyle = "bold";
-              data.cell.styles.lineWidth = 0.5;
-            }
-          },
-        });
-      }
-
-      // Fee summary - always on current or new page
-      const lastTableY = (pdf as any).lastAutoTable?.finalY ?? 200;
-      let feeSummaryY = lastTableY + 12;
-
-      if (feeSummaryY > 250) {
-        pdf.addPage();
-        feeSummaryY = 20;
-      }
-
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(12);
-      pdf.text("FEE SUMMARY", margin, feeSummaryY);
-      feeSummaryY += 7;
-      
-      const feeSummaryData = [
-        ["School Fee", `UGX ${fee.schoolFee.toLocaleString()}`],
-        ["Student Fee", `UGX ${fee.studentFee.toLocaleString()}`],
-        ["Late Fee", `UGX ${fee.lateFee.toLocaleString()}`],
-        ["Marking Fee", `UGX ${fee.markingFee.toLocaleString()}`],
+      // BUILD TABLE DIRECTLY FROM ROWS (which already have correct subject counts from UI)
+      // Do NOT recalculate - use the pre-calculated data
+      const tableHeaders = [
+        ...formBaseColumns.map((col) => col.label),
+        ...subjectsColumns.map((col) => col.label),
       ];
+
+      // Build table rows: each row is a school with its subject counts
+      const tableData = rows.map((row) => [
+        row.refNo,
+        row.schoolName,
+        row.district,
+        row.zone,
+        row.registeredSubjects,
+        row.telephone,
+        ...subjectsColumns.map((subject) => String(row[subject.key] ?? 0)),
+      ]);
+
+      // BLACK & WHITE TABLE ONLY - No colors, no styling
+      // Calculate dynamic column widths to fit all subjects on landscape page
+      const usableWidth = pageWidth - (margin * 2);
+      const totalCols = tableHeaders.length;
       
+      // Allocate proportional widths
+      // Base columns: Ref(10), School(35), District(15), Zone(18), Subjects(12), Phone(15) = 105mm
+      // Remaining width for subject columns
+      const baseColsWidth = 10 + 35 + 15 + 18 + 12 + 15;
+      const subjectColsWidth = Math.max(usableWidth - baseColsWidth, 50);
+      const numSubjectCols = totalCols - 6;
+      const subjectColWidth = numSubjectCols > 0 ? subjectColsWidth / numSubjectCols : 10;
+
+      const columnStylesObj: Record<number, any> = {};
+      columnStylesObj[0] = { cellWidth: 10, halign: "center", fontSize: 6 };   // Ref
+      columnStylesObj[1] = { cellWidth: 35, halign: "left", fontSize: 6 };    // School Name
+      columnStylesObj[2] = { cellWidth: 15, halign: "center", fontSize: 6 };  // District
+      columnStylesObj[3] = { cellWidth: 18, halign: "center", fontSize: 6 };  // Zone
+      columnStylesObj[4] = { cellWidth: 12, halign: "center", fontSize: 6 };  // Registered Subjects
+      columnStylesObj[5] = { cellWidth: 15, halign: "center", fontSize: 6 };  // Telephone
+      for (let i = 6; i < totalCols; i++) {
+        columnStylesObj[i] = { cellWidth: subjectColWidth, halign: "center", fontSize: 5.5 };
+      }
+
       autoTable(pdf, {
-        head: [["Description", "Amount"]],
-        body: feeSummaryData,
-        startY: feeSummaryY,
-        margin: { left: margin, right: pageWidth - margin - 100 },
-        tableWidth: 100,
-        columnStyles: {
-          0: { cellWidth: 60 },
-          1: { cellWidth: 40 },
-        },
+        head: [tableHeaders],
+        body: tableData,
+        startY: yPos,
+        margin: { left: margin, right: margin },
+        columnStyles: columnStylesObj,
         headStyles: {
-          fillColor: [255, 255, 255], // White background
-          textColor: [0, 0, 0], // Black text
-          fontSize: 10,
+          fillColor: [255, 255, 255],  // WHITE - no color
+          textColor: [0, 0, 0],        // BLACK text
+          lineWidth: 0.3,
+          lineColor: [0, 0, 0],        // BLACK borders only
+          fontSize: 5.5,
           fontStyle: "bold",
-          lineWidth: 0.5,
-          lineColor: [0, 0, 0], // Black borders
-          padding: 3,
+          halign: "center",
+          valign: "middle",
+          padding: 0.5,
         },
         bodyStyles: {
-          fontSize: 10,
-          textColor: [0, 0, 0], // Black text
-          padding: 2,
-          lineWidth: 0.5,
-          lineColor: [0, 0, 0], // Black borders
-          fillColor: [255, 255, 255], // White background
+          lineWidth: 0.3,
+          lineColor: [0, 0, 0],        // BLACK borders only
+          fontSize: 5.5,
+          textColor: [0, 0, 0],        // BLACK text
+          padding: 0.5,
+          fillColor: [255, 255, 255], // WHITE background - no styling
+          halign: "center",
         },
         alternateRowStyles: {
-          fillColor: [255, 255, 255], // Keep white
+          fillColor: [255, 255, 255], // WHITE - NO alternating colors
+          lineColor: [0, 0, 0],
+          textColor: [0, 0, 0],
         },
       });
-      
-      const totalEndY = (pdf as any).lastAutoTable.finalY + 5;
-      pdf.setFontSize(12);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(`TOTAL AMOUNT: UGX ${fee.totalAmount.toLocaleString()}`, margin, totalEndY);
+
+      // Signature section
+      const finalY = (pdf as any).lastAutoTable?.finalY ?? 150;
+      let sigY = finalY + 15;
+
+      if (schoolContext && schoolContext.contactPerson) {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9);
+        pdf.text("_________________________", margin, sigY);
+        sigY += 4;
+        pdf.text(`${schoolContext.contactPerson}`, margin, sigY);
+        if (schoolContext.contactDesignation) {
+          sigY += 3;
+          pdf.text(`(${schoolContext.contactDesignation})`, margin, sigY);
+        }
+      }
 
       pdf.save(`${fileName}.pdf`);
       toast.success(`${level} official form exported successfully`);
@@ -1204,20 +1068,19 @@ export function Reports({ onPageChange }: ReportsProps) {
       autoTable(pdf, {
         startY: 34,
         margin: { left: 12, right: 12 },
-        head: [["Reg No", "Student Name", "Subject Code", "Subject Name", "Papers"]],
+        head: [["Reg No", "Student Name", "Subject Code", "Subject Name", "Paper"]],
         body: rows.flatMap((student) =>
-          student.subjects.map((subj) => [
+          (student.subjects ?? []).map((subj) => [
             student.registrationNumber,
             student.studentName,
             subj.subjectCode,
             subj.subjectName,
-            [subj.entry1 && "P1", subj.entry2 && "P2", subj.entry3 && "P3", subj.entry4 && "P4"]
-              .filter(Boolean)
-              .join(", ") || "-",
+            subj.paper || "-",
           ])
         ),
-        styles: { fontSize: 8.2, lineWidth: 0.2, lineColor: [120, 120, 120] },
-        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
+        styles: { fontSize: 8.2, lineWidth: 0.5, lineColor: [0, 0, 0], textColor: [0, 0, 0] },
+        headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: "bold", lineColor: [0, 0, 0], lineWidth: 0.5 },
+        alternateRowStyles: { fillColor: [255, 255, 255], lineColor: [0, 0, 0], textColor: [0, 0, 0] },
       });
 
       pdf.save(`Students-List-${selected.code}-${selectedSchoolReportLevel}.pdf`);
@@ -1242,15 +1105,13 @@ export function Reports({ onPageChange }: ReportsProps) {
       );
       const worksheet = XLSXUtils.json_to_sheet(
         rows.flatMap((student) =>
-          student.subjects.map((subj) => ({
+          (student.subjects ?? []).map((subj) => ({
             RegistrationNumber: student.registrationNumber,
             StudentName: student.studentName,
             ExamLevel: student.examLevel,
             SubjectCode: subj.subjectCode,
             SubjectName: subj.subjectName,
-            PapersSelected: [subj.entry1 && "P1", subj.entry2 && "P2", subj.entry3 && "P3", subj.entry4 && "P4"]
-              .filter(Boolean)
-              .join(", ") || "-",
+            Paper: subj.paper || "-",
           }))
         ),
       );
@@ -1271,27 +1132,23 @@ export function Reports({ onPageChange }: ReportsProps) {
 
     try {
       if (reportType === "UACE Consolidated") {
-        const levelToExport: "UACE" | "UCE" =
-          educationLevelFilter === "UCE" ? "UCE" : "UACE";
-        const rowsForLevel = consolidatedRows.filter((row) => {
-          const school = scopedSchools.find((record) => record.name === row.schoolName);
-          if (!school) return false;
-          if (levelToExport === "UACE") {
-            return school.educationLevel === "UACE" || school.educationLevel === "BOTH";
-          }
-          return school.educationLevel === "UCE" || school.educationLevel === "BOTH";
-        });
+        // consolidatedRows is ALREADY filtered by educationLevelFilter
+        // Use it directly - do NOT filter again (causes missing schools)
         if (format === "pdf") {
+          const levelToExport: "UACE" | "UCE" =
+            educationLevelFilter === "UCE" ? "UCE" : "UACE";
           if (levelToExport === "UACE") {
-            generateUACEFormPDF(rowsForLevel, "UACE-summary-form");
+            generateUACEFormPDF(consolidatedRows, "UACE-summary-form");
           } else {
-            generateUCEFormPDF(rowsForLevel, "UCE-summary-form");
+            generateUCEFormPDF(consolidatedRows, "UCE-summary-form");
           }
         } else {
+          const levelToExport: "UACE" | "UCE" =
+            educationLevelFilter === "UCE" ? "UCE" : "UACE";
           if (levelToExport === "UACE") {
-            generateUACEFormExcel(rowsForLevel, "UACE-summary-form");
+            generateUACEFormExcel(consolidatedRows, "UACE-summary-form");
           } else {
-            generateUCEFormExcel(rowsForLevel, "UCE-summary-form");
+            generateUCEFormExcel(consolidatedRows, "UCE-summary-form");
           }
         }
       } else if (reportType === "Subject-Wise") {
@@ -1387,11 +1244,11 @@ export function Reports({ onPageChange }: ReportsProps) {
         ))}
       </div>
 
-      <Tabs defaultValue={isAdmin ? "consolidated" : "subject-wise"} className="space-y-4">
-        <TabsList className={`grid w-full ${isAdmin ? "grid-cols-3" : "grid-cols-2"}`}>
+      <Tabs defaultValue={isAdmin ? "consolidated" : "school-wise"} className="space-y-4">
+        <TabsList className={`grid w-full ${isAdmin ? "grid-cols-3" : "grid-cols-1"}`}>
           {isAdmin && <TabsTrigger value="consolidated">Consolidated</TabsTrigger>}
-          <TabsTrigger value="subject-wise">Subject-Wise</TabsTrigger>
-          <TabsTrigger value="school-wise">Single School Report</TabsTrigger>
+          {isAdmin && <TabsTrigger value="subject-wise">Subject-Wise</TabsTrigger>}
+          <TabsTrigger value="school-wise">{isAdmin ? "Single School Report" : "My School Report"}</TabsTrigger>
         </TabsList>
 
         {isAdmin && (

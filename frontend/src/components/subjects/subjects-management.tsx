@@ -21,7 +21,20 @@ interface SubjectsManagementProps {
 }
 
 export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
-  const { subjects, addSubject, updateSubject } = useAuth();
+  const { user, subjects, addSubject, updateSubject } = useAuth();
+
+  // Permission check - admin only
+  if (user?.role !== "admin") {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-center">
+          <h2 className="mb-2 text-xl font-bold text-slate-900">Access Denied</h2>
+          <p className="text-slate-500">Only administrators can manage subjects.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
   const [newSubject, setNewSubject] = useState({
     name: "",

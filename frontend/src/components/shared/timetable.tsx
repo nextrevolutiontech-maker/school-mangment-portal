@@ -39,7 +39,7 @@ interface ScheduleRow {
   code: string;
   paper: string;
   level: "UCE" | "UACE";
-  period: "Morning" | "Afternoon"; // Morning or Afternoon instead of time
+  period: "Morning" | "Afternoon";
   duration: string;
 }
 
@@ -208,12 +208,6 @@ function SchedulePanel({
       className: "border-l-blue-500",
       valueClass: "text-slate-900",
     },
-    {
-      label: "Exam Centres",
-      value: new Set(schedule.map((exam) => exam.venue)).size,
-      className: "border-l-green-500",
-      valueClass: "text-slate-900",
-    },
   ];
 
   return (
@@ -307,7 +301,7 @@ function SchedulePanel({
               <CardContent className="grid gap-4 pt-6 lg:grid-cols-2">
                 {exams.map((exam) => (
                   <div
-                    key={`${exam.code}-${exam.time}`}
+                    key={`${exam.code}-${exam.date}`}
                     className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4"
                   >
                     <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -319,15 +313,11 @@ function SchedulePanel({
                     <div className="space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <Clock className="h-3.5 w-3.5" />
-                        <span>{exam.time}</span>
+                        <span>{exam.period}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3.5 w-3.5" />
                         <span>{exam.duration}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5" />
-                        <span>{exam.venue}</span>
                       </div>
                     </div>
                   </div>
@@ -348,45 +338,25 @@ export function Timetable({ onPageChange }: TimetableProps) {
     try {
       setIsExporting(level);
       const schedule = level === "UCE" ? uceSchedule : uaceSchedule;
-      const pdf = new jsPDF();
+      const pdf = new jsPDF("landscape");
       const pageWidth = pdf.internal.pageSize.getWidth();
       let yPos = 15;
 
       // Header
-      pdf.setFontSize(18);
-      pdf.text(`${level} Examination Timetable`, pageWidth / 2, yPos, {
+      pdf.setFontSize(14);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`WAKISSHA JOINT MOCK EXAMINATIONS, 2026 ${level} TIME TABLE (SECOND DRAFT)`, pageWidth / 2, yPos, {
         align: "center",
       });
-      yPos += 8;
+      yPos += 10;
 
-      // Metadata
-      pdf.setFontSize(10);
-      pdf.text(`WAKISSHA - ${new Date().toLocaleDateString()}`, 15, yPos);
-      yPos += 8;
-
-      // Table
-      const tableColumns = [
-        "Date",
-        "Day",
-        "Subject",
-        "Code",
-        "Paper",
-        "Time",
-        "Duration",
-        "Venue",
-      ];
+      // Table with 4 columns: Day & Date | Period | Subject & Paper | Duration
+      const tableColumns = ["Day & Date", "Period", "Subject & Paper", "Duration"];
       const tableRows = schedule.map((exam) => [
-        new Date(exam.date).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
-        exam.day,
-        exam.subject,
-        exam.code,
-        exam.paper,
-        exam.time,
+        `${exam.day}, ${new Date(exam.date).toLocaleDateString("en-GB")}`,
+        exam.period,
+        `${exam.code}${exam.paper.match(/\d+/) ? exam.paper.match(/\d+/)[0] : ""} ${exam.subject}`,
         exam.duration,
-        exam.venue,
       ]);
 
       autoTable(pdf, {
@@ -394,27 +364,36 @@ export function Timetable({ onPageChange }: TimetableProps) {
         body: tableRows,
         startY: yPos,
         margin: { left: 10, right: 10 },
+        columnStyles: {
+          0: { cellWidth: 35 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 95 },
+          3: { cellWidth: 25 },
+        },
         headStyles: {
-          fillColor: level === "UCE" ? [59, 130, 246] : [34, 197, 94],
-          textColor: [255, 255, 255],
-          fontSize: 9,
+          fillColor: [200, 200, 200],
+          textColor: [0, 0, 0],
+          fontSize: 10,
           fontStyle: "bold",
+          halign: "center",
+          padding: 3,
+          lineWidth: 0.5,
+          lineColor: [0, 0, 0],
         },
         bodyStyles: {
-          fontSize: 8,
+          fontSize: 9,
+          textColor: [0, 0, 0],
+          padding: 2.5,
+          lineWidth: 0.5,
+          lineColor: [0, 0, 0],
+          fillColor: [255, 255, 255],
         },
         alternateRowStyles: {
-          fillColor: [240, 245, 250],
-        },
-        columnStyles: {
-          0: { cellWidth: 15 },
-          1: { cellWidth: 15 },
-          2: { cellWidth: 30 },
-          3: { cellWidth: 15 },
+          fillColor: [245, 245, 245],
         },
       });
 
-      pdf.save(`${level}-timetable-${new Date().getTime()}.pdf`);
+      pdf.save(`${level}-Timetable-Draft-2026.pdf`);
       toast.success(`${level} timetable downloaded successfully`);
     } catch (error) {
       toast.error(`Failed to export ${level} timetable`);
