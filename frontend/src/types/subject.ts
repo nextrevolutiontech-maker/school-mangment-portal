@@ -1,39 +1,39 @@
 export interface Subject {
   id: string;
   name: string;
-  code: string; // Abbreviation for display (e.g., MTH)
+  code: string; // Short code / abbreviation (e.g., ENG, MATH)
+  standardCode: string; // Official examination standard code (e.g., 112, 456)
   educationLevel: "UCE" | "UACE";
   optional: boolean;
-  standardCode?: string; // Standard WAKISSHA code (e.g., 456/1 for Maths)
   papers?: number; // Number of papers for this subject (1-4)
 }
 
 // Standard WAKISSHA Subject Codes
 export const STANDARD_SUBJECT_CODES: Record<string, string> = {
-  "MTH": "456/1", // Mathematics
-  "ENG": "456/2", // English Language
-  "PHY": "612/1", // Physics
-  "CHE": "612/2", // Chemistry
-  "BIO": "612/3", // Biology
-  "SM": "456/3",  // Subsidiary Mathematics
-  "ICT": "456/4", // Computer Science/ICT
-  "HIST": "456/5", // History
-  "GEO": "456/6",  // Geography
-  "CRE": "456/7",  // Christian Religious Education
-  "IRE": "456/8",  // Islamic Religious Education
-  "LIT": "456/9",  // Literature in English
-  "KISWA": "456/10", // Kiswahili
-  "ART": "456/11", // Art & Design
-  "AGRIC": "456/12", // Agriculture
-  "FN": "456/13",  // Family & Consumer Science
-  "TD": "456/14",  // Technology & Design
-  "GP": "456/15",  // General Paper (UACE)
-  "FRENCH": "456/16", // French
-  "GERMAN": "456/17", // German
-  "ARABIC": "456/18", // Arabic
-  "LUGANDA": "456/19", // Luganda
-  "RUNY": "456/20", // Runyankole/Rukiga
-  "LUSOGA": "456/21", // Lusoga
-  "ENT": "456/22", // Entrepreneurship
-  "ECN": "456/23", // Economics
+  ENG: "112",
+  LIT: "208",
+  KISWA: "336",
+  CRE: "223",
+  IRE: "225",
+  HIST: "241",
+  GEOG: "273",
+  FRENCH: "314",
+  GERMAN: "309",
+  ARABIC: "337",
+  LUGANDA: "335",
+  RUNY: "345",
+  LUSOGA: "355",
+  MATH: "456",
+  AGRIC: "527",
+  PHY: "535",
+  CHEM: "545",
+  BIO: "553",
+  ART: "612",
+  FN: "662",
+  TD: "745",
+  CPS: "840",
+  ENT: "845",
+  GP: "101",
+  SUB_MATHS: "475",
+  SUB_ICT: "610",
 };

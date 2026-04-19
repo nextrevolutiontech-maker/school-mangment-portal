@@ -39,6 +39,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
   const [newSubject, setNewSubject] = useState({
     name: "",
     code: "",
+    standardCode: "",
     educationLevel: "UCE" as "UCE" | "UACE",
     optional: "yes" as "yes" | "no",
   });
@@ -88,19 +89,22 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
   );
 
   const handleSubmitSubject = () => {
-    if (!newSubject.name.trim() || !newSubject.code.trim()) {
-      toast.error("Subject name and code are required");
+    if (!newSubject.name.trim() || !newSubject.code.trim() || !newSubject.standardCode.trim()) {
+      toast.error("Subject name, short code, and standard code are required");
       return;
     }
 
     const exists = subjects.some(
       (subject) =>
-        subject.code.toUpperCase() === newSubject.code.trim().toUpperCase() &&
+        (
+          subject.code.toUpperCase() === newSubject.code.trim().toUpperCase() ||
+          subject.standardCode.toUpperCase() === newSubject.standardCode.trim().toUpperCase()
+        ) &&
         subject.educationLevel === newSubject.educationLevel &&
         subject.id !== editingSubjectId,
     );
     if (exists) {
-      toast.error("This subject code already exists for the selected level");
+      toast.error("This short code or standard code already exists for the selected level");
       return;
     }
 
@@ -108,6 +112,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
       updateSubject(editingSubjectId, {
         name: newSubject.name,
         code: newSubject.code,
+        standardCode: newSubject.standardCode,
         educationLevel: newSubject.educationLevel,
         optional: newSubject.optional === "yes",
       });
@@ -115,6 +120,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
       addSubject({
         name: newSubject.name,
         code: newSubject.code,
+        standardCode: newSubject.standardCode,
         educationLevel: newSubject.educationLevel,
         optional: newSubject.optional === "yes",
       });
@@ -123,6 +129,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
     setNewSubject({
       name: "",
       code: "",
+      standardCode: "",
       educationLevel: "UCE",
       optional: "yes",
     });
@@ -172,21 +179,30 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
             <div>
               <CardTitle>Association-Controlled Subject Setup</CardTitle>
               <CardDescription>
-                Only admin should define and edit standard subject names and
-                subject codes. Once saved here, they become visible to all
+                Only admin should define and edit standard subject names, short
+                codes, and standard codes. Once saved here, they become visible to all
                 schools for the matching level.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 pt-6 md:grid-cols-2 xl:grid-cols-4">
+        <CardContent className="grid gap-4 pt-6 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-2">
-            <Label htmlFor="subjectCode">Standard Code</Label>
+            <Label htmlFor="subjectCode">Short Code</Label>
             <Input
               id="subjectCode"
               placeholder="e.g. ECON"
               value={newSubject.code}
               onChange={(event) => setNewSubject({ ...newSubject, code: event.target.value.toUpperCase() })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="standardCode">Standard Code</Label>
+            <Input
+              id="standardCode"
+              placeholder="e.g. 268"
+              value={newSubject.standardCode}
+              onChange={(event) => setNewSubject({ ...newSubject, standardCode: event.target.value.toUpperCase() })}
             />
           </div>
           <div className="space-y-2">
@@ -225,7 +241,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="no">Core / Required</SelectItem>
+                <SelectItem value="no">Compulsory</SelectItem>
                 <SelectItem value="yes">Optional</SelectItem>
               </SelectContent>
             </Select>
@@ -258,7 +274,8 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
+                  <TableHead>Short Code</TableHead>
+                  <TableHead>Standard Code</TableHead>
                   <TableHead>Subject Name</TableHead>
                   <TableHead>Level</TableHead>
                   <TableHead>Totals</TableHead>
@@ -270,6 +287,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                 {orderedSubjects.map((subject) => (
                   <TableRow key={subject.id}>
                     <TableCell className="font-mono text-xs">{subject.code}</TableCell>
+                    <TableCell className="font-mono text-xs">{subject.standardCode}</TableCell>
                     <TableCell className="font-semibold text-slate-900">{subject.name}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{subject.educationLevel}</Badge>
@@ -279,7 +297,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                     </TableCell>
                     <TableCell>
                       <Badge variant={subject.optional ? "outline" : "success"}>
-                        {subject.optional ? "Optional" : "Required"}
+                        {subject.optional ? "Optional" : "Compulsory"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -292,6 +310,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                           setNewSubject({
                             name: subject.name,
                             code: subject.code,
+                            standardCode: subject.standardCode,
                             educationLevel: subject.educationLevel,
                             optional: subject.optional ? "yes" : "no",
                           });

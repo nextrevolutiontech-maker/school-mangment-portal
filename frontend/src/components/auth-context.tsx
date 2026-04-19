@@ -49,7 +49,7 @@ export interface SchoolRecord {
   district: string;
   zone: string;
   zone_id: string;
-  educationLevel: EducationLevel | "BOTH";
+  educationLevel: EducationLevel;
   academicYear: string;
   status: SchoolStatus;
   registrationDate: string;
@@ -65,7 +65,8 @@ export interface SchoolRecord {
 
 export interface StudentSubjectEntry {
   subjectId: string;
-  subjectCode: string; // Standard code like 456/1, 612/1
+  subjectCode: string; // Short code such as ENG, MATH, GP
+  subjectStandardCode?: string;
   subjectName: string;
   paper: "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4";
   entry1: boolean;
@@ -94,7 +95,7 @@ interface NewSchoolInput {
   email: string;
   phone: string;
   address: string;
-  educationLevel: EducationLevel | "BOTH";
+  educationLevel: EducationLevel;
   zone_id: string;
   schoolLogo?: string;
   contactPerson?: string;
@@ -139,6 +140,7 @@ interface AuthContextType {
   addSubject: (subject: {
     name: string;
     code: string;
+    standardCode: string;
     educationLevel: "UCE" | "UACE";
     optional: boolean;
   }) => void;
@@ -147,6 +149,7 @@ interface AuthContextType {
     updates: {
       name: string;
       code: string;
+      standardCode: string;
       educationLevel: "UCE" | "UACE";
       optional: boolean;
     },
@@ -278,51 +281,51 @@ const initialZones: Zone[] = [
 
 const initialSubjects: Subject[] = [
   // UCE Subjects
-  { id: "subj-1", name: "English", code: "ENG", educationLevel: "UCE", optional: false },
-  { id: "subj-2", name: "Literature in English", code: "LIT", educationLevel: "UCE", optional: true },
-  { id: "subj-3-uceEP", name: "Kiswahili", code: "KISWA", educationLevel: "UCE", optional: true },
-  { id: "subj-4-uce", name: "Christian Religious Education", code: "CRE", educationLevel: "UCE", optional: true },
-  { id: "subj-5-uce", name: "Islamic Religious Education", code: "IRE", educationLevel: "UCE", optional: true },
-  { id: "subj-6", name: "History and Political Education", code: "HIST", educationLevel: "UCE", optional: true },
-  { id: "subj-7-uce", name: "Geography", code: "GEOG", educationLevel: "UCE", optional: true },
-  { id: "subj-8-uce", name: "French", code: "FRENCH", educationLevel: "UCE", optional: true },
-  { id: "subj-9-uce", name: "German", code: "GERMAN", educationLevel: "UCE", optional: true },
-  { id: "subj-10-uce", name: "Arabic", code: "ARABIC", educationLevel: "UCE", optional: true },
-  { id: "subj-11-uce", name: "Luganda", code: "LUGANDA", educationLevel: "UCE", optional: true },
-  { id: "subj-12-uce", name: "Runyankole / Rukiga", code: "RUNY", educationLevel: "UCE", optional: true },
-  { id: "subj-13-uce", name: "Lusoga", code: "LUSOGA", educationLevel: "UCE", optional: true },
-  { id: "subj-14-uce", name: "Mathematics", code: "MATH", educationLevel: "UCE", optional: false },
-  { id: "subj-15-uce", name: "Agriculture", code: "AGRIC", educationLevel: "UCE", optional: true },
-  { id: "subj-16-uce", name: "Physics", code: "PHY", educationLevel: "UCE", optional: true },
-  { id: "subj-17-uce", name: "Chemistry", code: "CHEM", educationLevel: "UCE", optional: true },
-  { id: "subj-18-uce", name: "Biology", code: "BIO", educationLevel: "UCE", optional: true },
-  { id: "subj-19-uce", name: "Art and Design", code: "ART", educationLevel: "UCE", optional: true },
-  { id: "subj-20", name: "Nutrition and Food Technology", code: "FN", educationLevel: "UCE", optional: true },
-  { id: "subj-21-uce", name: "Technical and Design", code: "TD", educationLevel: "UCE", optional: true },
-  { id: "subj-22", name: "ICT", code: "CPS", educationLevel: "UCE", optional: true },
-  { id: "subj-23-uce", name: "Entrepreneurship", code: "ENT", educationLevel: "UCE", optional: true },
+  { id: "subj-1", name: "English Language", code: "ENG", standardCode: "112", educationLevel: "UCE", optional: false },
+  { id: "subj-2", name: "Literature in English", code: "LIT", standardCode: "208", educationLevel: "UCE", optional: true },
+  { id: "subj-3-uceEP", name: "Kiswahili", code: "KISWA", standardCode: "336", educationLevel: "UCE", optional: true },
+  { id: "subj-4-uce", name: "Christian Religious Education", code: "CRE", standardCode: "223", educationLevel: "UCE", optional: true },
+  { id: "subj-5-uce", name: "Islamic Religious Education", code: "IRE", standardCode: "225", educationLevel: "UCE", optional: true },
+  { id: "subj-6", name: "History & Political Education", code: "HIST", standardCode: "241", educationLevel: "UCE", optional: true },
+  { id: "subj-7-uce", name: "Geography", code: "GEOG", standardCode: "273", educationLevel: "UCE", optional: true },
+  { id: "subj-8-uce", name: "French", code: "FRENCH", standardCode: "314", educationLevel: "UCE", optional: true },
+  { id: "subj-9-uce", name: "German", code: "GERMAN", standardCode: "309", educationLevel: "UCE", optional: true },
+  { id: "subj-10-uce", name: "Arabic", code: "ARABIC", standardCode: "337", educationLevel: "UCE", optional: true },
+  { id: "subj-11-uce", name: "Luganda", code: "LUGANDA", standardCode: "335", educationLevel: "UCE", optional: true },
+  { id: "subj-12-uce", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "345", educationLevel: "UCE", optional: true },
+  { id: "subj-13-uce", name: "Lusoga", code: "LUSOGA", standardCode: "355", educationLevel: "UCE", optional: true },
+  { id: "subj-14-uce", name: "Mathematics", code: "MATH", standardCode: "456", educationLevel: "UCE", optional: false },
+  { id: "subj-15-uce", name: "Agriculture", code: "AGRIC", standardCode: "527", educationLevel: "UCE", optional: true },
+  { id: "subj-16-uce", name: "Physics", code: "PHY", standardCode: "535", educationLevel: "UCE", optional: true },
+  { id: "subj-17-uce", name: "Chemistry", code: "CHEM", standardCode: "545", educationLevel: "UCE", optional: true },
+  { id: "subj-18-uce", name: "Biology", code: "BIO", standardCode: "553", educationLevel: "UCE", optional: true },
+  { id: "subj-19-uce", name: "Art & Design", code: "ART", standardCode: "612", educationLevel: "UCE", optional: true },
+  { id: "subj-20", name: "Nutrition & Food Technology", code: "FN", standardCode: "662", educationLevel: "UCE", optional: true },
+  { id: "subj-21-uce", name: "Technical & Design", code: "TD", standardCode: "745", educationLevel: "UCE", optional: true },
+  { id: "subj-22", name: "ICT", code: "CPS", standardCode: "840", educationLevel: "UCE", optional: true },
+  { id: "subj-23-uce", name: "Entrepreneurship", code: "ENT", standardCode: "845", educationLevel: "UCE", optional: true },
   // UACE Subjects
-  { id: "subj-24", name: "General Paper", code: "GP", educationLevel: "UACE", optional: false },
-  { id: "subj-25", name: "Subsidiary Mathematics", code: "SUB_MATHS", educationLevel: "UACE", optional: true },
-  { id: "subj-26", name: "Subsidiary ICT", code: "SUB_ICT", educationLevel: "UACE", optional: true },
-  { id: "subj-3-uace", name: "Kiswahili", code: "KISWA", educationLevel: "UACE", optional: true },
-  { id: "subj-4-uace", name: "Christian Religious Education", code: "CRE", educationLevel: "UACE", optional: true },
-  { id: "subj-5-uace", name: "Islamic Religious Education", code: "IRE", educationLevel: "UACE", optional: true },
-  { id: "subj-7-uace", name: "Geography", code: "GEOG", educationLevel: "UACE", optional: true },
-  { id: "subj-8-uace", name: "French", code: "FRENCH", educationLevel: "UACE", optional: true },
-  { id: "subj-9-uace", name: "German", code: "GERMAN", educationLevel: "UACE", optional: true },
-  { id: "subj-10-uace", name: "Arabic", code: "ARABIC", educationLevel: "UACE", optional: true },
-  { id: "subj-11-uace", name: "Luganda", code: "LUGANDA", educationLevel: "UACE", optional: true },
-  { id: "subj-12-uace", name: "Runyankole / Rukiga", code: "RUNY", educationLevel: "UACE", optional: true },
-  { id: "subj-13-uace", name: "Lusoga", code: "LUSOGA", educationLevel: "UACE", optional: true },
-  { id: "subj-14-uace", name: "Mathematics", code: "MATH", educationLevel: "UACE", optional: false },
-  { id: "subj-15-uace", name: "Agriculture", code: "AGRIC", educationLevel: "UACE", optional: true },
-  { id: "subj-16-uace", name: "Physics", code: "PHY", educationLevel: "UACE", optional: true },
-  { id: "subj-17-uace", name: "Chemistry", code: "CHEM", educationLevel: "UACE", optional: true },
-  { id: "subj-18-uace", name: "Biology", code: "BIO", educationLevel: "UACE", optional: true },
-  { id: "subj-19-uace", name: "Fine Art", code: "ART", educationLevel: "UACE", optional: true },
-  { id: "subj-21-uace", name: "Technical Drawing", code: "TD", educationLevel: "UACE", optional: true },
-  { id: "subj-23-uace", name: "Entrepreneurship", code: "ENT", educationLevel: "UACE", optional: true },
+  { id: "subj-24", name: "General Paper", code: "GP", standardCode: "101", educationLevel: "UACE", optional: false },
+  { id: "subj-25", name: "Subsidiary Mathematics", code: "SUB_MATHS", standardCode: "475", educationLevel: "UACE", optional: true },
+  { id: "subj-26", name: "Subsidiary ICT", code: "SUB_ICT", standardCode: "610", educationLevel: "UACE", optional: true },
+  { id: "subj-3-uace", name: "Kiswahili", code: "KISWA", standardCode: "340", educationLevel: "UACE", optional: true },
+  { id: "subj-4-uace", name: "Christian Religious Education", code: "CRE", standardCode: "221", educationLevel: "UACE", optional: true },
+  { id: "subj-5-uace", name: "Islamic Religious Education", code: "IRE", standardCode: "224", educationLevel: "UACE", optional: true },
+  { id: "subj-7-uace", name: "Geography", code: "GEOG", standardCode: "230", educationLevel: "UACE", optional: true },
+  { id: "subj-8-uace", name: "French", code: "FRENCH", standardCode: "351", educationLevel: "UACE", optional: true },
+  { id: "subj-9-uace", name: "German", code: "GERMAN", standardCode: "358", educationLevel: "UACE", optional: true },
+  { id: "subj-10-uace", name: "Arabic", code: "ARABIC", standardCode: "361", educationLevel: "UACE", optional: true },
+  { id: "subj-11-uace", name: "Luganda", code: "LUGANDA", standardCode: "380", educationLevel: "UACE", optional: true },
+  { id: "subj-12-uace", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "383", educationLevel: "UACE", optional: true },
+  { id: "subj-13-uace", name: "Lusoga", code: "LUSOGA", standardCode: "386", educationLevel: "UACE", optional: true },
+  { id: "subj-14-uace", name: "Mathematics", code: "MATH", standardCode: "475", educationLevel: "UACE", optional: false },
+  { id: "subj-15-uace", name: "Agriculture", code: "AGRIC", standardCode: "515", educationLevel: "UACE", optional: true },
+  { id: "subj-16-uace", name: "Physics", code: "PHY", standardCode: "525", educationLevel: "UACE", optional: true },
+  { id: "subj-17-uace", name: "Chemistry", code: "CHEM", standardCode: "535", educationLevel: "UACE", optional: true },
+  { id: "subj-18-uace", name: "Biology", code: "BIO", standardCode: "545", educationLevel: "UACE", optional: true },
+  { id: "subj-19-uace", name: "Fine Art", code: "ART", standardCode: "615", educationLevel: "UACE", optional: true },
+  { id: "subj-21-uace", name: "Technical Drawing", code: "TD", standardCode: "680", educationLevel: "UACE", optional: true },
+  { id: "subj-23-uace", name: "Entrepreneurship", code: "ENT", standardCode: "268", educationLevel: "UACE", optional: true },
 ];
 
 const initialSchools: SchoolRecord[] = [
@@ -330,7 +333,7 @@ const initialSchools: SchoolRecord[] = [
     id: "2",
     name: "AMITY SECONDARY SCHOOL",
     code: "WAK26-0001",
-    email: "kampalasss@wakissha.org",
+    email: "kampalasss@wakissha.ug",
     phone: "+256 700 101 001",
     address: "Plot 12 Kampala Road, Kampala",
     district: "Kampala",
@@ -349,7 +352,7 @@ const initialSchools: SchoolRecord[] = [
     id: "3",
     name: "Wakiso Hills College",
     code: "WAK26-0002",
-    email: "wakisohills@wakissha.org",
+    email: "wakisohills@wakissha.ug",
     phone: "+256 700 101 002",
     address: "Mityana Road, Wakiso",
     district: "Wakiso",
@@ -368,13 +371,13 @@ const initialSchools: SchoolRecord[] = [
     id: "4",
     name: "Entebbe High School",
     code: "WAK26-0003",
-    email: "entebbehigh@wakissha.org",
+    email: "entebbehigh@wakissha.ug",
     phone: "+256 700 101 003",
     address: "Airport Road, Entebbe",
     district: "Entebbe",
     zone: "BWEYOGERERE ZONE",
     zone_id: "zone-3",
-    educationLevel: "BOTH" as const,
+    educationLevel: "UACE" as const,
     academicYear: "2026",
     status: "pending" as const,
     registrationDate: "2026-02-01",
@@ -674,7 +677,7 @@ const initialStudents: StudentRecord[] = [
     registrationDate: "2026-01-22",
   },
 
-  // WAK26-0003 (Entebbe High School) - BOTH UCE & UACE Students
+  // WAK26-0003 (Entebbe High School) - Mixed UCE & UACE Students
   {
     id: "student-8",
     registrationNumber: "WAK/26-0003/001",
@@ -1013,6 +1016,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: `${subject.educationLevel}-${normalizedCode}`,
           name: subject.name.trim(),
           code: normalizedCode,
+          standardCode: subject.standardCode.trim(),
           educationLevel: subject.educationLevel,
           optional: subject.optional,
         },
@@ -1037,6 +1041,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ...subject,
               name: updates.name.trim(),
               code: normalizedCode,
+              standardCode: updates.standardCode.trim(),
               educationLevel: updates.educationLevel,
               optional: updates.optional,
             }

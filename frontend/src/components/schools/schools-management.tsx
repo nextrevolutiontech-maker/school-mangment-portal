@@ -296,7 +296,6 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   <SelectContent>
                     <SelectItem value="UCE">UCE (O' Level)</SelectItem>
                     <SelectItem value="UACE">UACE (A' Level)</SelectItem>
-                    <SelectItem value="BOTH">Both UCE & UACE</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -543,7 +542,6 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
     </div>
   );
 }
-
 
 
 

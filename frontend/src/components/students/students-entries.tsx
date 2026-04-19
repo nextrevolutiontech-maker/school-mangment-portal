@@ -38,7 +38,7 @@ import { Badge } from "../ui/badge";
 import { Search, UserPlus, AlertCircle, Info, Edit2, Trash2, MoreVertical, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "../ui/alert";
-import { useAuth, CLASS_LEVELS_ARRAY } from "../auth-context";
+import { useAuth, CLASS_LEVELS, CLASS_LEVELS_ARRAY } from "../auth-context";
 import type { StudentSubjectEntry } from "../auth-context";
 import {
   DropdownMenu,
@@ -103,6 +103,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
   // Form state
   const [studentName, setStudentName] = useState("");
+  const [registrationLevel, setRegistrationLevel] = useState<"UCE" | "UACE">("UCE");
   const [classLevel, setClassLevel] = useState<"S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6">("S.1");
   const [stream, setStream] = useState("");
   const [schoolCode, setSchoolCode] = useState(user?.role === "school" ? user.schoolCode ?? "WAK26-0001" : "WAK26-0001");
@@ -112,16 +113,14 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     };
   }>({});
 
-  // Determine exam level from class level
-  const examLevel: "UCE" | "UACE" =
-    ["S.1", "S.2", "S.3", "S.4"].includes(classLevel) ? "UCE" : "UACE";
+  const availableClassLevels = registrationLevel === "UCE" ? CLASS_LEVELS.UCE : CLASS_LEVELS.UACE;
 
-  // Filter subjects by exam level
+  // Filter subjects by selected level
   const filteredSubjects = useMemo(() => {
     return subjects.filter(
-      (subject) => subject.educationLevel === examLevel
+      (subject) => subject.educationLevel === registrationLevel
     );
-  }, [subjects, examLevel]);
+  }, [subjects, registrationLevel]);
 
   // Filter subjects by exam level for edit modal
   const filteredSubjectsForEdit = useMemo(() => {
@@ -130,6 +129,16 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       (subject) => subject.educationLevel === editExamLevel
     );
   }, [subjects, editClassLevel]);
+
+  useEffect(() => {
+    setClassLevel((current) => {
+      if (availableClassLevels.includes(current as any)) {
+        return current;
+      }
+      return availableClassLevels[0];
+    });
+    setSelectedSubjects({});
+  }, [registrationLevel]);
 
   // Calculate total entries - one entry per subject selected
   const calculateTotalEntries = () => {
@@ -191,6 +200,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       return {
         subjectId,
         subjectCode: subject?.code || "",
+        subjectStandardCode: subject?.standardCode || "",
         subjectName: subject?.name || "",
         paper: data.paper,
         entry1: false,
@@ -217,6 +227,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
     // Reset form
     setStudentName("");
+    setRegistrationLevel("UCE");
     setClassLevel("S.1");
     setStream("");
     setSelectedSubjects({});
@@ -277,6 +288,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       return {
         subjectId,
         subjectCode: subject?.code || "",
+        subjectStandardCode: subject?.standardCode || "",
         subjectName: subject?.name || "",
         paper: data.paper,
         entry1: false,
@@ -391,6 +403,19 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="exam-level">Exam Level *</Label>
+                <Select value={registrationLevel} onValueChange={(value: "UCE" | "UACE") => setRegistrationLevel(value)}>
+                  <SelectTrigger id="exam-level">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UCE">UCE</SelectItem>
+                    <SelectItem value="UACE">UACE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Class Level */}
               <div className="space-y-2">
                 <Label htmlFor="class-level">Class Level *</Label>
@@ -399,21 +424,21 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"].map((level) => (
+                    {availableClassLevels.map((level) => (
                       <SelectItem key={level} value={level}>
-                        {level} {["S.1", "S.2", "S.3", "S.4"].includes(level) ? "(UCE)" : "(UACE)"}
+                        {level}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Exam Level (Auto) */}
+              {/* Exam Level */}
               <div className="space-y-2">
                 <Label>Exam Level</Label>
                 <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg bg-slate-50">
-                  <Badge variant={examLevel === "UCE" ? "secondary" : "default"}>
-                    {examLevel}
+                  <Badge variant={registrationLevel === "UCE" ? "secondary" : "default"}>
+                    {registrationLevel}
                   </Badge>
                 </div>
               </div>
@@ -462,7 +487,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               {/* Subject List with Paper Selection */}
               <div className="md:col-span-2 space-y-3 max-h-96 overflow-y-auto border border-slate-200 rounded-lg p-4">
                 {filteredSubjects.length === 0 ? (
-                  <p className="text-sm text-slate-500">No subjects available for {examLevel}</p>
+                  <p className="text-sm text-slate-500">No subjects available for {registrationLevel}</p>
                 ) : (
                   filteredSubjects.map((subject) => (
                     <div key={subject.id} className="border-b pb-3 last:border-b-0">
@@ -475,7 +500,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                         />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-mono font-bold text-black">{subject.code}</span>
+                            <span className="text-xs font-mono font-bold text-black">{subject.standardCode}</span>
                             {selectedSubjects[subject.id] && (
                               <span className="text-xs font-semibold text-blue-600">/{selectedSubjects[subject.id].paper.split(" ")[1]}</span>
                             )}
@@ -484,7 +509,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                             </Label>
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
-                            {subject.optional ? "Optional" : "Required"}
+                            {subject.optional ? "Optional" : "Compulsory"}
                           </p>
                         </div>
                         {subject.optional && (
@@ -724,7 +749,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                   {viewingStudent.subjects.map((subject) => (
                     <div key={subject.subjectId} className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
                       <div className="flex-1">
-                        <p className="text-xs font-mono font-bold text-black">{subject.subjectCode}</p>
+                        <p className="text-xs font-mono font-bold text-black">{subject.subjectStandardCode ?? subject.subjectCode}</p>
                         <p className="text-sm font-medium text-slate-900">{subject.subjectName}</p>
                       </div>
                       <Badge variant="outline" className="text-blue-600 border-blue-200">
@@ -850,7 +875,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-mono font-bold text-black">
-                            {subject.code}
+                            {subject.standardCode}
                           </span>
                           <span className="text-xs font-semibold text-blue-600">/
                             {editSelectedSubjects[subject.id]?.paper.split(" ")[1]}
@@ -860,7 +885,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                           </Label>
                         </div>
                         <p className="text-xs text-slate-500 mt-1">
-                          {subject.optional ? "Optional" : "Required"}
+                          {subject.optional ? "Optional" : "Compulsory"}
                         </p>
                       </div>
                       {subject.optional && (

@@ -336,10 +336,10 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                   <p className="mt-1 text-sm text-slate-500">
                     Contact finance support at{" "}
                     <a
-                      href="mailto:payments@wakissha.org"
+                      href="mailto:payments@wakissha.ug"
                       className="text-red-600 hover:underline"
                     >
-                      payments@wakissha.org
+                      payments@wakissha.ug
                     </a>{" "}
                     or call +256 700 000 000.
                   </p>
@@ -392,6 +392,5 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
     </div>
   );
 }
-
 
 

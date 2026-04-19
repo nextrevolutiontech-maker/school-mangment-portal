@@ -58,24 +58,24 @@ const formBaseColumns: FormColumn[] = [
 ];
 
 const uaceSubjectColumns: FormColumn[] = [
-  { key: "GP", label: "GP" },
-  { key: "SUB_MATHS", label: "Sub Maths" },
-  { key: "SUB_ICT", label: "Sub ICT" },
+  { key: "GP", label: "General Paper" },
+  { key: "SUB_MATHS", label: "Subsidiary Mathematics" },
+  { key: "SUB_ICT", label: "Subsidiary ICT" },
   { key: "HIST", label: "History" },
-  { key: "ENT", label: "Ent" },
+  { key: "ENT", label: "Entrepreneurship" },
   { key: "IRE", label: "IRE" },
   { key: "CRE", label: "CRE" },
   { key: "GEOG", label: "Geography" },
   { key: "LIT", label: "Literature" },
   { key: "KISWA", label: "Kiswahili" },
-  { key: "ART", label: "Art" },
+  { key: "ART", label: "Fine Art" },
   { key: "PHY", label: "Physics" },
   { key: "CHEM", label: "Chemistry" },
   { key: "BIO", label: "Biology" },
-  { key: "MATH", label: "Maths" },
+  { key: "MATH", label: "Mathematics" },
   { key: "AGRIC", label: "Agriculture" },
-  { key: "FN", label: "F/N" },
-  { key: "TD", label: "TD" },
+  { key: "FN", label: "Food & Nutrition" },
+  { key: "TD", label: "Technical Drawing" },
   { key: "FRENCH", label: "French" },
   { key: "GERMAN", label: "German" },
   { key: "ARABIC", label: "Arabic" },
@@ -85,16 +85,16 @@ const uaceSubjectColumns: FormColumn[] = [
 ];
 
 const uceSubjectColumns: FormColumn[] = [
-  { key: "ENG", label: "English" },
-  { key: "MATH", label: "Maths" },
+  { key: "ENG", label: "English Language" },
+  { key: "MATH", label: "Mathematics" },
   { key: "BIO", label: "Biology" },
   { key: "CHEM", label: "Chemistry" },
   { key: "PHY", label: "Physics" },
-  { key: "HIST", label: "History" },
+  { key: "HIST", label: "History & Political Education" },
   { key: "GEOG", label: "Geography" },
   { key: "CRE", label: "CRE" },
   { key: "IRE", label: "IRE" },
-  { key: "CPS", label: "Comp" },
+  { key: "CPS", label: "ICT" },
   { key: "FRENCH", label: "French" },
   { key: "GERMAN", label: "German" },
   { key: "ARABIC", label: "Arabic" },
@@ -304,6 +304,16 @@ export function Reports({ onPageChange }: ReportsProps) {
   const [exportingKey, setExportingKey] = useState<string | null>(null);
   const [educationLevelFilter, setEducationLevelFilter] = useState<EducationLevelFilter>("UCE");
   const [lateFee] = useState(0);
+  const subjectLookup = useMemo(
+    () =>
+      new Map(
+        subjects.map((subject) => [
+          `${subject.educationLevel}:${subject.code.toUpperCase()}`,
+          subject,
+        ]),
+      ),
+    [subjects],
+  );
 
   useEffect(() => {
     if (user?.role === "school" && user.schoolCode) {
@@ -312,9 +322,12 @@ export function Reports({ onPageChange }: ReportsProps) {
   }, [user?.role, user?.schoolCode]);
 
   const consolidatedRows = useMemo<FormRow[]>(() => {
-    const filteredSchools = scopedSchools.filter((school) => {
-      return school.educationLevel === educationLevelFilter || school.educationLevel === "BOTH";
-    });
+    const schoolCodesForLevel = new Set(
+      scopedStudents
+        .filter((student) => student.examLevel === educationLevelFilter)
+        .map((student) => student.schoolCode),
+    );
+    const filteredSchools = scopedSchools.filter((school) => schoolCodesForLevel.has(school.code));
 
     return filteredSchools.map((school) => {
       const schoolStudents = scopedStudents.filter(
@@ -410,14 +423,25 @@ export function Reports({ onPageChange }: ReportsProps) {
       ? scopedSchools.find((school) => school.code === selectedSchool)
       : undefined;
 
+  const selectedSchoolAvailableLevels = useMemo(() => {
+    if (!selectedSchoolData) return [] as Array<"UCE" | "UACE">;
+
+    const levels = new Set<"UCE" | "UACE">();
+    scopedStudents.forEach((student) => {
+      if (student.schoolCode === selectedSchoolData.code) {
+        levels.add(student.examLevel);
+      }
+    });
+
+    return Array.from(levels).sort();
+  }, [selectedSchoolData, scopedStudents]);
+
   useEffect(() => {
-    if (!selectedSchoolData) return;
-    if (selectedSchoolData.educationLevel === "UACE") {
-      setSelectedSchoolReportLevel("UACE");
-    } else if (selectedSchoolData.educationLevel === "UCE") {
-      setSelectedSchoolReportLevel("UCE");
+    if (selectedSchoolAvailableLevels.length === 0) return;
+    if (!selectedSchoolAvailableLevels.includes(selectedSchoolReportLevel)) {
+      setSelectedSchoolReportLevel(selectedSchoolAvailableLevels[0]);
     }
-  }, [selectedSchoolData?.code, selectedSchoolData?.educationLevel]);
+  }, [selectedSchoolAvailableLevels, selectedSchoolReportLevel]);
 
   const selectedSchoolProfile = useMemo(() => {
     if (!selectedSchoolData) return undefined;
@@ -705,11 +729,12 @@ export function Reports({ onPageChange }: ReportsProps) {
   const generateReadableSummaryPDF = () => {
     try {
       const summaryLevel = educationLevelFilter;
-      const summarySchools = scopedSchools.filter(
-        (school) =>
-          school.educationLevel === summaryLevel || school.educationLevel === "BOTH",
+      const summarySchoolCodes = new Set(
+        scopedStudents
+          .filter((student) => student.examLevel === summaryLevel)
+          .map((student) => student.schoolCode),
       );
-      const summarySchoolCodes = new Set(summarySchools.map((school) => school.code));
+      const summarySchools = scopedSchools.filter((school) => summarySchoolCodes.has(school.code));
       const summaryStudents = scopedStudents.filter(
         (student) =>
           student.examLevel === summaryLevel && summarySchoolCodes.has(student.schoolCode),
@@ -1195,8 +1220,12 @@ export function Reports({ onPageChange }: ReportsProps) {
           (student.subjects ?? []).map((subj) => [
             student.registrationNumber,
             student.studentName,
-            subj.subjectCode,
-            subj.subjectName,
+            subj.subjectStandardCode ??
+              subjectLookup.get(`${student.examLevel}:${subj.subjectCode.toUpperCase()}`)?.standardCode ??
+              subj.subjectCode,
+            subj.subjectName ||
+              subjectLookup.get(`${student.examLevel}:${subj.subjectCode.toUpperCase()}`)?.name ||
+              subj.subjectCode,
             subj.paper || "-",
           ])
         ),
@@ -1231,8 +1260,14 @@ export function Reports({ onPageChange }: ReportsProps) {
             RegistrationNumber: student.registrationNumber,
             StudentName: student.studentName,
             ExamLevel: student.examLevel,
-            SubjectCode: subj.subjectCode,
-            SubjectName: subj.subjectName,
+            SubjectCode:
+              subj.subjectStandardCode ??
+              subjectLookup.get(`${student.examLevel}:${subj.subjectCode.toUpperCase()}`)?.standardCode ??
+              subj.subjectCode,
+            SubjectName:
+              subj.subjectName ||
+              subjectLookup.get(`${student.examLevel}:${subj.subjectCode.toUpperCase()}`)?.name ||
+              subj.subjectCode,
             Paper: subj.paper || "-",
           }))
         ),
@@ -1652,8 +1687,14 @@ export function Reports({ onPageChange }: ReportsProps) {
                         <SelectValue placeholder="Level" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="UCE">UCE Form</SelectItem>
-                        <SelectItem value="UACE">UACE Form</SelectItem>
+                        {(selectedSchoolAvailableLevels.length > 0
+                          ? selectedSchoolAvailableLevels
+                          : ["UCE", "UACE"]
+                        ).map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {level} Form
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1674,8 +1715,14 @@ export function Reports({ onPageChange }: ReportsProps) {
                         <SelectValue placeholder="Level" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="UCE">UCE Form</SelectItem>
-                        <SelectItem value="UACE">UACE Form</SelectItem>
+                        {(selectedSchoolAvailableLevels.length > 0
+                          ? selectedSchoolAvailableLevels
+                          : ["UCE", "UACE"]
+                        ).map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {level} Form
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

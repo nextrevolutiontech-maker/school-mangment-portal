@@ -27,13 +27,12 @@ interface SchoolDashboardProps {
 }
 
 export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
-  const { user, schools, students, zones } = useAuth();
+  const { user, schools, students } = useAuth();
   const currentSchool = schools.find((school) => school.code === user?.schoolCode);
   const schoolStudents = students.filter((student) => student.schoolCode === user?.schoolCode);
   const uceStudents = schoolStudents.filter((student) => student.examLevel === "UCE").length;
   const uaceStudents = schoolStudents.filter((student) => student.examLevel === "UACE").length;
   const schoolSubjectsCount = new Set(schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))).size;
-  const zoneDetails = zones.find((zone) => zone.name === user?.zone);
 
   const stats = [
     {
@@ -409,65 +408,6 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </CardContent>
       </Card>
 
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-slate-900">Zone & Support Details</CardTitle>
-          <CardDescription className="text-slate-500">
-            Your zone coordinator and WAKISSHA support contacts for assistance
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 lg:grid-cols-2">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-50 border border-blue-200 rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-10 w-10 rounded-full bg-blue-600/10 text-blue-600 flex items-center justify-center font-semibold">
-                Z
-              </div>
-              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-blue-600">
-                Zone Coordinator
-              </p>
-            </div>
-            <div className="mt-4 flex items-start gap-4">
-              <div className="h-14 w-14 rounded-full bg-white border border-blue-200 text-blue-600 flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                {zoneDetails?.leaderName?.split(" ").map((name) => name[0]).slice(0, 2).join("") || "ZN"}
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-slate-900">
-                  {zoneDetails?.leaderName || "Zone Leader"}
-                </p>
-                <p className="text-sm text-slate-600 mt-1">{zoneDetails?.name || "Current Zone"} Coordinator</p>
-                <div className="mt-3 space-y-1 text-sm">
-                  <p className="text-slate-700"><span className="font-medium">Phone:</span> <a href={`tel:${zoneDetails?.leaderPhone || ""}`} className="text-blue-600 hover:underline">{zoneDetails?.leaderPhone || "N/A"}</a></p>
-                  <p className="text-slate-700"><span className="font-medium">Email:</span> <a href={`mailto:${zoneDetails?.leaderEmail || ""}`} className="text-blue-600 hover:underline">{zoneDetails?.leaderEmail || "N/A"}</a></p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-red-50 to-red-50 border border-red-200 rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-10 w-10 rounded-full bg-red-600/10 text-red-600 flex items-center justify-center font-semibold">
-                S
-              </div>
-              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-red-600">
-                WAKISSHA Secretariat
-              </p>
-            </div>
-            <div className="mt-4">
-              <p className="text-lg font-semibold text-slate-900">
-                {zoneDetails?.secretariatName || "Secretariat Desk"}
-              </p>
-              <p className="text-sm text-slate-600 mt-1">
-                Registration & Exam Support
-              </p>
-              <div className="mt-4 space-y-1 text-sm">
-                <p className="text-slate-700"><span className="font-medium">Phone:</span> <a href={`tel:${zoneDetails?.secretariatPhone || ""}`} className="text-red-600 hover:underline">{zoneDetails?.secretariatPhone || "+256 700 100 420"}</a></p>
-                <p className="text-slate-700"><span className="font-medium">Email:</span> <a href={`mailto:${zoneDetails?.secretariatEmail || "secretariat@wakissha.org"}`} className="text-red-600 hover:underline">{zoneDetails?.secretariatEmail || "secretariat@wakissha.org"}</a></p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid gap-4 md:grid-cols-3">
         <Button
           variant="outline"
@@ -520,4 +460,3 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
     </div>
   );
 }
-

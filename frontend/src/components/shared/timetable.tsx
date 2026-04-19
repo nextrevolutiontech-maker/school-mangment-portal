@@ -243,7 +243,9 @@ function SchedulePanel({
                   <TableRow>
                     <TableHead>Day & Date</TableHead>
                     <TableHead>Period</TableHead>
-                    <TableHead>Subject & Paper</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Paper</TableHead>
+                    <TableHead>Subject</TableHead>
                     <TableHead>Duration</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -261,8 +263,14 @@ function SchedulePanel({
                       <TableCell>
                         <Badge variant="outline">{exam.period}</Badge>
                       </TableCell>
-                      <TableCell className="font-medium text-slate-900">
-                        {exam.code}/{exam.paper.split(" ")[1]} {exam.subject}
+                      <TableCell className="font-mono font-bold text-black">
+                        {exam.code}
+                      </TableCell>
+                      <TableCell className="font-semibold text-blue-600">
+                        {exam.paper}
+                      </TableCell>
+                      <TableCell className="font-medium text-amber-600">
+                        {exam.subject}
                       </TableCell>
                       <TableCell className="text-slate-500">
                         {exam.duration}
@@ -306,9 +314,9 @@ function SchedulePanel({
                   >
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                       <BookOpen className="h-4 w-4 text-red-400" />
-                      <h4 className="font-semibold text-slate-900">{exam.subject}</h4>
-                      <Badge variant="outline">{exam.code}</Badge>
-                      <Badge variant="secondary">{exam.paper}</Badge>
+                      <span className="font-mono text-sm font-bold text-black">{exam.code}</span>
+                      <span className="text-sm font-semibold text-blue-600">{exam.paper}</span>
+                      <h4 className="font-semibold text-amber-600">{exam.subject}</h4>
                     </div>
                     <div className="space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
@@ -350,12 +358,13 @@ export function Timetable({ onPageChange }: TimetableProps) {
       });
       yPos += 10;
 
-      // Table with 4 columns: Day & Date | Period | Subject & Paper | Duration
-      const tableColumns = ["Day & Date", "Period", "Subject & Paper", "Duration"];
+      const tableColumns = ["Day & Date", "Period", "Code", "Paper", "Subject", "Duration"];
       const tableRows = schedule.map((exam) => [
         `${exam.day}, ${new Date(exam.date).toLocaleDateString("en-GB")}`,
         exam.period,
-        `${exam.code}${exam.paper.match(/\d+/) ? exam.paper.match(/\d+/)[0] : ""} ${exam.subject}`,
+        exam.code,
+        exam.paper,
+        exam.subject,
         exam.duration,
       ]);
 
@@ -365,10 +374,12 @@ export function Timetable({ onPageChange }: TimetableProps) {
         startY: yPos,
         margin: { left: 10, right: 10 },
         columnStyles: {
-          0: { cellWidth: 35 },
-          1: { cellWidth: 25 },
-          2: { cellWidth: 95 },
-          3: { cellWidth: 25 },
+          0: { cellWidth: 34 },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 18, textColor: [0, 0, 0], fontStyle: "bold" },
+          3: { cellWidth: 24, textColor: [37, 99, 235], fontStyle: "bold" },
+          4: { cellWidth: 82, textColor: [217, 119, 6], fontStyle: "bold" },
+          5: { cellWidth: 22 },
         },
         headStyles: {
           fillColor: [200, 200, 200],
@@ -439,7 +450,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
               disabled={isExporting === "UCE"}
             >
               <Download className="h-4 w-4" />
-              {isExporting === "UCE" ? "Exporting..." : "Export UCE PDF"}
+              {isExporting === "UCE" ? "Downloading..." : "Download UCE PDF"}
             </Button>
           </div>
           <SchedulePanel
@@ -457,7 +468,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
               disabled={isExporting === "UACE"}
             >
               <Download className="h-4 w-4" />
-              {isExporting === "UACE" ? "Exporting..." : "Export UACE PDF"}
+              {isExporting === "UACE" ? "Downloading..." : "Download UACE PDF"}
             </Button>
           </div>
           <SchedulePanel
@@ -499,7 +510,6 @@ export function Timetable({ onPageChange }: TimetableProps) {
     </div>
   );
 }
-
 
 
 
