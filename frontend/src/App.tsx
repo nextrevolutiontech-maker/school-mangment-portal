@@ -86,11 +86,11 @@ function AppContent() {
       case "dashboard":
         return <SchoolDashboard onPageChange={handlePageChange} />;
       case "my-students":
-        return <StudentsEntries onPageChange={handlePageChange} />;
+        return <StudentsEntries onPageChange={handlePageChange} autoOpenAddDialog={false} />;
       case "add-student":
-        return <StudentsEntries onPageChange={handlePageChange} />;
+        return <StudentsEntries onPageChange={handlePageChange} autoOpenAddDialog={true} />;
       case "students":
-        return <StudentsEntries onPageChange={handlePageChange} />;
+        return <StudentsEntries onPageChange={handlePageChange} autoOpenAddDialog={false} />;
       case "payment-status":
         return <PaymentStatus onPageChange={handlePageChange} />;
       case "upload-pdf":

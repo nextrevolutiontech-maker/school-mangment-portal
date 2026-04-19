@@ -14,13 +14,15 @@ export type SchoolStatus =
   | "payment_submitted"
   | "verified"
   | "active";
-export type EducationLevel = "UCE" | "UACE" | "BOTH";
+export type EducationLevel = "UCE" | "UACE";
 
 // Predetermined class levels - managed by super admin only
 export const CLASS_LEVELS = {
   UCE: ["S.1", "S.2", "S.3", "S.4"],
   UACE: ["S.5", "S.6"],
 } as const;
+
+export const CLASS_LEVELS_ARRAY = ["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"] as const;
 
 export interface User {
   id: string;
@@ -34,6 +36,7 @@ export interface User {
   status?: SchoolStatus;
   activationCode?: string;
   avatar?: string;
+  schoolLogo?: string;
 }
 
 export interface SchoolRecord {
@@ -46,7 +49,7 @@ export interface SchoolRecord {
   district: string;
   zone: string;
   zone_id: string;
-  educationLevel: EducationLevel;
+  educationLevel: EducationLevel | "BOTH";
   academicYear: string;
   status: SchoolStatus;
   registrationDate: string;
@@ -80,6 +83,7 @@ export interface StudentRecord {
   schoolCode: string;
   schoolName: string;
   academicYear: string;
+  stream?: string; // Internal use only
   subjects: StudentSubjectEntry[];
   totalEntries: number; // Sum of all checked entries
   registrationDate: string;
@@ -90,7 +94,7 @@ interface NewSchoolInput {
   email: string;
   phone: string;
   address: string;
-  educationLevel: EducationLevel;
+  educationLevel: EducationLevel | "BOTH";
   zone_id: string;
   schoolLogo?: string;
   contactPerson?: string;
@@ -117,13 +121,25 @@ interface AuthContextType {
     schoolCode: string;
     studentName: string;
     classLevel: "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6";
+    stream?: string;
     subjects: StudentSubjectEntry[];
     totalEntries: number;
   }) => void;
+  updateStudentEntry: (
+    studentId: string,
+    updates: {
+      studentName: string;
+      classLevel: "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6";
+      stream?: string;
+      subjects: StudentSubjectEntry[];
+      totalEntries: number;
+    },
+  ) => void;
+  deleteStudentEntry: (studentId: string) => void;
   addSubject: (subject: {
     name: string;
     code: string;
-    educationLevel: "UCE" | "UACE" | "BOTH";
+    educationLevel: "UCE" | "UACE";
     optional: boolean;
   }) => void;
   updateSubject: (
@@ -131,7 +147,7 @@ interface AuthContextType {
     updates: {
       name: string;
       code: string;
-      educationLevel: "UCE" | "UACE" | "BOTH";
+      educationLevel: "UCE" | "UACE";
       optional: boolean;
     },
   ) => void;
@@ -142,7 +158,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const adminUser: User = {
   id: "1",
   name: "WAKISSHA Administrator",
-  email: "admin@wakissha.org",
+  email: "admin@wakissha.ug",
   role: "admin",
   status: "active",
 };
@@ -154,10 +170,10 @@ const initialZones: Zone[] = [
     district: "Wakiso",
     leaderName: "Mr. Robert Kasigire",
     leaderPhone: "+256 757 123 456",
-    leaderEmail: "robert.kasigire@wakissha.org",
+    leaderEmail: "robert.kasigire@wakissha.ug",
     secretariatName: "Ms. Grace Nalweyiso",
     secretariatPhone: "+256 757 234 567",
-    secretariatEmail: "grace.nalweyiso@wakissha.org",
+    secretariatEmail: "grace.nalweyiso@wakissha.ug",
   },
   {
     id: "zone-2",
@@ -165,10 +181,10 @@ const initialZones: Zone[] = [
     district: "Wakiso",
     leaderName: "Dr. Henry Musoke",
     leaderPhone: "+256 757 345 678",
-    leaderEmail: "henry.musoke@wakissha.org",
+    leaderEmail: "henry.musoke@wakissha.ug",
     secretariatName: "Ms. Fatuma Ahmed",
     secretariatPhone: "+256 757 456 789",
-    secretariatEmail: "fatuma.ahmed@wakissha.org",
+    secretariatEmail: "fatuma.ahmed@wakissha.ug",
   },
   {
     id: "zone-3",
@@ -176,10 +192,10 @@ const initialZones: Zone[] = [
     district: "Entebbe",
     leaderName: "Prof. Sarah Nakamya",
     leaderPhone: "+256 757 567 890",
-    leaderEmail: "sarah.nakamya@wakissha.org",
+    leaderEmail: "sarah.nakamya@wakissha.ug",
     secretariatName: "Mr. Joseph Kyambadde",
     secretariatPhone: "+256 757 678 901",
-    secretariatEmail: "joseph.kyambadde@wakissha.org",
+    secretariatEmail: "joseph.kyambadde@wakissha.ug",
   },
   {
     id: "zone-4",
@@ -187,10 +203,10 @@ const initialZones: Zone[] = [
     district: "Wakiso",
     leaderName: "Mr. Patrick Lubega",
     leaderPhone: "+256 757 789 012",
-    leaderEmail: "patrick.lubega@wakissha.org",
+    leaderEmail: "patrick.lubega@wakissha.ug",
     secretariatName: "Ms. Sylvia Namujju",
     secretariatPhone: "+256 757 890 123",
-    secretariatEmail: "sylvia.namujju@wakissha.org",
+    secretariatEmail: "sylvia.namujju@wakissha.ug",
   },
   {
     id: "zone-5",
@@ -198,10 +214,10 @@ const initialZones: Zone[] = [
     district: "Mukono",
     leaderName: "Mr. David Otim",
     leaderPhone: "+256 757 901 234",
-    leaderEmail: "david.otim@wakissha.org",
+    leaderEmail: "david.otim@wakissha.ug",
     secretariatName: "Ms. Rosemary Kiwanuka",
     secretariatPhone: "+256 757 012 345",
-    secretariatEmail: "rosemary.kiwanuka@wakissha.org",
+    secretariatEmail: "rosemary.kiwanuka@wakissha.ug",
   },
   {
     id: "zone-6",
@@ -209,10 +225,10 @@ const initialZones: Zone[] = [
     district: "Jinja",
     leaderName: "Mr. Edgar Kamya",
     leaderPhone: "+256 758 112 233",
-    leaderEmail: "edgar.kamya@wakissha.org",
+    leaderEmail: "edgar.kamya@wakissha.ug",
     secretariatName: "Ms. Christine Nabulya",
     secretariatPhone: "+256 758 223 334",
-    secretariatEmail: "christine.nabulya@wakissha.org",
+    secretariatEmail: "christine.nabulya@wakissha.ug",
   },
   {
     id: "zone-7",
@@ -220,10 +236,10 @@ const initialZones: Zone[] = [
     district: "Wakiso",
     leaderName: "Mr. Julius Mugyenyi",
     leaderPhone: "+256 758 334 445",
-    leaderEmail: "julius.mugyenyi@wakissha.org",
+    leaderEmail: "julius.mugyenyi@wakissha.ug",
     secretariatName: "Ms. Hilda Kamugyisha",
     secretariatPhone: "+256 758 445 556",
-    secretariatEmail: "hilda.kamugyisha@wakissha.org",
+    secretariatEmail: "hilda.kamugyisha@wakissha.ug",
   },
   {
     id: "zone-8",
@@ -231,10 +247,10 @@ const initialZones: Zone[] = [
     district: "Wakiso",
     leaderName: "Mr. Amos Bazira",
     leaderPhone: "+256 758 556 667",
-    leaderEmail: "amos.bazira@wakissha.org",
+    leaderEmail: "amos.bazira@wakissha.ug",
     secretariatName: "Ms. Teresa Byamukama",
     secretariatPhone: "+256 758 667 778",
-    secretariatEmail: "teresa.byamukama@wakissha.org",
+    secretariatEmail: "teresa.byamukama@wakissha.ug",
   },
   {
     id: "zone-9",
@@ -242,10 +258,10 @@ const initialZones: Zone[] = [
     district: "Wakiso",
     leaderName: "Mr. Samuel Ssenyonga",
     leaderPhone: "+256 759 111 222",
-    leaderEmail: "samuel.ssenyonga@wakissha.org",
+    leaderEmail: "samuel.ssenyonga@wakissha.ug",
     secretariatName: "Ms. Brenda Namata",
     secretariatPhone: "+256 759 222 333",
-    secretariatEmail: "brenda.namata@wakissha.org",
+    secretariatEmail: "brenda.namata@wakissha.ug",
   },
   {
     id: "zone-10",
@@ -253,40 +269,60 @@ const initialZones: Zone[] = [
     district: "Wakiso",
     leaderName: "Mr. Peter Mugisha",
     leaderPhone: "+256 759 333 444",
-    leaderEmail: "peter.mugisha@wakissha.org",
+    leaderEmail: "peter.mugisha@wakissha.ug",
     secretariatName: "Ms. Lydia Namirembe",
     secretariatPhone: "+256 759 444 555",
-    secretariatEmail: "lydia.namirembe@wakissha.org",
+    secretariatEmail: "lydia.namirembe@wakissha.ug",
   },
 ];
 
 const initialSubjects: Subject[] = [
+  // UCE Subjects
   { id: "subj-1", name: "English", code: "ENG", educationLevel: "UCE", optional: false },
   { id: "subj-2", name: "Literature in English", code: "LIT", educationLevel: "UCE", optional: true },
-  { id: "subj-3", name: "Kiswahili", code: "KISWA", educationLevel: "BOTH", optional: true },
-  { id: "subj-4", name: "Christian Religious Education", code: "CRE", educationLevel: "BOTH", optional: true },
-  { id: "subj-5", name: "Islamic Religious Education", code: "IRE", educationLevel: "BOTH", optional: true },
+  { id: "subj-3-uceEP", name: "Kiswahili", code: "KISWA", educationLevel: "UCE", optional: true },
+  { id: "subj-4-uce", name: "Christian Religious Education", code: "CRE", educationLevel: "UCE", optional: true },
+  { id: "subj-5-uce", name: "Islamic Religious Education", code: "IRE", educationLevel: "UCE", optional: true },
   { id: "subj-6", name: "History and Political Education", code: "HIST", educationLevel: "UCE", optional: true },
-  { id: "subj-7", name: "Geography", code: "GEOG", educationLevel: "BOTH", optional: true },
-  { id: "subj-8", name: "French", code: "FRENCH", educationLevel: "BOTH", optional: true },
-  { id: "subj-9", name: "German", code: "GERMAN", educationLevel: "BOTH", optional: true },
-  { id: "subj-10", name: "Arabic", code: "ARABIC", educationLevel: "BOTH", optional: true },
-  { id: "subj-11", name: "Luganda", code: "LUGANDA", educationLevel: "BOTH", optional: true },
-  { id: "subj-12", name: "Runyankole / Rukiga", code: "RUNY", educationLevel: "BOTH", optional: true },
-  { id: "subj-13", name: "Lusoga", code: "LUSOGA", educationLevel: "BOTH", optional: true },
-  { id: "subj-14", name: "Mathematics", code: "MATH", educationLevel: "BOTH", optional: false },
-  { id: "subj-15", name: "Agriculture", code: "AGRIC", educationLevel: "BOTH", optional: true },
-  { id: "subj-16", name: "Physics", code: "PHY", educationLevel: "BOTH", optional: true },
-  { id: "subj-17", name: "Chemistry", code: "CHEM", educationLevel: "BOTH", optional: true },
-  { id: "subj-18", name: "Biology", code: "BIO", educationLevel: "BOTH", optional: true },
-  { id: "subj-19", name: "Art and Design", code: "ART", educationLevel: "BOTH", optional: true },
+  { id: "subj-7-uce", name: "Geography", code: "GEOG", educationLevel: "UCE", optional: true },
+  { id: "subj-8-uce", name: "French", code: "FRENCH", educationLevel: "UCE", optional: true },
+  { id: "subj-9-uce", name: "German", code: "GERMAN", educationLevel: "UCE", optional: true },
+  { id: "subj-10-uce", name: "Arabic", code: "ARABIC", educationLevel: "UCE", optional: true },
+  { id: "subj-11-uce", name: "Luganda", code: "LUGANDA", educationLevel: "UCE", optional: true },
+  { id: "subj-12-uce", name: "Runyankole / Rukiga", code: "RUNY", educationLevel: "UCE", optional: true },
+  { id: "subj-13-uce", name: "Lusoga", code: "LUSOGA", educationLevel: "UCE", optional: true },
+  { id: "subj-14-uce", name: "Mathematics", code: "MATH", educationLevel: "UCE", optional: false },
+  { id: "subj-15-uce", name: "Agriculture", code: "AGRIC", educationLevel: "UCE", optional: true },
+  { id: "subj-16-uce", name: "Physics", code: "PHY", educationLevel: "UCE", optional: true },
+  { id: "subj-17-uce", name: "Chemistry", code: "CHEM", educationLevel: "UCE", optional: true },
+  { id: "subj-18-uce", name: "Biology", code: "BIO", educationLevel: "UCE", optional: true },
+  { id: "subj-19-uce", name: "Art and Design", code: "ART", educationLevel: "UCE", optional: true },
   { id: "subj-20", name: "Nutrition and Food Technology", code: "FN", educationLevel: "UCE", optional: true },
-  { id: "subj-21", name: "Technical and Design", code: "TD", educationLevel: "BOTH", optional: true },
+  { id: "subj-21-uce", name: "Technical and Design", code: "TD", educationLevel: "UCE", optional: true },
   { id: "subj-22", name: "ICT", code: "CPS", educationLevel: "UCE", optional: true },
-  { id: "subj-23", name: "Entrepreneurship", code: "ENT", educationLevel: "BOTH", optional: true },
+  { id: "subj-23-uce", name: "Entrepreneurship", code: "ENT", educationLevel: "UCE", optional: true },
+  // UACE Subjects
   { id: "subj-24", name: "General Paper", code: "GP", educationLevel: "UACE", optional: false },
   { id: "subj-25", name: "Subsidiary Mathematics", code: "SUB_MATHS", educationLevel: "UACE", optional: true },
   { id: "subj-26", name: "Subsidiary ICT", code: "SUB_ICT", educationLevel: "UACE", optional: true },
+  { id: "subj-3-uace", name: "Kiswahili", code: "KISWA", educationLevel: "UACE", optional: true },
+  { id: "subj-4-uace", name: "Christian Religious Education", code: "CRE", educationLevel: "UACE", optional: true },
+  { id: "subj-5-uace", name: "Islamic Religious Education", code: "IRE", educationLevel: "UACE", optional: true },
+  { id: "subj-7-uace", name: "Geography", code: "GEOG", educationLevel: "UACE", optional: true },
+  { id: "subj-8-uace", name: "French", code: "FRENCH", educationLevel: "UACE", optional: true },
+  { id: "subj-9-uace", name: "German", code: "GERMAN", educationLevel: "UACE", optional: true },
+  { id: "subj-10-uace", name: "Arabic", code: "ARABIC", educationLevel: "UACE", optional: true },
+  { id: "subj-11-uace", name: "Luganda", code: "LUGANDA", educationLevel: "UACE", optional: true },
+  { id: "subj-12-uace", name: "Runyankole / Rukiga", code: "RUNY", educationLevel: "UACE", optional: true },
+  { id: "subj-13-uace", name: "Lusoga", code: "LUSOGA", educationLevel: "UACE", optional: true },
+  { id: "subj-14-uace", name: "Mathematics", code: "MATH", educationLevel: "UACE", optional: false },
+  { id: "subj-15-uace", name: "Agriculture", code: "AGRIC", educationLevel: "UACE", optional: true },
+  { id: "subj-16-uace", name: "Physics", code: "PHY", educationLevel: "UACE", optional: true },
+  { id: "subj-17-uace", name: "Chemistry", code: "CHEM", educationLevel: "UACE", optional: true },
+  { id: "subj-18-uace", name: "Biology", code: "BIO", educationLevel: "UACE", optional: true },
+  { id: "subj-19-uace", name: "Fine Art", code: "ART", educationLevel: "UACE", optional: true },
+  { id: "subj-21-uace", name: "Technical Drawing", code: "TD", educationLevel: "UACE", optional: true },
+  { id: "subj-23-uace", name: "Entrepreneurship", code: "ENT", educationLevel: "UACE", optional: true },
 ];
 
 const initialSchools: SchoolRecord[] = [
@@ -349,9 +385,9 @@ const initialSchools: SchoolRecord[] = [
   },
   {
     id: "5",
-    name: "Nansana Modern School",
+    name: "Nansana Secondary School",
     code: "WAK26-0004",
-    email: "nansana@wakissha.org",
+    email: "nansana@wakissha.ug",
     phone: "+256 700 101 004",
     address: "Hoima Road, Nansana",
     district: "Wakiso",
@@ -698,7 +734,7 @@ const initialStudents: StudentRecord[] = [
     registrationDate: "2026-01-23",
   },
 
-  // WAK26-0004 (Nansana Modern School) - UCE Students
+  // WAK26-0004 (Nansana Secondary School) - UCE Students
   {
     id: "student-10",
     registrationNumber: "WAK/26-0004/001",
@@ -706,7 +742,7 @@ const initialStudents: StudentRecord[] = [
     examLevel: "UCE",
     classLevel: "S.4",
     schoolCode: "WAK26-0004",
-    schoolName: "Nansana Modern School",
+    schoolName: "Nansana Secondary School",
     academicYear: "2026",
     subjects: [
       {
@@ -758,6 +794,7 @@ function toSchoolUser(school: SchoolRecord): User {
     status: school.status,
     activationCode: school.activationCode,
     avatar: school.avatar,
+    schoolLogo: school.schoolLogo,
   };
 }
 
@@ -901,6 +938,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         studentName: entry.studentName,
         classLevel: entry.classLevel as "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6",
         examLevel,
+        stream: entry.stream,
         subjects: entry.subjects,
         totalEntries: entry.totalEntries,
         schoolCode: entry.schoolCode,
@@ -921,17 +959,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const updateStudentEntry: AuthContextType["updateStudentEntry"] = (studentId, updates) => {
+    setStudents((prev) =>
+      prev.map((student) =>
+        student.id === studentId
+          ? {
+              ...student,
+              studentName: updates.studentName,
+              classLevel: updates.classLevel,
+              stream: updates.stream,
+              subjects: updates.subjects,
+              totalEntries: updates.totalEntries,
+              examLevel: ["S.1", "S.2", "S.3", "S.4"].includes(updates.classLevel)
+                ? "UCE"
+                : "UACE",
+            }
+          : student,
+      ),
+    );
+  };
+
+  const deleteStudentEntry: AuthContextType["deleteStudentEntry"] = (studentId) => {
+    const studentToDelete = students.find((s) => s.id === studentId);
+    if (!studentToDelete) return;
+
+    setStudents((prev) => prev.filter((student) => student.id !== studentId));
+
+    setSchools((prev) =>
+      prev.map((school) =>
+        school.code === studentToDelete.schoolCode
+          ? { ...school, students: Math.max(0, school.students - 1) }
+          : school,
+      ),
+    );
+  };
+
   const addSubject: AuthContextType["addSubject"] = (subject) => {
     setSubjects((prev) => {
       const normalizedCode = subject.code.trim().toUpperCase();
-      if (prev.some((item) => item.code.toUpperCase() === normalizedCode)) {
+      if (
+        prev.some(
+          (item) =>
+            item.code.toUpperCase() === normalizedCode &&
+            item.educationLevel === subject.educationLevel,
+        )
+      ) {
         return prev;
       }
 
       return [
         ...prev,
         {
-          id: `subj-${prev.length + 1}`,
+          id: `${subject.educationLevel}-${normalizedCode}`,
           name: subject.name.trim(),
           code: normalizedCode,
           educationLevel: subject.educationLevel,
@@ -945,7 +1024,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSubjects((prev) => {
       const normalizedCode = updates.code.trim().toUpperCase();
       const duplicate = prev.some(
-        (item) => item.id !== subjectId && item.code.toUpperCase() === normalizedCode,
+        (item) =>
+          item.id !== subjectId &&
+          item.code.toUpperCase() === normalizedCode &&
+          item.educationLevel === updates.educationLevel,
       );
       if (duplicate) return prev;
 
@@ -978,6 +1060,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         submitSchoolDocuments,
         updateSchoolStatus,
         addStudentEntry,
+        updateStudentEntry,
+        deleteStudentEntry,
         addSubject,
         updateSubject,
       }}

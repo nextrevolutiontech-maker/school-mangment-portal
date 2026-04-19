@@ -40,7 +40,7 @@ export function Login() {
 
   const demoAccounts = [
     {
-      identifier: "admin@wakissha.org",
+      identifier: "admin@wakissha.ug",
       password: "wakissha2026",
       role: "WAKISSHA Admin",
       description: "Full system access - schools, payments, reports",

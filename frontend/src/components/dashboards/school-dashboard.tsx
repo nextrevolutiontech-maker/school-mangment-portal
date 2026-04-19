@@ -5,6 +5,7 @@ import {
   CreditCard,
   AlertTriangle,
   Calendar,
+  ImageIcon,
   Upload,
   Users,
 } from "lucide-react";
@@ -26,7 +27,8 @@ interface SchoolDashboardProps {
 }
 
 export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
-  const { user, students, subjects, zones } = useAuth();
+  const { user, schools, students, zones } = useAuth();
+  const currentSchool = schools.find((school) => school.code === user?.schoolCode);
   const schoolStudents = students.filter((student) => student.schoolCode === user?.schoolCode);
   const uceStudents = schoolStudents.filter((student) => student.examLevel === "UCE").length;
   const uaceStudents = schoolStudents.filter((student) => student.examLevel === "UACE").length;
@@ -60,8 +62,8 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       iconClass: "bg-blue-500/10 text-blue-600",
     },
     {
-      title: "Subjects Count",
-      value: String(schoolSubjectsCount || subjects.length),
+      title: "Subjects Registered",
+      value: String(schoolSubjectsCount || 0),
       subtitle: "Unique selected subjects",
       icon: CreditCard,
       borderClass: "border-l-orange-500",
@@ -72,19 +74,38 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
     },
   ];
 
-  const subjectSummary = [
-    { subject: "Mathematics", code: "MATH101", entries: 45, level: "Advanced" },
-    {
-      subject: "English Language",
-      code: "ENG101",
-      entries: 52,
-      level: "Standard",
-    },
-    { subject: "Physics", code: "PHY101", entries: 28, level: "Advanced" },
-    { subject: "Chemistry", code: "CHEM101", entries: 31, level: "Advanced" },
-    { subject: "Biology", code: "BIO101", entries: 35, level: "Advanced" },
-    { subject: "History", code: "HIST101", entries: 22, level: "Standard" },
-  ];
+  const subjectSummary = Object.values(
+    schoolStudents.reduce<Record<string, { subject: string; code: string; entries: number; level: "UCE" | "UACE" }>>(
+      (acc, student) => {
+        const uniqueSubjects = new Set(
+          student.subjects.map((subject) => `${student.examLevel}:${subject.subjectCode}`),
+        );
+
+        uniqueSubjects.forEach((key) => {
+          const match = student.subjects.find(
+            (subject) => `${student.examLevel}:${subject.subjectCode}` === key,
+          );
+          if (!match) return;
+
+          if (!acc[key]) {
+            acc[key] = {
+              subject: match.subjectName,
+              code: match.subjectCode,
+              entries: 0,
+              level: student.examLevel,
+            };
+          }
+
+          acc[key].entries += 1;
+        });
+
+        return acc;
+      },
+      {},
+    ),
+  )
+    .sort((left, right) => right.entries - left.entries || left.code.localeCompare(right.code))
+    .slice(0, 6);
 
   const upcomingExams = [
     {
@@ -140,11 +161,39 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
             </p>
           </div>
         </div>
-        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-500">
-          Academic year:{" "}
-          <span className="font-semibold text-slate-900">
-            {user?.academicYear ?? "2026"}
-          </span>
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+            {currentSchool?.schoolLogo ? (
+              <img
+                src={currentSchool.schoolLogo}
+                alt={`${currentSchool.name} logo`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-1 text-slate-400">
+                <ImageIcon className="h-5 w-5" />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">
+                  Logo
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="text-sm">
+            <p className="font-semibold text-slate-900">
+              {currentSchool?.name ?? user?.name}
+            </p>
+            <p className="text-slate-500">
+              Academic year:{" "}
+              <span className="font-semibold text-slate-900">
+                {user?.academicYear ?? "2026"}
+              </span>
+            </p>
+            {!currentSchool?.schoolLogo && (
+              <p className="text-xs text-slate-400">
+                Upload a school logo to personalise this dashboard.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -302,7 +351,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
                     <Badge variant="secondary">{item.code}</Badge>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    {item.level} Level
+                    {item.level} candidates
                   </p>
                 </div>
                 <div className="text-right">
@@ -471,5 +520,4 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
     </div>
   );
 }
-
 

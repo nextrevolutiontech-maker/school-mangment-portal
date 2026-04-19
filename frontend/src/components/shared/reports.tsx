@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FileSpreadsheet,
   FileText,
-  BarChart3,
   Download,
   Loader2,
   School,
@@ -42,7 +41,7 @@ interface ReportsProps {
   onPageChange: (page: string) => void;
 }
 
-type EducationLevelFilter = "all" | "UCE" | "UACE";
+type EducationLevelFilter = "UCE" | "UACE";
 
 type FormColumn = {
   key: string;
@@ -110,6 +109,25 @@ type OfficialSubjectRow = {
   key: string;
   code: string;
   name: string;
+};
+
+type SubjectWiseReportRow = {
+  key: string;
+  code: string;
+  subject: string;
+  level: "UCE" | "UACE";
+  totalSchools: number;
+  totalStudents: number;
+  totalEntries: number;
+};
+
+type StudentSubjectEntry = {
+  subjectCode: string;
+};
+
+type StudentLike = {
+  examLevel: "UCE" | "UACE";
+  subjects?: StudentSubjectEntry[];
 };
 
 const uceOfficialSubjectRows: OfficialSubjectRow[] = [
@@ -186,8 +204,67 @@ function mapSubjectCode(subjectCode: string) {
   return aliases[normalized] ?? normalized;
 }
 
+function buildSubjectLevelKey(subjectCode: string, level: "UCE" | "UACE") {
+  return `${level}:${mapSubjectCode(subjectCode)}`;
+}
+
 function getOfficialSubjectRows(level: "UACE" | "UCE") {
   return level === "UACE" ? uaceOfficialSubjectRows : uceOfficialSubjectRows;
+}
+
+function getOfficialSubjectName(subjectCode: string, level: "UCE" | "UACE") {
+  return (
+    getOfficialSubjectRows(level).find((subject) => subject.key === mapSubjectCode(subjectCode))?.name ??
+    subjectCode
+  );
+}
+
+function getSummarySubjectSections(level: "UCE" | "UACE") {
+  if (level === "UACE") {
+    return [
+      {
+        title: "Core Subjects",
+        keys: ["GP", "SUB_MATHS", "SUB_ICT", "HIST", "ENT", "CRE", "IRE", "GEOG", "LIT"],
+      },
+      {
+        title: "Sciences",
+        keys: ["MATH", "PHY", "CHEM", "BIO", "AGRIC", "FN", "TD", "ART"],
+      },
+      {
+        title: "Languages",
+        keys: ["KISWA", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA"],
+      },
+    ] as const;
+  }
+
+  return [
+    {
+      title: "Core Subjects",
+      keys: ["ENG", "MATH", "HIST", "GEOG", "CRE", "IRE", "CPS", "ENT", "LIT"],
+    },
+    {
+      title: "Sciences",
+      keys: ["BIO", "CHEM", "PHY", "AGRIC", "FN", "TD", "ART"],
+    },
+    {
+      title: "Languages",
+      keys: ["KISWA", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA"],
+    },
+  ] as const;
+}
+
+function getSubjectStudentCount(
+  studentsList: StudentLike[],
+  subjectKey: string,
+  level: "UCE" | "UACE",
+) {
+  return studentsList.reduce((total, student) => {
+    if (student.examLevel !== level) return total;
+    const hasSubject = student.subjects?.some(
+      (subject) => mapSubjectCode(subject.subjectCode) === subjectKey,
+    );
+    return total + (hasSubject ? 1 : 0);
+  }, 0);
 }
 
 function formatPaperCell(value: unknown) {
@@ -225,7 +302,7 @@ export function Reports({ onPageChange }: ReportsProps) {
   const [selectedSubjectCode, setSelectedSubjectCode] = useState("all");
   const [selectedSchoolReportLevel, setSelectedSchoolReportLevel] = useState<"UCE" | "UACE">("UCE");
   const [exportingKey, setExportingKey] = useState<string | null>(null);
-  const [educationLevelFilter, setEducationLevelFilter] = useState<EducationLevelFilter>("all");
+  const [educationLevelFilter, setEducationLevelFilter] = useState<EducationLevelFilter>("UCE");
   const [lateFee] = useState(0);
 
   useEffect(() => {
@@ -236,19 +313,21 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const consolidatedRows = useMemo<FormRow[]>(() => {
     const filteredSchools = scopedSchools.filter((school) => {
-      if (educationLevelFilter === "all") return true;
       return school.educationLevel === educationLevelFilter || school.educationLevel === "BOTH";
     });
 
-    return filteredSchools.map((school, index) => {
-      const schoolStudents = scopedStudents.filter((student) => student.schoolCode === school.code);
+    return filteredSchools.map((school) => {
+      const schoolStudents = scopedStudents.filter(
+        (student) =>
+          student.schoolCode === school.code &&
+          student.examLevel === educationLevelFilter,
+      );
       const registeredSubjects = new Set(
         schoolStudents.flatMap((student) => student.subjects?.map((s) => s.subjectCode) ?? [])
       ).size;
 
-      // Determine which subject columns to use based on education level
-      const isUaceForm = educationLevelFilter === "UACE" || school.educationLevel === "UACE";
-      const subjectColumns = isUaceForm ? uaceSubjectColumns : uceSubjectColumns;
+      const subjectColumns =
+        educationLevelFilter === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
 
       // Calculate total students per subject (not entries or papers)
       const subjectCounts = schoolStudents.reduce<
@@ -280,42 +359,49 @@ export function Reports({ onPageChange }: ReportsProps) {
     });
   }, [scopedSchools, scopedStudents, educationLevelFilter]);
 
-  const subjectWiseData = useMemo(
+  const subjectWiseData = useMemo<SubjectWiseReportRow[]>(
     () =>
-      subjects.map((subject) => {
-        // Flatten students - each student might have this subject multiple times, count unique
-        const subjectStudents = new Set<string>();
-        scopedStudents.forEach((student) => {
-          if (student.subjects?.some((s) => s.subjectCode === subject.code)) {
-            subjectStudents.add(student.id);
-          }
-        });
+      ["UCE", "UACE"].flatMap((level) =>
+        getOfficialSubjectRows(level).map((subject) => {
+          const subjectStudents = new Set<string>();
+          const subjectSchools = new Set<string>();
+          let totalEntries = 0;
 
-        const totalStudentCount = subjectStudents.size;
-        const schools = new Set<string>();
-        scopedStudents.forEach((student) => {
-          if (student.subjects?.some((s) => s.subjectCode === subject.code)) {
-            schools.add(student.schoolCode);
-          }
-        });
+          scopedStudents.forEach((student) => {
+            if (student.examLevel !== level) return;
 
-        return {
-          subject: subject.name,
-          code: subject.code,
-          level: subject.educationLevel,
-          totalStudents: totalStudentCount,
-          schools: schools.size,
-          average: totalStudentCount > 0 ? Math.round(totalStudentCount / Math.max(schools.size, 1)) : 0,
-        };
-      }),
-    [subjects, scopedStudents],
+            const matchingEntries =
+              student.subjects?.filter(
+                (entry) => mapSubjectCode(entry.subjectCode) === subject.key,
+              ) ?? [];
+
+            if (matchingEntries.length > 0) {
+              subjectStudents.add(student.id);
+              subjectSchools.add(student.schoolCode);
+              totalEntries += matchingEntries.length;
+            }
+          });
+
+          return {
+            key: buildSubjectLevelKey(subject.key, level),
+            code: subject.code,
+            subject: subject.name,
+            level,
+            totalSchools: subjectSchools.size,
+            totalStudents: subjectStudents.size,
+            totalEntries,
+          };
+        }),
+      ),
+    [scopedStudents],
   );
 
   const subjectStudentsList = useMemo(() => {
     if (selectedSubjectCode === "all") return scopedStudents;
-    // Filter students that have the selected subject
     return scopedStudents.filter((student) =>
-      student.subjects?.some((s) => s.subjectCode === selectedSubjectCode)
+      student.subjects?.some(
+        (subject) => buildSubjectLevelKey(subject.subjectCode, student.examLevel) === selectedSubjectCode,
+      ),
     );
   }, [scopedStudents, selectedSubjectCode]);
 
@@ -335,14 +421,19 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const selectedSchoolProfile = useMemo(() => {
     if (!selectedSchoolData) return undefined;
-    const schoolStudents = scopedStudents.filter((student) => student.schoolCode === selectedSchoolData.code);
+    const schoolStudents = scopedStudents.filter(
+      (student) =>
+        student.schoolCode === selectedSchoolData.code &&
+        student.examLevel === selectedSchoolReportLevel,
+    );
     return {
       totalStudents: schoolStudents.length,
-      subjectsRegistered: new Set(schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))).size,
-      reportNote: "Report generated from current frontend simulation state.",
+      subjectsRegistered: new Set(
+        schoolStudents.flatMap((student) => student.subjects.map((s) => mapSubjectCode(s.subjectCode))),
+      ).size,
       lastUpdated: new Date().toLocaleDateString(),
     };
-  }, [selectedSchoolData, scopedStudents]);
+  }, [selectedSchoolData, scopedStudents, selectedSchoolReportLevel]);
 
   const buildSingleSchoolRow = (
     schoolCode: string,
@@ -613,173 +704,166 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const generateReadableSummaryPDF = () => {
     try {
-      const preferredSchool =
-        (selectedSchool !== "all"
-          ? scopedSchools.find((school) => school.code === selectedSchool)
-          : scopedSchools.find(
-              (school) =>
-                school.educationLevel === "UACE" || school.educationLevel === "BOTH",
-            )) ?? scopedSchools[0];
-
-      if (!preferredSchool) {
-        toast.error("No school data available");
-        return;
-      }
-
-      const row = consolidatedRows.find((record) => record.schoolName === preferredSchool.name);
-      if (!row) {
-        toast.error("No report data available for selected school");
-        return;
-      }
-
-      const schoolStudents = scopedStudents.filter(
-        (student) => student.schoolCode === preferredSchool.code,
+      const summaryLevel = educationLevelFilter;
+      const summarySchools = scopedSchools.filter(
+        (school) =>
+          school.educationLevel === summaryLevel || school.educationLevel === "BOTH",
       );
-      const totalEntries = uaceSubjectColumns.reduce(
-        (sum, subject) => sum + Number(row[`${subject.key}_entries`] || 0),
+      const summarySchoolCodes = new Set(summarySchools.map((school) => school.code));
+      const summaryStudents = scopedStudents.filter(
+        (student) =>
+          student.examLevel === summaryLevel && summarySchoolCodes.has(student.schoolCode),
+      );
+
+      if (summarySchools.length === 0 || summaryStudents.length === 0) {
+        toast.error("No report data available for the selected level");
+        return;
+      }
+
+      const headerSchool =
+        selectedSchool !== "all" && summarySchoolCodes.has(selectedSchool)
+          ? scopedSchools.find((school) => school.code === selectedSchool)
+          : undefined;
+      const totalEntries = summaryStudents.reduce(
+        (sum, student) => sum + (student.subjects?.length ?? 0),
         0,
       );
-      const fee = calculateFeeSummary([row]);
+      const totalRegisteredSubjects = new Set(
+        summaryStudents.flatMap((student) =>
+          student.subjects?.map((subject) => mapSubjectCode(subject.subjectCode)) ?? [],
+        ),
+      ).size;
+      const summarySections = getSummarySubjectSections(summaryLevel);
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 14;
-      let y = 16;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      let y = 12;
 
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(15);
-      pdf.text("WAKISSHA UACE SUMMARY REPORT 2026", pageWidth / 2, y, { align: "center" });
-      y += 8;
+      pdf.setFontSize(13);
+      pdf.text(`WAKISSHA ${summaryLevel} SUMMARY REPORT 2026`, pageWidth / 2, y, {
+        align: "center",
+      });
+      y += 6;
 
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      pdf.text(`School Name: ${preferredSchool.name}`, margin, y);
-      y += 5;
-      pdf.text(`District: ${preferredSchool.district}`, margin, y);
-      y += 5;
-      pdf.text(`Zone: ${preferredSchool.zone}`, margin, y);
-      y += 5;
-      pdf.text(`Total Students: ${schoolStudents.length}`, margin, y);
-      y += 8;
-
-      const subjectGroups = [
-        {
-          title: "Core Subjects",
-          keys: ["GP", "HIST", "ECON", "ENT", "MATH"],
+      autoTable(pdf, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        tableWidth: pageWidth - margin * 2,
+        body: [
+          [
+            "School Name",
+            headerSchool?.name ?? (summarySchools.length === 1 ? summarySchools[0].name : "ALL SCHOOLS"),
+            "District",
+            headerSchool?.district ??
+              (summarySchools.length === 1 ? summarySchools[0].district : "ALL DISTRICTS"),
+            "Zone",
+            headerSchool?.zone ?? (summarySchools.length === 1 ? summarySchools[0].zone : "ALL ZONES"),
+          ],
+        ],
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          lineWidth: 0.35,
+          lineColor: [0, 0, 0],
+          textColor: [0, 0, 0],
+          fillColor: [255, 255, 255],
+          cellPadding: 1.4,
         },
-        {
-          title: "Sciences",
-          keys: ["PHY", "CHEM", "BIO", "AGRIC", "FN", "TD"],
+        bodyStyles: {
+          fontStyle: "normal",
         },
-        {
-          title: "Languages",
-          keys: ["LIT", "KISWA", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA"],
+        columnStyles: {
+          0: { cellWidth: 24, fontStyle: "bold" },
+          1: { cellWidth: 47 },
+          2: { cellWidth: 16, fontStyle: "bold" },
+          3: { cellWidth: 31 },
+          4: { cellWidth: 12, fontStyle: "bold" },
+          5: { cellWidth: 50 },
         },
-      ] as const;
+      });
 
-      for (const group of subjectGroups) {
-        if (y > 240) {
-          pdf.addPage();
-          y = 18;
-        }
+      y = ((pdf as any).lastAutoTable?.finalY ?? y) + 3;
 
+      for (const section of summarySections) {
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(11);
-        pdf.text(group.title, margin, y);
-        y += 5;
+        pdf.setFontSize(9);
+        pdf.text(section.title.toUpperCase(), margin, y);
+        y += 1;
 
-        let xCol = margin;
-        let colY = y;
-        const colWidth = 86;
-
-        group.keys.forEach((key, index) => {
-          const subject = uaceSubjectColumns.find((subjectCol) => subjectCol.key === key);
-          if (!subject) return;
-
-          const metrics = [
-            ["Students", String(row[key] ?? 0)],
-          ];
-
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(9);
-          pdf.text(`SUBJECT: ${subject.label}`, xCol, colY);
-
-          autoTable(pdf, {
-            startY: colY + 1.5,
-            margin: { left: xCol, right: pageWidth - xCol - colWidth },
-            tableWidth: colWidth,
-            head: [["Metric", "Value"]],
-            body: metrics,
-            styles: {
-              fontSize: 8,
-              lineWidth: 0.2,
-              lineColor: [120, 120, 120],
-            },
-            headStyles: {
-              fillColor: [245, 247, 252],
-              textColor: [15, 23, 42],
-              fontStyle: "bold",
-            },
-          });
-
-          const endY = (pdf as any).lastAutoTable.finalY + 4;
-          const goNextColumn = index % 2 === 0;
-          if (goNextColumn) {
-            xCol = margin + colWidth + 8;
-          } else {
-            xCol = margin;
-            colY = endY;
-            if (colY > 235 && index < group.keys.length - 1) {
-              pdf.addPage();
-              colY = 18;
-            }
-          }
+        autoTable(pdf, {
+          startY: y,
+          margin: { left: margin, right: margin },
+          tableWidth: pageWidth - margin * 2,
+          head: [["Code", "Subject", "Students"]],
+          body: section.keys.map((subjectKey) => {
+            const subject = getOfficialSubjectRows(summaryLevel).find(
+              (entry) => entry.key === subjectKey,
+            );
+            return [
+              subject?.code ?? "",
+              subject?.name ?? getOfficialSubjectName(subjectKey, summaryLevel),
+              String(getSubjectStudentCount(summaryStudents, subjectKey, summaryLevel)),
+            ];
+          }),
+          theme: "grid",
+          styles: {
+            fontSize: 7.2,
+            lineWidth: 0.3,
+            lineColor: [0, 0, 0],
+            textColor: [0, 0, 0],
+            fillColor: [255, 255, 255],
+            cellPadding: 1.1,
+          },
+          headStyles: {
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            fontStyle: "bold",
+            lineWidth: 0.35,
+            lineColor: [0, 0, 0],
+          },
+          columnStyles: {
+            0: { cellWidth: 18, halign: "center" },
+            1: { cellWidth: 122 },
+            2: { cellWidth: 30, halign: "center" },
+          },
         });
 
-        y = colY + 4;
+        y = ((pdf as any).lastAutoTable?.finalY ?? y) + 3;
       }
 
-      if (y > 245) {
-        pdf.addPage();
-        y = 18;
-      }
-
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(11);
-      pdf.text("Summary", margin, y);
-      y += 3;
       autoTable(pdf, {
         startY: y,
         margin: { left: margin, right: margin },
-        head: [["Metric", "Value"]],
+        tableWidth: pageWidth - margin * 2,
         body: [
-          ["Total Students", String(schoolStudents.length)],
-          ["Total Entries", String(totalEntries)],
-          ["Total Subjects Registered", String(row.registeredSubjects ?? 0)],
+          ["Total Schools", String(summarySchools.length), "Total Students", String(summaryStudents.length)],
+          ["Total Entries", String(totalEntries), "Registered Subjects", String(totalRegisteredSubjects)],
         ],
-        styles: { fontSize: 9, lineWidth: 0.2, lineColor: [120, 120, 120] },
-        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          lineWidth: 0.35,
+          lineColor: [0, 0, 0],
+          textColor: [0, 0, 0],
+          fillColor: [255, 255, 255],
+          cellPadding: 1.4,
+        },
+        columnStyles: {
+          0: { cellWidth: 35, fontStyle: "bold" },
+          1: { cellWidth: 35, halign: "center" },
+          2: { cellWidth: 35, fontStyle: "bold" },
+          3: { cellWidth: 35, halign: "center" },
+        },
       });
 
-      y = (pdf as any).lastAutoTable.finalY + 6;
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(11);
-      pdf.text("Fee Section", margin, y);
-      y += 3;
-      autoTable(pdf, {
-        startY: y,
-        margin: { left: margin, right: margin },
-        head: [["Item", "Amount (UGX)"]],
-        body: [
-          ["School Fee", fee.schoolFee.toLocaleString()],
-          ["Student Fee", fee.studentFee.toLocaleString()],
-          ["Total Amount", fee.totalAmount.toLocaleString()],
-        ],
-        styles: { fontSize: 9, lineWidth: 0.2, lineColor: [120, 120, 120] },
-        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
-      });
+      if (((pdf as any).lastAutoTable?.finalY ?? y) > pageHeight - 10) {
+        throw new Error("Summary PDF exceeds one page");
+      }
 
-      pdf.save(`Readable-UACE-Summary-${preferredSchool.code}.pdf`);
+      pdf.save(`Readable-${summaryLevel}-Summary.pdf`);
       toast.success("Readable summary PDF generated");
     } catch (error) {
       toast.error("Failed to generate readable summary PDF");
@@ -862,17 +946,46 @@ export function Reports({ onPageChange }: ReportsProps) {
       autoTable(pdf, {
         startY: 24,
         margin: { left: 14, right: 14 },
-        head: [["Subject", "Code", "Level", "Total Students", "Schools", "Average Entries"]],
+        head: [[
+          "Code",
+          "Subject",
+          "Level",
+          "Total Schools",
+          "Total Students",
+          "Total Entries",
+        ]],
         body: subjectWiseData.map((item) => [
-          item.subject,
           item.code,
+          item.subject,
           item.level,
+          String(item.totalSchools),
           String(item.totalStudents),
-          String(item.schools),
-          String(item.average),
+          String(item.totalEntries),
         ]),
-        styles: { fontSize: 9, lineWidth: 0.2, lineColor: [140, 140, 140] },
-        headStyles: { fillColor: [245, 247, 252], textColor: [15, 23, 42], fontStyle: "bold" },
+        theme: "grid",
+        styles: {
+          fontSize: 8.3,
+          lineWidth: 0.3,
+          lineColor: [0, 0, 0],
+          textColor: [0, 0, 0],
+          fillColor: [255, 255, 255],
+          cellPadding: 1.2,
+        },
+        headStyles: {
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          fontStyle: "bold",
+          lineColor: [0, 0, 0],
+          lineWidth: 0.35,
+        },
+        columnStyles: {
+          0: { cellWidth: 18, halign: "center" },
+          1: { cellWidth: 64 },
+          2: { cellWidth: 18, halign: "center" },
+          3: { cellWidth: 22, halign: "center" },
+          4: { cellWidth: 24, halign: "center" },
+          5: { cellWidth: 24, halign: "center" },
+        },
       });
 
       pdf.save("Readable-Subject-Wise-Report.pdf");
@@ -885,7 +998,16 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const generateReadableSubjectWiseExcel = () => {
     try {
-      const worksheet = XLSXUtils.json_to_sheet(subjectWiseData);
+      const worksheet = XLSXUtils.json_to_sheet(
+        subjectWiseData.map((item) => ({
+          Code: item.code,
+          Subject: item.subject,
+          Level: item.level,
+          "Total Schools": item.totalSchools,
+          "Total Students": item.totalStudents,
+          "Total Entries": item.totalEntries,
+        })),
+      );
       const workbook = XLSXUtils.book_new();
       XLSXUtils.book_append_sheet(workbook, worksheet, "SubjectWise");
       writeFile(workbook, "Readable-Subject-Wise-Report.xlsx");
@@ -910,7 +1032,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       }
 
       const subjectsColumns =
-        selected.educationLevel === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
+        selectedSchoolReportLevel === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       let y = 16;
 
@@ -959,7 +1081,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         return;
       }
       const subjectsColumns =
-        selected.educationLevel === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
+        selectedSchoolReportLevel === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
       const worksheet = XLSXUtils.json_to_sheet(
         subjectsColumns.map((subject) => ({
           Subject: subject.label,
@@ -1224,7 +1346,7 @@ export function Reports({ onPageChange }: ReportsProps) {
             ) : (
               <>
                 <Download className="h-4 w-4" />
-                User-Friendly PDF
+                Download Summary
               </>
             )}
           </Button>
@@ -1270,7 +1392,6 @@ export function Reports({ onPageChange }: ReportsProps) {
                       <SelectValue placeholder="Filter by level" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Levels</SelectItem>
                       <SelectItem value="UCE">UCE (O Level)</SelectItem>
                       <SelectItem value="UACE">UACE (A Level)</SelectItem>
                     </SelectContent>
@@ -1290,7 +1411,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       ) : (
                         <>
                           <FileText className="h-4 w-4" />
-                          Export PDF
+                          Download Report
                         </>
                       )}
                     </Button>
@@ -1308,7 +1429,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       ) : (
                         <>
                           <FileSpreadsheet className="h-4 w-4" />
-                          Export Excel
+                          Download Excel
                         </>
                       )}
                     </Button>
@@ -1357,8 +1478,8 @@ export function Reports({ onPageChange }: ReportsProps) {
                 <div>
                   <CardTitle className="text-slate-900">Subject-Wise Report</CardTitle>
                   <CardDescription className="text-slate-500">
-                    Compare total student counts and school participation by
-                    subject.
+                    Review system-wide student totals per subject without
+                    mixing UCE and UACE records.
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
@@ -1376,7 +1497,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                     ) : (
                       <>
                         <FileText className="h-4 w-4" />
-                        Export PDF
+                        Download Report
                       </>
                     )}
                   </Button>
@@ -1394,7 +1515,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                     ) : (
                       <>
                         <FileSpreadsheet className="h-4 w-4" />
-                        Export Excel
+                        Download Excel
                       </>
                     )}
                   </Button>
@@ -1409,9 +1530,9 @@ export function Reports({ onPageChange }: ReportsProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Subjects</SelectItem>
-                    {subjects.map((subject) => (
-                      <SelectItem key={subject.code} value={subject.code}>
-                        {subject.name} ({subject.code})
+                    {subjectWiseData.map((subject) => (
+                      <SelectItem key={subject.key} value={subject.key}>
+                        {subject.code} - {subject.subject} ({subject.level})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1426,31 +1547,35 @@ export function Reports({ onPageChange }: ReportsProps) {
                 <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Subject</TableHead>
                     <TableHead>Code</TableHead>
+                    <TableHead>Subject</TableHead>
                     <TableHead>Level</TableHead>
+                    <TableHead className="text-right">Total Schools</TableHead>
                     <TableHead className="text-right">Total Students</TableHead>
-                    <TableHead className="text-right">Schools</TableHead>
-                    <TableHead className="text-right">Average</TableHead>
+                    <TableHead className="text-right">Total Entries</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {subjectWiseData.map((subject) => (
-                    <TableRow key={subject.code}>
-                      <TableCell className="font-semibold text-slate-900">
-                        {subject.subject}
-                      </TableCell>
+                    <TableRow key={subject.key}>
                       <TableCell>
                         <Badge variant="outline">{subject.code}</Badge>
+                      </TableCell>
+                      <TableCell className="font-semibold text-slate-900">
+                        {subject.subject}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{subject.level}</Badge>
                       </TableCell>
                       <TableCell className="text-right font-semibold text-slate-900">
+                        {subject.totalSchools}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-slate-900">
                         {subject.totalStudents}
                       </TableCell>
-                      <TableCell className="text-right">{subject.schools}</TableCell>
-                      <TableCell className="text-right">{subject.average}</TableCell>
+                      <TableCell className="text-right font-semibold text-slate-900">
+                        {subject.totalEntries}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1482,7 +1607,11 @@ export function Reports({ onPageChange }: ReportsProps) {
                           <TableCell className="font-mono text-xs">{student.registrationNumber}</TableCell>
                           <TableCell className="font-semibold text-slate-900">{student.studentName}</TableCell>
                           <TableCell>{student.schoolName}</TableCell>
-                          <TableCell>{selectedSubjectCode === "all" ? "All" : selectedSubjectCode}</TableCell>
+                          <TableCell>
+                            {selectedSubjectCode === "all"
+                              ? "All"
+                              : subjectWiseData.find((subject) => subject.key === selectedSubjectCode)?.code ?? "Selected"}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1495,19 +1624,15 @@ export function Reports({ onPageChange }: ReportsProps) {
 
         <TabsContent value="school-wise">
           <Card>
-            <CardHeader className="border-b border-slate-200">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <CardHeader className="border-b border-slate-200 py-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <CardTitle className="text-slate-900">Single School Report</CardTitle>
-                  <CardDescription className="text-slate-500">
-                    Export the official school summary form with school details
-                    and subject registration data.
-                  </CardDescription>
+                  <CardTitle className="text-base font-semibold text-slate-900">School Report</CardTitle>
                 </div>
                 {isAdmin ? (
-                  <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row">
+                  <div className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 lg:w-auto lg:flex-row lg:items-center">
                     <Select value={selectedSchool} onValueChange={setSelectedSchool}>
-                      <SelectTrigger className="w-full lg:w-[320px]">
+                      <SelectTrigger className="w-full border-white bg-white lg:w-[300px]">
                         <SelectValue placeholder="Select school" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1523,7 +1648,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       value={selectedSchoolReportLevel}
                       onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
                     >
-                      <SelectTrigger className="w-full lg:w-[180px]">
+                      <SelectTrigger className="w-full border-white bg-white lg:w-[160px]">
                         <SelectValue placeholder="Level" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1533,9 +1658,10 @@ export function Reports({ onPageChange }: ReportsProps) {
                     </Select>
                   </div>
                 ) : (
-                  <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row">
-                    <div className="w-full lg:w-[320px] rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500">
-                      School:{" "}
+                  <div className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 lg:w-auto lg:flex-row lg:items-center">
+                    <div className="w-full rounded-xl border border-white bg-white px-4 py-2.5 text-sm text-slate-500 lg:w-[300px]">
+                      School
+                      <span className="mx-2 text-slate-300">|</span>
                       <span className="font-semibold text-slate-900">
                         {scopedSchools[0]?.name || user?.schoolCode}
                       </span>
@@ -1544,7 +1670,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       value={selectedSchoolReportLevel}
                       onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
                     >
-                      <SelectTrigger className="w-full lg:w-[180px]">
+                      <SelectTrigger className="w-full border-white bg-white lg:w-[160px]">
                         <SelectValue placeholder="Level" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1564,6 +1690,45 @@ export function Reports({ onPageChange }: ReportsProps) {
                 </div>
               ) : (
                 <div className="space-y-6">
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="min-w-0 space-y-0.5">
+                        <h3 className="text-xl font-bold text-slate-900">
+                          {selectedSchoolData.name}
+                        </h3>
+                        <p className="text-sm text-slate-600">
+                          {selectedSchoolData.code} / {selectedSchoolData.district} / {selectedSchoolData.zone}
+                        </p>
+                      </div>
+                      <div className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-3 lg:max-w-[520px] lg:flex-1 lg:justify-end">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                            Academic Year
+                          </p>
+                          <p className="mt-1 font-semibold text-slate-900">
+                            {selectedSchoolData.academicYear || "2026"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                            Activation Code
+                          </p>
+                          <p className="mt-1 font-semibold text-slate-900">
+                            {selectedSchoolData.activationCode || "Pending activation"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                            Last Updated
+                          </p>
+                          <p className="mt-1 font-semibold text-slate-900">
+                            {selectedSchoolProfile.lastUpdated}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid gap-4 md:grid-cols-3">
                     <Card className="border-l-4 border-l-red-600">
                       <CardContent className="pt-6">
@@ -1593,59 +1758,6 @@ export function Reports({ onPageChange }: ReportsProps) {
                     </Card>
                   </div>
 
-                  <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="mb-4 flex items-center gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600/10 text-red-600">
-                            <BarChart3 className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">
-                              {selectedSchoolData.name}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              {selectedSchoolData.code} / {selectedSchoolData.district} /{" "}
-                              {selectedSchoolData.zone}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-sm leading-6 text-slate-500">
-                          {selectedSchoolProfile.reportNote}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="space-y-4 pt-6">
-                        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                            Academic Year
-                          </p>
-                          <p className="mt-2 text-lg font-semibold text-slate-900">
-                            {selectedSchoolData.academicYear}
-                          </p>
-                        </div>
-                        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                            Activation Code
-                          </p>
-                          <p className="mt-2 text-lg font-semibold text-slate-900">
-                            {selectedSchoolData.activationCode || "Pending activation"}
-                          </p>
-                        </div>
-                        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
-                          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                            Last Updated
-                          </p>
-                          <p className="mt-2 text-lg font-semibold text-slate-900">
-                            {selectedSchoolProfile.lastUpdated}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
                   <div className="flex flex-wrap justify-end gap-2">
                     <Button
                       variant="outline"
@@ -1661,7 +1773,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       ) : (
                         <>
                           <FileText className="h-4 w-4" />
-                          Export PDF
+                          Download Report
                         </>
                       )}
                     </Button>
@@ -1679,7 +1791,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       ) : (
                         <>
                           <FileSpreadsheet className="h-4 w-4" />
-                          Export Excel
+                          Download Excel
                         </>
                       )}
                     </Button>
@@ -1697,7 +1809,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       ) : (
                         <>
                           <FileText className="h-4 w-4" />
-                          Students List PDF
+                          Download Students List (PDF)
                         </>
                       )}
                     </Button>
@@ -1715,7 +1827,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       ) : (
                         <>
                           <FileSpreadsheet className="h-4 w-4" />
-                          Students List Excel
+                          Download Students List (Excel)
                         </>
                       )}
                     </Button>
@@ -1729,7 +1841,3 @@ export function Reports({ onPageChange }: ReportsProps) {
     </div>
   );
 }
-
-
-
-

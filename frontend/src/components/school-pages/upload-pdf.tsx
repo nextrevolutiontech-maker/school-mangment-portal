@@ -29,7 +29,7 @@ interface UploadPDFProps {
 }
 
 export function UploadPDF({ onPageChange }: UploadPDFProps) {
-  const { user, submitSchoolDocuments } = useAuth();
+  const { user, students, submitSchoolDocuments } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -107,6 +107,26 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
       badge: "Payment Submitted",
     };
   }, [user?.status]);
+
+  const schoolEntriesSummary = useMemo(() => {
+    const schoolStudents = students.filter(
+      (student) => student.schoolCode === user?.schoolCode,
+    );
+    const uniqueSubjects = new Set(
+      schoolStudents.flatMap((student) =>
+        (student.subjects ?? []).map((subject) => `${student.examLevel}:${subject.subjectCode}`),
+      ),
+    );
+
+    return {
+      totalStudents: schoolStudents.length,
+      totalSubjects: uniqueSubjects.size,
+      totalEntries: schoolStudents.reduce(
+        (sum, student) => sum + (student.totalEntries ?? 0),
+        0,
+      ),
+    };
+  }, [students, user?.schoolCode]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -188,9 +208,9 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
 
       // Student Summary Table
       const studentTableData = [
-        ["Total Enrolled Students", "85"],
-        ["Subjects Registered", "12"],
-        ["Total Entries", "247"],
+        ["Total Enrolled Students", String(schoolEntriesSummary.totalStudents)],
+        ["Subjects Registered", String(schoolEntriesSummary.totalSubjects)],
+        ["Total Entries", String(schoolEntriesSummary.totalEntries)],
         ["Payment Status", user?.status?.toUpperCase() || "PENDING"],
       ];
 
@@ -259,15 +279,27 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
 
   return (
     <div className="flex flex-col w-full gap-6">
-      <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400">
-          Signed Form Workflow
-        </p>
-        <h1 className="text-3xl font-bold text-slate-900">Upload Signed PDF</h1>
-        <p className="max-w-2xl text-slate-500">
-          Download your filled summary form, complete the signing process, and
-          submit it together with payment confirmation for final review.
-        </p>
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400">
+            Signed Form Workflow
+          </p>
+          <h1 className="text-3xl font-bold text-slate-900">Upload Signed PDF</h1>
+          <p className="max-w-2xl text-slate-500">
+            Download your filled summary form, sign and stamp it, then upload the
+            signed PDF for final review.
+          </p>
+        </div>
+        {!documentsSubmitted && (
+          <Button
+            className="w-full lg:w-auto"
+            onClick={handleUpload}
+            disabled={!selectedFile || isUploading}
+          >
+            <Upload className="h-4 w-4" />
+            {isUploading ? "Uploading..." : "Upload Signed PDF"}
+          </Button>
+        )}
       </div>
 
       <Alert variant="info">
@@ -286,13 +318,40 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-slate-900">
-              Step 1: Generate Summary Form
+              Step 1: Download Summary
             </CardTitle>
             <CardDescription className="text-slate-500">
               Download the filled PDF that summarizes your student entries
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Total Students
+                </p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {schoolEntriesSummary.totalStudents}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Subjects Registered
+                </p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {schoolEntriesSummary.totalSubjects}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Total Entries
+                </p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {schoolEntriesSummary.totalEntries}
+                </p>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-4 rounded-2xl bg-white shadow-sm border border-slate-200 p-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-600/15 text-red-400">
@@ -332,7 +391,7 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-slate-900">
-              Step 2: Submit Signed Documents
+              Step 2: Upload Signed PDF
             </CardTitle>
             <CardDescription className="text-slate-500">
               Upload the signed summary form and payment proof for verification
@@ -425,7 +484,10 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
                         </p>
                       </div>
                     </div>
-                    <Button onClick={handleUpload}>Upload Now</Button>
+                    <Button onClick={handleUpload}>
+                      <Upload className="h-4 w-4" />
+                      Upload Signed PDF
+                    </Button>
                   </div>
                 )}
 
@@ -447,6 +509,17 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
                     upload is clear and legible. Blurry or incomplete documents
                     may be returned for correction.
                   </p>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    className="w-full lg:w-auto"
+                    onClick={handleUpload}
+                    disabled={!selectedFile || isUploading}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {isUploading ? "Uploading..." : "Upload Signed PDF"}
+                  </Button>
                 </div>
               </>
             )}
@@ -523,7 +596,6 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
     </div>
   );
 }
-
 
 
 

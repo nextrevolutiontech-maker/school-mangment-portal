@@ -21,7 +21,7 @@ interface SubjectsManagementProps {
 }
 
 export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
-  const { user, subjects, addSubject, updateSubject } = useAuth();
+  const { user, subjects, students, addSubject, updateSubject } = useAuth();
 
   // Permission check - admin only
   if (user?.role !== "admin") {
@@ -39,7 +39,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
   const [newSubject, setNewSubject] = useState({
     name: "",
     code: "",
-    educationLevel: "UCE" as "UCE" | "UACE" | "BOTH",
+    educationLevel: "UCE" as "UCE" | "UACE",
     optional: "yes" as "yes" | "no",
   });
 
@@ -48,13 +48,42 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
       { label: "Total Standard Subjects", value: subjects.length },
       {
         label: "UCE Subjects",
-        value: subjects.filter((subject) => subject.educationLevel === "UCE" || subject.educationLevel === "BOTH").length,
+        value: subjects.filter((subject) => subject.educationLevel === "UCE").length,
       },
       {
         label: "UACE Subjects",
-        value: subjects.filter((subject) => subject.educationLevel === "UACE" || subject.educationLevel === "BOTH").length,
+        value: subjects.filter((subject) => subject.educationLevel === "UACE").length,
       },
     ],
+    [subjects],
+  );
+
+  const subjectTotals = useMemo(
+    () =>
+      students.reduce<Record<string, number>>((acc, student) => {
+        const keys = new Set(
+          (student.subjects ?? []).map(
+            (subject) => `${student.examLevel}:${subject.subjectCode.toUpperCase()}`,
+          ),
+        );
+
+        keys.forEach((key) => {
+          acc[key] = (acc[key] || 0) + 1;
+        });
+
+        return acc;
+      }, {}),
+    [students],
+  );
+
+  const orderedSubjects = useMemo(
+    () =>
+      [...subjects].sort((left, right) => {
+        if (left.educationLevel !== right.educationLevel) {
+          return left.educationLevel.localeCompare(right.educationLevel);
+        }
+        return left.code.localeCompare(right.code);
+      }),
     [subjects],
   );
 
@@ -67,10 +96,11 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
     const exists = subjects.some(
       (subject) =>
         subject.code.toUpperCase() === newSubject.code.trim().toUpperCase() &&
+        subject.educationLevel === newSubject.educationLevel &&
         subject.id !== editingSubjectId,
     );
     if (exists) {
-      toast.error("This subject code already exists");
+      toast.error("This subject code already exists for the selected level");
       return;
     }
 
@@ -151,15 +181,6 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
         </CardHeader>
         <CardContent className="grid gap-4 pt-6 md:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-2">
-            <Label htmlFor="subjectName">Subject Name</Label>
-            <Input
-              id="subjectName"
-              placeholder="e.g. Economics"
-              value={newSubject.name}
-              onChange={(event) => setNewSubject({ ...newSubject, name: event.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
             <Label htmlFor="subjectCode">Standard Code</Label>
             <Input
               id="subjectCode"
@@ -169,10 +190,19 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="subjectName">Subject Name</Label>
+            <Input
+              id="subjectName"
+              placeholder="e.g. Economics"
+              value={newSubject.name}
+              onChange={(event) => setNewSubject({ ...newSubject, name: event.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
             <Label>Education Level</Label>
             <Select
               value={newSubject.educationLevel}
-              onValueChange={(value: "UCE" | "UACE" | "BOTH") =>
+              onValueChange={(value: "UCE" | "UACE") =>
                 setNewSubject({ ...newSubject, educationLevel: value })
               }
             >
@@ -182,7 +212,6 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
               <SelectContent>
                 <SelectItem value="UCE">UCE</SelectItem>
                 <SelectItem value="UACE">UACE</SelectItem>
-                <SelectItem value="BOTH">Both Levels</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -232,17 +261,21 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                   <TableHead>Code</TableHead>
                   <TableHead>Subject Name</TableHead>
                   <TableHead>Level</TableHead>
+                  <TableHead>Totals</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {subjects.map((subject) => (
+                {orderedSubjects.map((subject) => (
                   <TableRow key={subject.id}>
                     <TableCell className="font-mono text-xs">{subject.code}</TableCell>
                     <TableCell className="font-semibold text-slate-900">{subject.name}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{subject.educationLevel}</Badge>
+                    </TableCell>
+                    <TableCell className="font-semibold text-slate-900">
+                      {subjectTotals[`${subject.educationLevel}:${subject.code.toUpperCase()}`] ?? 0}
                     </TableCell>
                     <TableCell>
                       <Badge variant={subject.optional ? "outline" : "success"}>

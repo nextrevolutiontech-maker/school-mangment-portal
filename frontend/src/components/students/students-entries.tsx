@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -35,18 +35,25 @@ import {
   TableRow,
 } from "../ui/table";
 import { Badge } from "../ui/badge";
-import { Search, UserPlus, AlertCircle, Info } from "lucide-react";
+import { Search, UserPlus, AlertCircle, Info, Edit2, Trash2, MoreVertical, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "../ui/alert";
-import { useAuth, CLASS_LEVELS } from "../auth-context";
+import { useAuth, CLASS_LEVELS_ARRAY } from "../auth-context";
 import type { StudentSubjectEntry } from "../auth-context";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 interface StudentsEntriesProps {
   onPageChange: (page: string) => void;
+  autoOpenAddDialog?: boolean;
 }
 
-export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
-  const { user, schools, students, subjects, addStudentEntry } = useAuth();
+export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: StudentsEntriesProps) {
+  const { user, schools, students, subjects, addStudentEntry, updateStudentEntry, deleteStudentEntry } = useAuth();
   const isAdmin = user?.role === "admin";
 
   const scopedStudents = useMemo(() => {
@@ -63,12 +70,41 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [schoolFilter, setSchoolFilter] = useState("all");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [levelFilter, setLevelFilter] = useState<"all" | "UCE" | "UACE">("all");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(autoOpenAddDialog);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // View Student Modal
+  const [viewingStudent, setViewingStudent] = useState<typeof students[0] | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+  // Edit Student Modal
+  const [editingStudent, setEditingStudent] = useState<typeof students[0] | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editStudentName, setEditStudentName] = useState("");
+  const [editClassLevel, setEditClassLevel] = useState<"S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6">("S.1");
+  const [editStream, setEditStream] = useState("");
+  const [editSelectedSubjects, setEditSelectedSubjects] = useState<{
+    [subjectId: string]: {
+      paper: "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4";
+    };
+  }>({});
+
+  // Delete Confirmation
+  const [deletingStudent, setDeletingStudent] = useState<typeof students[0] | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+  // Auto-open add dialog when navigating from sidebar
+  useEffect(() => {
+    if (autoOpenAddDialog) {
+      setIsAddDialogOpen(true);
+    }
+  }, [autoOpenAddDialog]);
 
   // Form state
   const [studentName, setStudentName] = useState("");
   const [classLevel, setClassLevel] = useState<"S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6">("S.1");
+  const [stream, setStream] = useState("");
   const [schoolCode, setSchoolCode] = useState(user?.role === "school" ? user.schoolCode ?? "WAK26-0001" : "WAK26-0001");
   const [selectedSubjects, setSelectedSubjects] = useState<{
     [subjectId: string]: {
@@ -83,10 +119,17 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
   // Filter subjects by exam level
   const filteredSubjects = useMemo(() => {
     return subjects.filter(
-      (subject) =>
-        subject.educationLevel === examLevel || subject.educationLevel === "BOTH"
+      (subject) => subject.educationLevel === examLevel
     );
   }, [subjects, examLevel]);
+
+  // Filter subjects by exam level for edit modal
+  const filteredSubjectsForEdit = useMemo(() => {
+    const editExamLevel = editClassLevel === "S.1" || editClassLevel === "S.2" || editClassLevel === "S.3" || editClassLevel === "S.4" ? "UCE" : "UACE";
+    return subjects.filter(
+      (subject) => subject.educationLevel === editExamLevel
+    );
+  }, [subjects, editClassLevel]);
 
   // Calculate total entries - one entry per subject selected
   const calculateTotalEntries = () => {
@@ -163,6 +206,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
       schoolCode,
       studentName,
       classLevel,
+      stream,
       subjects: subjectsArray,
       totalEntries,
     });
@@ -174,9 +218,109 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
     // Reset form
     setStudentName("");
     setClassLevel("S.1");
+    setStream("");
     setSelectedSubjects({});
     setValidationErrors([]);
     setIsAddDialogOpen(false);
+  };
+
+  // Handle View Student
+  const handleViewStudent = (student: typeof students[0]) => {
+    setViewingStudent(student);
+    setIsViewModalOpen(true);
+  };
+
+  // Handle Edit Student - Open Modal
+  const handleEditStudent = (student: typeof students[0]) => {
+    setEditingStudent(student);
+    setEditStudentName(student.studentName);
+    setEditClassLevel(student.classLevel);
+    setEditStream(student.stream || "");
+    
+    // Convert subjects to edit format
+    const editSubjects: typeof editSelectedSubjects = {};
+    student.subjects.forEach((subj) => {
+      const subjectId = subjects.find(
+        (s) =>
+          s.code === subj.subjectCode &&
+          s.educationLevel === student.examLevel,
+      )?.id;
+      if (subjectId) {
+        editSubjects[subjectId] = {
+          paper: subj.paper as "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4",
+        };
+      }
+    });
+    setEditSelectedSubjects(editSubjects);
+    setIsEditModalOpen(true);
+  };
+
+  // Handle Save Edit
+  const handleSaveEdit = () => {
+    if (!editingStudent) return;
+
+    const errors: string[] = [];
+    if (!editStudentName.trim()) errors.push("Student name is required");
+    if (Object.keys(editSelectedSubjects).length === 0) {
+      errors.push("At least one subject must be selected");
+    }
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    const subjectsArray: StudentSubjectEntry[] = Object.entries(
+      editSelectedSubjects
+    ).map(([subjectId, data]) => {
+      const subject = subjects.find((s) => s.id === subjectId);
+      return {
+        subjectId,
+        subjectCode: subject?.code || "",
+        subjectName: subject?.name || "",
+        paper: data.paper,
+        entry1: false,
+        entry2: false,
+        entry3: false,
+        entry4: false,
+      };
+    });
+
+    updateStudentEntry(editingStudent.id, {
+      studentName: editStudentName,
+      classLevel: editClassLevel,
+      stream: editStream,
+      subjects: subjectsArray,
+      totalEntries: subjectsArray.length,
+    });
+
+    toast.success("Student updated successfully", {
+      description: `${editStudentName} has been updated.`,
+    });
+
+    setIsEditModalOpen(false);
+    setEditingStudent(null);
+    setValidationErrors([]);
+  };
+
+  // Handle Delete Student - Show Confirmation
+  const handleDeleteStudent = (student: typeof students[0]) => {
+    setDeletingStudent(student);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  // Handle Confirm Delete
+  const handleConfirmDelete = () => {
+    if (!deletingStudent) return;
+
+    deleteStudentEntry(deletingStudent.id);
+
+    toast.success("Student deleted successfully", {
+      description: `${deletingStudent.studentName} has been removed.`,
+    });
+
+    setIsDeleteConfirmOpen(false);
+    setDeletingStudent(null);
   };
 
   // Filtered and searched students
@@ -187,9 +331,11 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
         student.registrationNumber.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesSchool =
         schoolFilter === "all" || student.schoolCode === schoolFilter;
-      return matchesSearch && matchesSchool;
+      const matchesLevel =
+        levelFilter === "all" || student.examLevel === levelFilter;
+      return matchesSearch && matchesSchool && matchesLevel;
     });
-  }, [scopedStudents, searchTerm, schoolFilter]);
+  }, [scopedStudents, searchTerm, schoolFilter, levelFilter]);
 
   return (
     <div className="flex flex-col w-full gap-6">
@@ -272,6 +418,17 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                 </div>
               </div>
 
+              {/* Stream (for internal use) */}
+              <div className="space-y-2">
+                <Label htmlFor="stream">Stream (Optional)</Label>
+                <Input
+                  id="stream"
+                  placeholder="e.g., A, B, C (internal use only)"
+                  value={stream}
+                  onChange={(e) => setStream(e.target.value)}
+                />
+              </div>
+
               {/* School Selection */}
               {isAdmin && (
                 <div className="space-y-2 md:col-span-2">
@@ -317,10 +474,18 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                           className="mt-1"
                         />
                         <div className="flex-1">
-                          <Label htmlFor={subject.id} className="font-semibold cursor-pointer">
-                            {subject.name}
-                          </Label>
-                          <p className="text-xs text-slate-500">{subject.code}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-mono font-bold text-black">{subject.code}</span>
+                            {selectedSubjects[subject.id] && (
+                              <span className="text-xs font-semibold text-blue-600">/{selectedSubjects[subject.id].paper.split(" ")[1]}</span>
+                            )}
+                            <Label htmlFor={subject.id} className="font-semibold cursor-pointer text-amber-600">
+                              {subject.name}
+                            </Label>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {subject.optional ? "Optional" : "Required"}
+                          </p>
                         </div>
                         {subject.optional && (
                           <Badge variant="outline" className="text-xs">
@@ -382,9 +547,16 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle className="text-slate-900">Registered Students</CardTitle>
-              <CardDescription className="text-slate-500">
-                {filteredStudents.length} student{filteredStudents.length !== 1 ? "s" : ""} found
-              </CardDescription>
+              <div className="flex gap-4 mt-2">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">School</p>
+                  <p className="text-sm font-semibold text-slate-900">{scopedSchools[0]?.name || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Total Registered</p>
+                  <p className="text-sm font-semibold text-slate-900">{filteredStudents.length}</p>
+                </div>
+              </div>
             </div>
             <div className="flex flex-col gap-2 lg:flex-row">
               <div className="relative flex-1">
@@ -396,6 +568,16 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                   className="pl-10"
                 />
               </div>
+              <Select value={levelFilter} onValueChange={(value: any) => setLevelFilter(value)}>
+                <SelectTrigger className="w-full lg:w-[150px]">
+                  <SelectValue placeholder="Filter by level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Levels</SelectItem>
+                  <SelectItem value="UCE">UCE</SelectItem>
+                  <SelectItem value="UACE">UACE</SelectItem>
+                </SelectContent>
+              </Select>
               {isAdmin && scopedSchools.length > 1 && (
                 <Select value={schoolFilter} onValueChange={setSchoolFilter}>
                   <SelectTrigger className="w-full lg:w-[200px]">
@@ -430,7 +612,7 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                     <TableHead>Exam Level</TableHead>
                     <TableHead>Subjects</TableHead>
                     <TableHead>Total Entries</TableHead>
-                    <TableHead>School</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -456,8 +638,38 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
                       <TableCell className="font-semibold text-slate-900">
                         {student.totalEntries}
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        {student.schoolName}
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewStudent(student)}
+                            title="View student details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Edit or delete student"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditStudent(student)}>
+                                <Edit2 className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteStudent(student)} className="text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -467,6 +679,270 @@ export function StudentsEntries({ onPageChange }: StudentsEntriesProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* View Student Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Student Details</DialogTitle>
+            <DialogDescription>
+              View complete information for {viewingStudent?.studentName}
+            </DialogDescription>
+          </DialogHeader>
+          {viewingStudent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Registration Number</p>
+                  <p className="text-sm font-medium text-slate-900">{viewingStudent.registrationNumber}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Student Name</p>
+                  <p className="text-sm font-medium text-slate-900">{viewingStudent.studentName}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Class Level</p>
+                  <p className="text-sm font-medium text-slate-900">{viewingStudent.classLevel}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase">Exam Level</p>
+                  <Badge variant={viewingStudent.examLevel === "UCE" ? "default" : "secondary"}>
+                    {viewingStudent.examLevel}
+                  </Badge>
+                </div>
+                {viewingStudent.stream && (
+                  <div className="col-span-2">
+                    <p className="text-xs font-semibold text-slate-500 uppercase">Stream</p>
+                    <p className="text-sm font-medium text-slate-900">{viewingStudent.stream}</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase mb-3">Subjects ({viewingStudent.subjects.length})</p>
+                <div className="space-y-2 bg-slate-50 p-3 rounded-lg border">
+                  {viewingStudent.subjects.map((subject) => (
+                    <div key={subject.subjectId} className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
+                      <div className="flex-1">
+                        <p className="text-xs font-mono font-bold text-black">{subject.subjectCode}</p>
+                        <p className="text-sm font-medium text-slate-900">{subject.subjectName}</p>
+                      </div>
+                      <Badge variant="outline" className="text-blue-600 border-blue-200">
+                        {subject.paper}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase">Total Entries</p>
+                <p className="text-sm font-medium text-slate-900">{viewingStudent.totalEntries}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              setIsViewModalOpen(false);
+              handleEditStudent(viewingStudent!);
+            }}>
+              Edit Student
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Student Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+            <DialogDescription>
+              Update information for {editingStudent?.studentName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {validationErrors.length > 0 && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <ul className="list-disc list-inside">
+                  {validationErrors.map((error, idx) => (
+                    <li key={idx}>{error}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4">
+            {/* Student Name */}
+            <div>
+              <Label htmlFor="edit-student-name" className="font-semibold">
+                Student Name
+              </Label>
+              <Input
+                id="edit-student-name"
+                value={editStudentName}
+                onChange={(e) => setEditStudentName(e.target.value)}
+                placeholder="Enter student name"
+              />
+            </div>
+
+            {/* Class Level */}
+            <div>
+              <Label className="font-semibold">Class Level</Label>
+              <Select value={editClassLevel} onValueChange={(value: any) => setEditClassLevel(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLASS_LEVELS_ARRAY.map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Stream */}
+            <div>
+              <Label htmlFor="edit-stream" className="font-semibold">
+                Stream (Optional)
+              </Label>
+              <Input
+                id="edit-stream"
+                value={editStream}
+                onChange={(e) => setEditStream(e.target.value)}
+                placeholder="e.g., Science, Arts"
+              />
+            </div>
+
+            {/* Subjects Selection */}
+            <div>
+              <Label className="font-semibold mb-3 block">Select Subjects</Label>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {filteredSubjectsForEdit.map((subject) => (
+                  <div key={subject.id} className="border border-slate-200 rounded-lg p-3">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id={`edit-${subject.id}`}
+                        checked={!!editSelectedSubjects[subject.id]}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setEditSelectedSubjects((prev) => ({
+                              ...prev,
+                              [subject.id]: { paper: "Paper 1" },
+                            }));
+                          } else {
+                            setEditSelectedSubjects((prev) => {
+                              const updated = { ...prev };
+                              delete updated[subject.id];
+                              return updated;
+                            });
+                          }
+                        }}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-black">
+                            {subject.code}
+                          </span>
+                          <span className="text-xs font-semibold text-blue-600">/
+                            {editSelectedSubjects[subject.id]?.paper.split(" ")[1]}
+                          </span>
+                          <Label htmlFor={`edit-${subject.id}`} className="font-semibold cursor-pointer text-amber-600">
+                            {subject.name}
+                          </Label>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {subject.optional ? "Optional" : "Required"}
+                        </p>
+                      </div>
+                      {subject.optional && (
+                        <Badge variant="outline" className="text-xs">
+                          Optional
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Paper Selection */}
+                    {editSelectedSubjects[subject.id] && (
+                      <div className="ml-6 pl-3 border-l-2 border-slate-200 mt-2">
+                        <Label className="text-xs font-semibold text-slate-600 mb-2 block">
+                          Select Paper:
+                        </Label>
+                        <Select 
+                          value={editSelectedSubjects[subject.id]?.paper || "Paper 1"} 
+                          onValueChange={(value: any) => {
+                            setEditSelectedSubjects((prev) => ({
+                              ...prev,
+                              [subject.id]: { paper: value },
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4].map((paper) => (
+                              <SelectItem key={paper} value={`Paper ${paper}`}>
+                                Paper {paper}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsEditModalOpen(false);
+              setValidationErrors([]);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Student</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {deletingStudent?.studentName}?
+            </DialogDescription>
+          </DialogHeader>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              This action cannot be undone. The student record will be permanently removed from the system.
+            </AlertDescription>
+          </Alert>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete Student
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

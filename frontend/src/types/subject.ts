@@ -2,7 +2,7 @@ export interface Subject {
   id: string;
   name: string;
   code: string; // Abbreviation for display (e.g., MTH)
-  educationLevel: "UCE" | "UACE" | "BOTH";
+  educationLevel: "UCE" | "UACE";
   optional: boolean;
   standardCode?: string; // Standard WAKISSHA code (e.g., 456/1 for Maths)
   papers?: number; // Number of papers for this subject (1-4)
