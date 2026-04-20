@@ -1164,13 +1164,28 @@ export function Reports({ onPageChange }: ReportsProps) {
 
       // Calculations
       const totalStudentsCount = summaryStudents.length;
-      const schoolRegFee = 25000;
+      const schoolRegFee = 25000; // Fixed per school
       const studentsFee = totalStudentsCount * 27000;
-      const lateRegFee = totalStudentsCount * (lateFee || 0);
-      const markingGuideFeeArts = 25000;
-      const markingGuideFeeSciences = 25000;
-      const answerBookletsFee = totalStudentsCount * 25000;
-      const totalAmount = schoolRegFee + studentsFee + lateRegFee + markingGuideFeeArts + markingGuideFeeSciences + answerBookletsFee;
+      
+      // LATE REG FEE - Only for students registered after a certain date (simulated for now)
+      // In a real scenario, you'd check student.registrationDate
+      const lateStudentsCount = summaryStudents.filter(s => {
+        if (!s.registrationDate) return false;
+        const regDate = new Date(s.registrationDate);
+        const deadline = new Date("2026-04-15"); // Example deadline
+        return regDate > deadline;
+      }).length;
+      const lateRegFeeAmount = lateStudentsCount * (lateFee || 2000);
+
+      const markingGuideFeeArts = 25000; // Fixed
+      const markingGuideFeeSciences = 25000; // Fixed
+      
+      // ANSWER BOOKLETS - Optional, simulated input for now (could be a state/prop)
+      // Defaulting to total students for now as per "Allow input" requirement
+      const bookletRequestedCount = totalStudentsCount; 
+      const answerBookletsFee = bookletRequestedCount * 25000;
+      
+      const totalAmount = schoolRegFee + studentsFee + lateRegFeeAmount + markingGuideFeeArts + markingGuideFeeSciences + answerBookletsFee;
 
       let totalSubjectPapersRegistered = 0;
 
@@ -1225,35 +1240,52 @@ export function Reports({ onPageChange }: ReportsProps) {
           ];
         }
 
+        // 1. ENTRIES: Total unique students who selected this subject
         const subjectStudents = summaryStudents.filter(s => 
           s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key)
         );
         
         const entries = subjectStudents.length;
         
-        // Paper counts - check how many students have an entry for this paper number
-        const p1 = subjectStudents.filter(s => 
-          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "1")
-        ).length;
-        const p2 = subjectStudents.filter(s => 
-          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "2")
-        ).length;
-        const p3 = subjectStudents.filter(s => 
-          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "3")
-        ).length;
-        const p4 = subjectStudents.filter(s => 
-          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "4")
-        ).length;
+        // 2. Paper counts: Independent counts for each paper (1, 2, 3, 4)
+        // Rule: If count is 0, show "-"
+        const p1Count = subjectStudents.reduce((count, s) => {
+          const hasPaper = s.subjects?.some(sub => 
+            mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "1"
+          );
+          return count + (hasPaper ? 1 : 0);
+        }, 0);
 
-        totalSubjectPapersRegistered += (p1 + p2 + p3 + p4);
+        const p2Count = subjectStudents.reduce((count, s) => {
+          const hasPaper = s.subjects?.some(sub => 
+            mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "2"
+          );
+          return count + (hasPaper ? 1 : 0);
+        }, 0);
+
+        const p3Count = subjectStudents.reduce((count, s) => {
+          const hasPaper = s.subjects?.some(sub => 
+            mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "3"
+          );
+          return count + (hasPaper ? 1 : 0);
+        }, 0);
+
+        const p4Count = subjectStudents.reduce((count, s) => {
+          const hasPaper = s.subjects?.some(sub => 
+            mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "4"
+          );
+          return count + (hasPaper ? 1 : 0);
+        }, 0);
+
+        totalSubjectPapersRegistered += (p1Count + p2Count + p3Count + p4Count);
 
         return [
           `${subj.code} ${subj.name}`,
-          entries > 0 ? String(entries) : "",
-          p1 > 0 ? String(p1) : "",
-          p2 > 0 ? String(p2) : "",
-          p3 > 0 ? String(p3) : "",
-          p4 > 0 ? String(p4) : ""
+          entries > 0 ? String(entries) : "-",
+          p1Count > 0 ? String(p1Count) : "-",
+          p2Count > 0 ? String(p2Count) : "-",
+          p3Count > 0 ? String(p3Count) : "-",
+          p4Count > 0 ? String(p4Count) : "-"
         ];
       });
 
@@ -1292,10 +1324,10 @@ export function Reports({ onPageChange }: ReportsProps) {
         ["", "", "FOR OFFICIAL USE", "AMOUNT"],
         ["", "", "SCHOOL REG FEE", schoolRegFee.toLocaleString()],
         ["", "", { content: "STUDENTS’ FEE", styles: { valign: "middle" } }, { content: `27,000 X ${totalStudentsCount} = ${studentsFee.toLocaleString()}`, styles: { halign: "left" } }],
-        ["", "", { content: "LATE REG. FEE\n(If charged)", styles: { valign: "middle" } }, { content: `${(lateFee || 0).toLocaleString()} X ${totalStudentsCount} = ${lateRegFee.toLocaleString()}`, styles: { halign: "left" } }],
+        ["", "", { content: "LATE REG. FEE\n(If charged)", styles: { valign: "middle" } }, { content: `2,000 X ${lateStudentsCount} = ${lateRegFeeAmount.toLocaleString()}`, styles: { halign: "left" } }],
         ["", "", "MARKING GUIDE\nFEE", { content: `ARTS                       ${markingGuideFeeArts.toLocaleString()}\nSCIENCES                ${markingGuideFeeSciences.toLocaleString()}`, styles: { halign: "left" } }],
         [{ content: "TOTAL SUBJECT PAPER REGISTERED", colSpan: 2, rowSpan: 2, styles: { halign: "center", valign: "middle", fontStyle: "bold", fontSize: 10 } }, 
-         { content: "ANSWER BOOKLETS\n(optional)", styles: { fontStyle: "bold" } }, `25,000/= X ${totalStudentsCount} = ${answerBookletsFee.toLocaleString()}`],
+         { content: "ANSWER BOOKLETS\n(optional)", styles: { fontStyle: "bold" } }, `25,000/= X ${bookletRequestedCount} = ${answerBookletsFee.toLocaleString()}`],
         ["TOTAL AMOUNT", totalAmount.toLocaleString()],
       ];
 

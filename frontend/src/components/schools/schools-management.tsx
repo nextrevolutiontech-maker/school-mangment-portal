@@ -228,28 +228,30 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
               Add School
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-xl">
-            <DialogHeader>
-              <DialogTitle>Register New School</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto sm:p-8">
+            <DialogHeader className="mb-6">
+              <DialogTitle className="text-2xl font-bold text-slate-900">Register New School</DialogTitle>
+              <DialogDescription className="text-slate-500 mt-1">
                 Add a new school to the WAKISSHA portal. A school code will be
                 generated automatically.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="name">School Name *</Label>
+                <Label htmlFor="name" className="text-sm font-semibold text-slate-700">School Name *</Label>
                 <Input
                   id="name"
-                  placeholder="Enter school name"
+                  placeholder="Enter full school name"
                   value={newSchool.name}
                   onChange={(event) =>
                     setNewSchool({ ...newSchool, name: event.target.value })
                   }
+                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  autoFocus
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
+                <Label htmlFor="email" className="text-sm font-semibold text-slate-700">Email Address *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -258,10 +260,11 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   onChange={(event) =>
                     setNewSchool({ ...newSchool, email: event.target.value })
                   }
+                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
+                <Label htmlFor="phone" className="text-sm font-semibold text-slate-700">Phone Number *</Label>
                 <Input
                   id="phone"
                   placeholder="+256 700 000 000"
@@ -269,46 +272,48 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   onChange={(event) =>
                     setNewSchool({ ...newSchool, phone: event.target.value })
                   }
+                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">Address *</Label>
+                <Label htmlFor="address" className="text-sm font-semibold text-slate-700">Address *</Label>
                 <Input
                   id="address"
-                  placeholder="School address"
+                  placeholder="Physical school address / Location"
                   value={newSchool.address}
                   onChange={(event) =>
                     setNewSchool({ ...newSchool, address: event.target.value })
                   }
+                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="educationLevel">Education Level *</Label>
+                <Label htmlFor="educationLevel" className="text-sm font-semibold text-slate-700">Education Level *</Label>
                 <Select
                   value={newSchool.educationLevel}
                   onValueChange={(value: any) =>
                     setNewSchool({ ...newSchool, educationLevel: value })
                   }
                 >
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                    <SelectValue placeholder="Select level" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-200">
                     <SelectItem value="UCE">UCE (O' Level)</SelectItem>
                     <SelectItem value="UACE">UACE (A' Level)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="zone">Zone *</Label>
+                <Label htmlFor="zone" className="text-sm font-semibold text-slate-700">Zone *</Label>
                 <Select value={newSchool.zone_id} onValueChange={(value) =>
                     setNewSchool({ ...newSchool, zone_id: value })
                   }
                 >
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                    <SelectValue placeholder="Select zone" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-200">
                     <SelectItem value="unknown">I don't know (Admin will allocate)</SelectItem>
                     {zones.map((zone) => (
                       <SelectItem key={zone.id} value={zone.id}>
@@ -317,27 +322,29 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500">
-                  If a school does not know its zone, select "I don't know". WAKISSHA admin will allocate the correct zone.
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  If a school does not know its zone, select 'I don't know'. WAKISSHA admin will allocate the correct zone.
                 </p>
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="schoolLogo">School Logo (Optional)</Label>
-                <div className="flex gap-4">
+                <Label htmlFor="schoolLogo" className="text-sm font-semibold text-slate-700">School Logo (Optional)</Label>
+                <div className="flex flex-col gap-3">
                   <div className="flex-1">
-                    <Input
-                      id="schoolLogo"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      onChange={(e) => handleLogoChange(e.target.files)}
-                      className="cursor-pointer"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <div className="flex items-center gap-3 h-11 px-3 rounded-xl border border-slate-200 bg-slate-50/50">
+                      <Input
+                        id="schoolLogo"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={(e) => handleLogoChange(e.target.files)}
+                        className="flex-1 border-0 bg-transparent p-0 h-auto focus-visible:ring-0 cursor-pointer text-sm"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
                       PNG, JPEG or WebP. Max 2MB.
                     </p>
                   </div>
                   {logoPreview && (
-                    <div className="flex items-center justify-center w-16 h-16 border border-border rounded-lg bg-muted">
+                    <div className="flex items-center justify-center w-20 h-20 border border-slate-200 rounded-xl bg-slate-50 overflow-hidden shadow-sm">
                       <img
                         src={logoPreview}
                         alt="Logo preview"
@@ -347,8 +354,8 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   )}
                 </div>
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="contactPerson">Contact Person (Optional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="contactPerson" className="text-sm font-semibold text-slate-700">Contact Person (Optional)</Label>
                 <Input
                   id="contactPerson"
                   placeholder="Name of school contact"
@@ -359,13 +366,14 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                       contactPerson: event.target.value,
                     })
                   }
+                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="contactDesignation">Contact Designation (Optional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="contactDesignation" className="text-sm font-semibold text-slate-700">Contact Designation (Optional)</Label>
                 <Input
                   id="contactDesignation"
-                  placeholder="e.g. Head Teacher / Director of Studies"
+                  placeholder="e.g. Head Teacher / DOS"
                   value={newSchool.contactDesignation}
                   onChange={(event) =>
                     setNewSchool({
@@ -373,10 +381,16 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                       contactDesignation: event.target.value,
                     })
                   }
+                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
+              <div className="md:col-span-2">
+                <p className="text-xs text-slate-500 leading-relaxed italic">
+                  After designation, please add mobile contact for the contact person WAKISSHA will be contacting
+                </p>
+              </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="mt-8 gap-3 sm:gap-0">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -384,6 +398,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   setLogoPreview("");
                   setLogoFile(null);
                 }}
+                className="h-11 rounded-xl px-6 font-semibold"
               >
                 Cancel
               </Button>
@@ -397,6 +412,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   !newSchool.educationLevel ||
                   !newSchool.zone_id
                 }
+                className="h-11 rounded-xl px-8 font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200"
               >
                 Add School
               </Button>
