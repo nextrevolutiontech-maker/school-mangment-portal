@@ -168,6 +168,7 @@ const uaceOfficialSubjectRows: OfficialSubjectRow[] = [
   { key: "SUB_MATHS", code: "475", name: "SUBSIDIARY MATHEMATICS" },
   { key: "SUB_ICT", code: "610", name: "SUBSIDIARY ICT" },
   { key: "HIST", code: "210", name: "HISTORY" },
+  { key: "ECON", code: "220", name: "ECONOMICS" },
   { key: "ENT", code: "268", name: "ENTREPRENEURSHIP" },
   { key: "IRE", code: "224", name: "IRE" },
   { key: "CRE", code: "221", name: "CRE" },
@@ -191,67 +192,67 @@ const uaceOfficialSubjectRows: OfficialSubjectRow[] = [
 ];
 
 const appendixUCE: AppendixRow[] = [
-  { code: "112", key: "112", name: "ENGLISH LANGUAGE" },
-  { code: "208", key: "208", name: "LIT ENG" },
-  { code: "336", key: "336", name: "KISWAHILI" },
-  { code: "223", key: "223", name: "CRE" },
-  { code: "225", key: "225", name: "IRE" },
-  { code: "241", key: "241", name: "HISTORY & POL. EDUC." },
-  { code: "273", key: "273", name: "GEOGRAPHY" },
+  { code: "112", key: "ENG", name: "ENGLISH LANGUAGE" },
+  { code: "208", key: "LIT", name: "LIT ENG" },
+  { code: "336", key: "KISWA", name: "KISWAHILI" },
+  { code: "223", key: "CRE", name: "CRE" },
+  { code: "225", key: "IRE", name: "IRE" },
+  { code: "241", key: "HIST", name: "HISTORY & POL. EDUC." },
+  { code: "273", key: "GEOG", name: "GEOGRAPHY" },
   { code: "", key: "sec-foreign", name: "", section: "FOREIGN LANGUAGES" },
-  { code: "301", key: "301", name: "LATIN" },
-  { code: "309", key: "309", name: "GERMAN" },
-  { code: "314", key: "314", name: "FRENCH" },
-  { code: "337", key: "337", name: "ARABIC" },
-  { code: "396", key: "396", name: "CHINESE" },
+  { code: "301", key: "LATIN", name: "LATIN" },
+  { code: "309", key: "GERMAN", name: "GERMAN" },
+  { code: "314", key: "FRENCH", name: "FRENCH" },
+  { code: "337", key: "ARABIC", name: "ARABIC" },
+  { code: "396", key: "CHINESE", name: "CHINESE" },
   { code: "", key: "sec-local", name: "", section: "LOCAL LANGUAGES" },
-  { code: "335", key: "335", name: "LUGANDA" },
-  { code: "345", key: "345", name: "RUNYANKOLE / RUKIGA" },
-  { code: "385", key: "385", name: "RUNYORO/RUTOORO" },
-  { code: "315", key: "315", name: "LEB LANGO" },
-  { code: "355", key: "355", name: "LUSOGA" },
-  { code: "365", key: "365", name: "ATESO" },
-  { code: "456", key: "456", name: "MATHEMATICS" },
-  { code: "527", key: "527", name: "AGRICULTURE" },
-  { code: "535", key: "535", name: "PHYSICS" },
-  { code: "545", key: "545", name: "CHEMISTRY" },
-  { code: "553", key: "553", name: "BIOLOGY" },
-  { code: "555", key: "555", name: "PHYSICAL EDUC." },
-  { code: "612", key: "612", name: "ART & DESIGN" },
-  { code: "662", key: "662", name: "NUTRITION & FOOD TECH." },
-  { code: "745", key: "745", name: "TECH. & DESIGN" },
-  { code: "840", key: "840", name: "ICT" },
-  { code: "845", key: "845", name: "ENTREPRENEURSHIP" },
+  { code: "335", key: "LUGANDA", name: "LUGANDA" },
+  { code: "345", key: "RUNY", name: "RUNYANKOLE / RUKIGA" },
+  { code: "385", key: "RUNYORO", name: "RUNYORO/RUTOORO" },
+  { code: "315", key: "LEB", name: "LEB LANGO" },
+  { code: "355", key: "LUSOGA", name: "LUSOGA" },
+  { code: "365", key: "ATESO", name: "ATESO" },
+  { code: "456", key: "MATH", name: "MATHEMATICS" },
+  { code: "527", key: "AGRIC", name: "AGRICULTURE" },
+  { code: "535", key: "PHY", name: "PHYSICS" },
+  { code: "545", key: "CHEM", name: "CHEMISTRY" },
+  { code: "553", key: "BIO", name: "BIOLOGY" },
+  { code: "555", key: "PE", name: "PHYSICAL EDUC." },
+  { code: "612", key: "ART", name: "ART & DESIGN" },
+  { code: "662", key: "FN", name: "NUTRITION & FOOD TECH." },
+  { code: "745", key: "TD", name: "TECH. & DESIGN" },
+  { code: "840", key: "CPS", name: "ICT" },
+  { code: "845", key: "ENT", name: "ENTREPRENEURSHIP" },
 ];
 
 const appendixUACE: AppendixRow[] = [
-  { code: "S101", key: "101", name: "GP" },
-  { code: "P210", key: "210", name: "HISTORY" },
-  { code: "P220", key: "220", name: "ECONOMICS" },
-  { code: "P230", key: "230", name: "ENTREPRE" },
-  { code: "P235", key: "235", name: "IRE" },
-  { code: "P245", key: "245", name: "CRE" },
-  { code: "P250", key: "250", name: "GEOGRAPHY" },
-  { code: "P310", key: "310", name: "LIT. IN ENGLISH" },
-  { code: "P320", key: "320", name: "KISWAHILI" },
+  { code: "S101", key: "GP", name: "GP" },
+  { code: "P210", key: "HIST", name: "HISTORY" },
+  { code: "P220", key: "ECON", name: "ECONOMICS" },
+  { code: "P230", key: "ENT", name: "ENTREPRE" },
+  { code: "P235", key: "IRE", name: "IRE" },
+  { code: "P245", key: "CRE", name: "CRE" },
+  { code: "P250", key: "GEOG", name: "GEOGRAPHY" },
+  { code: "P310", key: "LIT", name: "LIT. IN ENGLISH" },
+  { code: "P320", key: "KISWA", name: "KISWAHILI" },
   { code: "", key: "sec-foreign-uace", name: "", section: "FOREIGN LANGUAGES" },
-  { code: "P330", key: "330", name: "FRENCH" },
-  { code: "P340", key: "340", name: "GERMAN" },
-  { code: "P370", key: "370", name: "ARABIC" },
+  { code: "P330", key: "FRENCH", name: "FRENCH" },
+  { code: "P340", key: "GERMAN", name: "GERMAN" },
+  { code: "P370", key: "ARABIC", name: "ARABIC" },
   { code: "", key: "sec-local-uace", name: "", section: "LOCAL LANGUAGES" },
-  { code: "P360", key: "360", name: "LUGANDA" },
-  { code: "P364", key: "364", name: "RUNYANKOLE / RUKIGA" },
-  { code: "P366", key: "366", name: "LUSOGA" },
-  { code: "P425", key: "425", name: "MATHS" },
-  { code: "P510", key: "510", name: "PHYSICS" },
-  { code: "P515", key: "515", name: "AGRIC" },
-  { code: "P525", key: "525", name: "CHEMISTRY" },
-  { code: "P530", key: "530", name: "BIOLOGY" },
-  { code: "P615", key: "615", name: "ART" },
-  { code: "P640", key: "640", name: "FOODS & NUTRITION" },
-  { code: "S475", key: "475S", name: "SUB MATHS" },
-  { code: "P720", key: "720", name: "TECH. DRAWING" },
-  { code: "S850", key: "850", name: "SUB COMPUTER" },
+  { code: "P360", key: "LUGANDA", name: "LUGANDA" },
+  { code: "P364", key: "RUNY", name: "RUNYANKOLE / RUKIGA" },
+  { code: "P366", key: "LUSOGA", name: "LUSOGA" },
+  { code: "P425", key: "MATH", name: "MATHS" },
+  { code: "P510", key: "PHY", name: "PHYSICS" },
+  { code: "P515", key: "AGRIC", name: "AGRIC" },
+  { code: "P525", key: "CHEM", name: "CHEMISTRY" },
+  { code: "P530", key: "BIO", name: "BIOLOGY" },
+  { code: "P615", key: "ART", name: "ART" },
+  { code: "P640", key: "FN", name: "FOODS & NUTRITION" },
+  { code: "S475", key: "SUB_MATHS", name: "SUB MATHS" },
+  { code: "P720", key: "TD", name: "TECH. DRAWING" },
+  { code: "S850", key: "SUB_ICT", name: "SUB COMPUTER" },
 ];
 
 function mapSubjectCode(subjectCode: string) {
@@ -261,7 +262,7 @@ function mapSubjectCode(subjectCode: string) {
     MTH: "MATH",
     CPS: "CPS",
     ETP: "ENT",
-    ECN: "ENT",
+    ECN: "ECON",
     GEO: "GEOG",
     HIS: "HIST",
     CHM: "CHEM",
@@ -271,6 +272,11 @@ function mapSubjectCode(subjectCode: string) {
     LIT: "LIT",
     CRE: "CRE",
     IRE: "IRE",
+    ECO: "ECON",
+    ENT: "ENT",
+    MATH: "MATH",
+    CHEM: "CHEM",
+    PHYS: "PHY",
   };
   return aliases[normalized] ?? normalized;
 }
@@ -341,6 +347,45 @@ function getSubjectStudentCount(
 function formatPaperCell(value: unknown) {
   const numeric = Number(value ?? 0);
   return numeric > 0 ? String(numeric) : "-";
+}
+
+function numberToWords(num: number): string {
+  if (num === 0) return "Zero";
+
+  const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  const scales = ["", "Thousand", "Million", "Billion"];
+
+  function convertGroup(n: number): string {
+    let res = "";
+    if (n >= 100) {
+      res += ones[Math.floor(n / 100)] + " Hundred ";
+      n %= 100;
+    }
+    if (n >= 20) {
+      res += tens[Math.floor(n / 10)] + " ";
+      n %= 10;
+    }
+    if (n > 0) {
+      res += ones[n] + " ";
+    }
+    return res.trim();
+  }
+
+  let result = "";
+  let scaleIndex = 0;
+
+  while (num > 0) {
+    const group = num % 1000;
+    if (group > 0) {
+      const groupWords = convertGroup(group);
+      result = groupWords + (scales[scaleIndex] ? " " + scales[scaleIndex] : "") + (result ? ", " + result : "");
+    }
+    num = Math.floor(num / 1000);
+    scaleIndex++;
+  }
+
+  return result.trim() + " Shillings Only";
 }
 
 function getPaperNumber(paper: string | undefined) {
@@ -1108,14 +1153,26 @@ export function Reports({ onPageChange }: ReportsProps) {
       }
 
       const headerSchool =
-        selectedSchool !== "all" && summarySchoolCodes.has(selectedSchool)
+        selectedSchool !== "all"
           ? scopedSchools.find((school) => school.code === selectedSchool)
-          : undefined;
+          : (user?.role === "school" ? scopedSchools[0] : undefined);
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const margin = 10;
       let y = 10;
+
+      // Calculations
+      const totalStudentsCount = summaryStudents.length;
+      const schoolRegFee = 25000;
+      const studentsFee = totalStudentsCount * 27000;
+      const lateRegFee = totalStudentsCount * (lateFee || 0);
+      const markingGuideFeeArts = 25000;
+      const markingGuideFeeSciences = 25000;
+      const answerBookletsFee = totalStudentsCount * 25000;
+      const totalAmount = schoolRegFee + studentsFee + lateRegFee + markingGuideFeeArts + markingGuideFeeSciences + answerBookletsFee;
+
+      let totalSubjectPapersRegistered = 0;
 
       // Header: Appendix 2
       pdf.setFont("helvetica", "bold");
@@ -1131,7 +1188,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       // Subtitle
       pdf.setFontSize(10);
       pdf.setFont("helvetica", "normal");
-      pdf.text(`SUMMARY OF ENTRIES UACE: YEAR 2026   TOTAL CANDIDATES: ${summaryStudents.length}`, margin, y);
+      pdf.text(`SUMMARY OF ENTRIES UACE: YEAR 2026   TOTAL CANDIDATES: ${totalStudentsCount}`, margin, y);
       y += 5;
 
       // School Info Lines
@@ -1142,14 +1199,14 @@ export function Reports({ onPageChange }: ReportsProps) {
 
       const district = headerSchool?.district || "...........................";
       const zone = headerSchool?.zone || "...........................";
-      const telephone = headerSchool?.telephone || "...........................";
+      const telephone = headerSchool?.telephone || headerSchool?.phone || "...........................";
       pdf.text(`DISTRICT: ${district}   ZONE: ${zone}   TELEPHONE: ${telephone}`, margin, y);
       y += 5;
 
       pdf.text("NAME & SIGN OF HEAD: ...................................................................................................", margin, y);
       y += 5;
 
-      const email = headerSchool?.contactEmail || "............................................................................";
+      const email = headerSchool?.contactEmail || headerSchool?.email || "............................................................................";
       pdf.text(`CONTACT E-MAIL ADDRESS: ${email}`, margin, y);
       y += 6;
 
@@ -1174,7 +1231,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         
         const entries = subjectStudents.length;
         
-        // Paper counts
+        // Paper counts - check how many students have an entry for this paper number
         const p1 = subjectStudents.filter(s => 
           s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "1")
         ).length;
@@ -1187,6 +1244,8 @@ export function Reports({ onPageChange }: ReportsProps) {
         const p4 = subjectStudents.filter(s => 
           s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "4")
         ).length;
+
+        totalSubjectPapersRegistered += (p1 + p2 + p3 + p4);
 
         return [
           `${subj.code} ${subj.name}`,
@@ -1231,13 +1290,13 @@ export function Reports({ onPageChange }: ReportsProps) {
       // Bottom Section
       const bottomTableData = [
         ["", "", "FOR OFFICIAL USE", "AMOUNT"],
-        ["", "", "SCHOOL REG FEE", "25,000"],
-        ["", "", { content: "STUDENTS’ FEE", styles: { valign: "middle" } }, { content: "27,000 X _______", styles: { halign: "left" } }],
-        ["", "", { content: "LATE REG. FEE\n(If charged)", styles: { valign: "middle" } }, { content: "2,000 X _______", styles: { halign: "left" } }],
-        ["", "", "MARKING GUIDE\nFEE", { content: "ARTS                       25,000\nSCIENCES                25,000", styles: { halign: "left" } }],
+        ["", "", "SCHOOL REG FEE", schoolRegFee.toLocaleString()],
+        ["", "", { content: "STUDENTS’ FEE", styles: { valign: "middle" } }, { content: `27,000 X ${totalStudentsCount} = ${studentsFee.toLocaleString()}`, styles: { halign: "left" } }],
+        ["", "", { content: "LATE REG. FEE\n(If charged)", styles: { valign: "middle" } }, { content: `${(lateFee || 0).toLocaleString()} X ${totalStudentsCount} = ${lateRegFee.toLocaleString()}`, styles: { halign: "left" } }],
+        ["", "", "MARKING GUIDE\nFEE", { content: `ARTS                       ${markingGuideFeeArts.toLocaleString()}\nSCIENCES                ${markingGuideFeeSciences.toLocaleString()}`, styles: { halign: "left" } }],
         [{ content: "TOTAL SUBJECT PAPER REGISTERED", colSpan: 2, rowSpan: 2, styles: { halign: "center", valign: "middle", fontStyle: "bold", fontSize: 10 } }, 
-         { content: "ANSWER BOOKLETS\n(optional)", styles: { fontStyle: "bold" } }, "25,000/= X _______"],
-        ["TOTAL AMOUNT", ""],
+         { content: "ANSWER BOOKLETS\n(optional)", styles: { fontStyle: "bold" } }, `25,000/= X ${totalStudentsCount} = ${answerBookletsFee.toLocaleString()}`],
+        ["TOTAL AMOUNT", totalAmount.toLocaleString()],
       ];
 
       autoTable(pdf, {
@@ -1273,12 +1332,12 @@ export function Reports({ onPageChange }: ReportsProps) {
       y = (pdf as any).lastAutoTable.finalY + 5;
 
       pdf.setFont("helvetica", "normal");
-      pdf.text("AMOUNT IN WORDS: ..........................................................................................................", margin, y);
+      pdf.text(`AMOUNT IN WORDS: ${numberToWords(totalAmount)}`, margin, y);
       y += 7;
 
       pdf.setFont("helvetica", "bold");
       pdf.text("CHECKED BY", margin, y);
-      pdf.text("DATE: ...........................................................", pageWidth - margin - 80, y);
+      pdf.text(`DATE: ${new Date().toLocaleDateString()}`, pageWidth - margin - 80, y);
 
       pdf.save("WAKISSHA-Appendix-2-UACE.pdf");
       toast.success("Appendix 2 PDF generated successfully");
