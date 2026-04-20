@@ -145,15 +145,15 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const completionPercentage = (completedSteps / completionSteps.length) * 100;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 anim-fade-up">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 anim-fade-up">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
         <div className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
             School Workspace
           </p>
-          <div>
+          <div className="space-y-1">
             <h1 className="text-3xl font-bold text-shimmer">School Dashboard</h1>
-            <p className="mt-2 max-w-2xl text-slate-500">
+            <p className="max-w-2xl text-slate-500">
               Welcome back, {user?.name}. Track registration progress, subject
               entries, payment status, and your examination timetable from one
               place.
@@ -229,20 +229,20 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </Alert>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
-            <Card key={stat.title} className={`h-full border-l-4 ${stat.borderClass} transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-md`}>
-              <CardContent className="pt-6">
+            <Card key={stat.title} className={`h-full border-l-4 ${stat.borderClass}`}>
+              <CardContent className="pt-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-3">
+                  <div className="space-y-1.5">
                     <p className="text-sm font-medium text-slate-500">
                       {stat.title}
                     </p>
                     <div className="space-y-1">
-                      <p className="text-3xl font-bold text-slate-900">
+                      <p className="text-2xl font-bold text-slate-900">
                         {stat.value}
                       </p>
                       <p className="text-sm text-slate-500">{stat.subtitle}</p>
@@ -260,7 +260,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         })}
       </div>
 
-      <div className="flex flex-col w-full gap-6">
+      <div className="grid w-full gap-4 xl:grid-cols-2">
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-slate-900">Submission Progress</CardTitle>
@@ -268,7 +268,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
               Complete each step to finalise registration
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-4">
             <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
               <div className="mb-3 flex items-center justify-between text-sm">
                 <span className="text-slate-500">Completion</span>
@@ -279,11 +279,11 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
               <Progress value={completionPercentage} className="h-2.5" />
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {completionSteps.map((step, index) => (
                 <div
                   key={index}
-                  className="bg-white shadow-sm border border-slate-200 rounded-2xl flex items-center gap-3 px-4 py-3"
+                  className="bg-white shadow-sm border border-slate-200 rounded-2xl flex items-center gap-3 px-4 py-2.5"
                 >
                   <div
                     className={`flex h-8 w-8 items-center justify-center rounded-full ${
@@ -335,11 +335,11 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 pt-6">
+          <CardContent className="space-y-2.5 pt-4">
             {subjectSummary.map((item) => (
               <div
                 key={item.code}
-                className="bg-white shadow-sm border border-slate-200 rounded-2xl flex items-center justify-between gap-4 p-4 transition-colors hover:bg-slate-50"
+                className="bg-white shadow-sm border border-slate-200 rounded-2xl flex items-center justify-between gap-4 p-3 transition-colors hover:bg-slate-50"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -383,21 +383,21 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="pt-6">
-          <div className="grid gap-4 lg:grid-cols-3">
+        <CardContent className="pt-4">
+          <div className="grid gap-3 lg:grid-cols-3">
             {upcomingExams.map((exam, index) => (
               <div
                 key={index}
-                className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4"
+                className="bg-white shadow-sm border border-slate-200 rounded-2xl p-3"
               >
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
                     <Calendar className="h-4 w-4" />
                   </div>
                   <Badge variant="info">Upcoming</Badge>
                 </div>
                 <h4 className="font-semibold text-slate-900">{exam.subject}</h4>
-                <div className="mt-3 space-y-1 text-sm text-slate-500">
+                <div className="mt-2 space-y-0.5 text-sm text-slate-500">
                   <p>Date: {new Date(exam.date).toLocaleDateString()}</p>
                   <p>Time: {exam.time}</p>
                   <p>Duration: {exam.duration}</p>

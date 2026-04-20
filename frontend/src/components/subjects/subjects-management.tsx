@@ -151,7 +151,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
           </p>
           <h1 className="text-3xl font-bold text-shimmer">Subjects Management</h1>
           <p className="max-w-3xl text-slate-500">
-            Association admin sets up the standard subject list here. Schools only select from this registry when registering students for UCE or UACE.
+            Manage the standard subject registry used during student registration.
           </p>
         </div>
         <Button variant="outline" onClick={() => onPageChange("students")}>
@@ -177,12 +177,8 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <CardTitle>Association-Controlled Subject Setup</CardTitle>
-              <CardDescription>
-                Only admin should define and edit standard subject names, short
-                codes, and standard codes. Once saved here, they become visible to all
-                schools for the matching level.
-              </CardDescription>
+              <CardTitle>Subject Setup</CardTitle>
+              <CardDescription>Define standard subject names and codes.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -263,13 +259,11 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
             </div>
             <div>
               <CardTitle>Registered Standard Subjects</CardTitle>
-              <CardDescription>
-                These are the subjects schools see when entering student registrations.
-              </CardDescription>
+              <CardDescription>Subjects available for school registration forms.</CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="pt-4">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -278,7 +272,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                   <TableHead>Standard Code</TableHead>
                   <TableHead>Subject Name</TableHead>
                   <TableHead>Level</TableHead>
-                  <TableHead>Totals</TableHead>
+                  <TableHead className="text-right">Totals</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
@@ -290,9 +284,22 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                     <TableCell className="font-mono text-xs">{subject.standardCode}</TableCell>
                     <TableCell className="font-semibold text-slate-900">{subject.name}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{subject.educationLevel}</Badge>
+                      <div className="flex flex-wrap gap-1.5">
+                        {subject.educationLevel === "UCE" ? (
+                          <Badge variant="secondary">UCE</Badge>
+                        ) : (
+                          <Badge variant="default">UACE</Badge>
+                        )}
+                        {subjects.some(
+                          (item) =>
+                            item.id !== subject.id &&
+                            item.code.toUpperCase() === subject.code.toUpperCase() &&
+                            item.standardCode.toUpperCase() === subject.standardCode.toUpperCase() &&
+                            item.educationLevel !== subject.educationLevel,
+                        ) && <Badge variant="outline">BOTH</Badge>}
+                      </div>
                     </TableCell>
-                    <TableCell className="font-semibold text-slate-900">
+                    <TableCell className="text-right font-semibold text-slate-900">
                       {subjectTotals[`${subject.educationLevel}:${subject.code.toUpperCase()}`] ?? 0}
                     </TableCell>
                     <TableCell>

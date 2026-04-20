@@ -52,6 +52,10 @@ interface StudentsEntriesProps {
   autoOpenAddDialog?: boolean;
 }
 
+type PaperOption = 1 | 2 | 3 | 4;
+
+const PAPER_OPTIONS: PaperOption[] = [1, 2, 3, 4];
+
 export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: StudentsEntriesProps) {
   const { user, schools, students, subjects, addStudentEntry, updateStudentEntry, deleteStudentEntry } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -86,7 +90,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   const [editStream, setEditStream] = useState("");
   const [editSelectedSubjects, setEditSelectedSubjects] = useState<{
     [subjectId: string]: {
-      paper: "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4";
+      selectedPapers: PaperOption[];
     };
   }>({});
 
@@ -109,7 +113,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   const [schoolCode, setSchoolCode] = useState(user?.role === "school" ? user.schoolCode ?? "WAK26-0001" : "WAK26-0001");
   const [selectedSubjects, setSelectedSubjects] = useState<{
     [subjectId: string]: {
-      paper: "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4";
+      selectedPapers: PaperOption[];
     };
   }>({});
 
@@ -140,22 +144,34 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     setSelectedSubjects({});
   }, [registrationLevel]);
 
-  // Calculate total entries - one entry per subject selected
+  // Calculate total entries - one entry per selected paper
   const calculateTotalEntries = () => {
-    return Object.keys(selectedSubjects).length;
+    return Object.values(selectedSubjects).reduce((sum, item) => sum + item.selectedPapers.length, 0);
   };
 
-  // Update paper selection for a subject
-  const setPaper = (
+  const togglePaperForSubject = (
     subjectId: string,
-    paper: "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4"
+    paper: PaperOption,
+    checked: boolean,
   ) => {
-    setSelectedSubjects((prev) => ({
-      ...prev,
-      [subjectId]: {
-        paper,
-      },
-    }));
+    setSelectedSubjects((prev) => {
+      if (!prev[subjectId]) return prev;
+      const currentPapers = prev[subjectId].selectedPapers;
+      const nextPapers = checked
+        ? Array.from(new Set([...currentPapers, paper]))
+        : currentPapers.filter((item) => item !== paper);
+
+      if (nextPapers.length === 0) {
+        const updated = { ...prev };
+        delete updated[subjectId];
+        return updated;
+      }
+
+      return {
+        ...prev,
+        [subjectId]: { selectedPapers: nextPapers },
+      };
+    });
   };
 
   // Toggle subject selection
@@ -167,11 +183,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         delete newState[subjectId];
         return newState;
       } else {
-        // Add subject with Paper 1 as default
+        // Add subject with Paper 1 pre-selected
         return {
           ...prev,
           [subjectId]: {
-            paper: "Paper 1",
+            selectedPapers: [1],
           },
         };
       }
@@ -192,25 +208,25 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       return;
     }
 
-    // Build subjects array with correct structure
-    const subjectsArray: StudentSubjectEntry[] = Object.entries(
-      selectedSubjects
-    ).map(([subjectId, data]) => {
-      const subject = subjects.find((s) => s.id === subjectId);
-      return {
-        subjectId,
-        subjectCode: subject?.code || "",
-        subjectStandardCode: subject?.standardCode || "",
-        subjectName: subject?.name || "",
-        paper: data.paper,
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      };
-    });
+    // Persist one entry per selected subject paper for compatibility with reporting/export flows.
+    const subjectsArray: StudentSubjectEntry[] = Object.entries(selectedSubjects).flatMap(
+      ([subjectId, data]) => {
+        const subject = subjects.find((s) => s.id === subjectId);
+        return data.selectedPapers.map((paper) => ({
+          subjectId,
+          subjectCode: subject?.code || "",
+          subjectStandardCode: subject?.standardCode || "",
+          subjectName: subject?.name || "",
+          paper: `Paper ${paper}` as "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4",
+          entry1: false,
+          entry2: false,
+          entry3: false,
+          entry4: false,
+        }));
+      },
+    );
 
-    const totalEntries = calculateTotalEntries();
+    const totalEntries = subjectsArray.length;
 
     addStudentEntry({
       schoolCode,
@@ -257,8 +273,12 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
           s.educationLevel === student.examLevel,
       )?.id;
       if (subjectId) {
+        const existingPapers = editSubjects[subjectId]?.papers ?? [];
+        const paper = Number(subj.paper.split(" ")[1]) as PaperOption;
         editSubjects[subjectId] = {
-          paper: subj.paper as "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4",
+          selectedPapers: existingPapers.includes(paper)
+            ? existingPapers
+            : [...existingPapers, paper],
         };
       }
     });
@@ -281,22 +301,22 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       return;
     }
 
-    const subjectsArray: StudentSubjectEntry[] = Object.entries(
-      editSelectedSubjects
-    ).map(([subjectId, data]) => {
-      const subject = subjects.find((s) => s.id === subjectId);
-      return {
-        subjectId,
-        subjectCode: subject?.code || "",
-        subjectStandardCode: subject?.standardCode || "",
-        subjectName: subject?.name || "",
-        paper: data.paper,
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      };
-    });
+    const subjectsArray: StudentSubjectEntry[] = Object.entries(editSelectedSubjects).flatMap(
+      ([subjectId, data]) => {
+        const subject = subjects.find((s) => s.id === subjectId);
+        return data.selectedPapers.map((paper) => ({
+          subjectId,
+          subjectCode: subject?.code || "",
+          subjectStandardCode: subject?.standardCode || "",
+          subjectName: subject?.name || "",
+          paper: `Paper ${paper}` as "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4",
+          entry1: false,
+          entry2: false,
+          entry3: false,
+          entry4: false,
+        }));
+      },
+    );
 
     updateStudentEntry(editingStudent.id, {
       studentName: editStudentName,
@@ -349,6 +369,56 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     });
   }, [scopedStudents, searchTerm, schoolFilter, levelFilter]);
 
+  const registrationPreview = useMemo(
+    () =>
+      Object.entries(selectedSubjects)
+        .map(([subjectId, data]) => {
+          const subject = subjects.find((s) => s.id === subjectId);
+          return {
+            subjectId,
+            subjectName: subject?.name ?? "Unknown Subject",
+            papers: data.selectedPapers,
+          };
+        })
+        .filter((item) => item.papers.length > 0),
+    [selectedSubjects, subjects],
+  );
+
+  const groupedViewingSubjects = useMemo(() => {
+    if (!viewingStudent) return [];
+
+    const grouped = new Map<
+      string,
+      { subjectId: string; code: string; name: string; papers: string[] }
+    >();
+
+    viewingStudent.subjects.forEach((subject) => {
+      const code = subject.subjectStandardCode ?? subject.subjectCode;
+      const key = `${code}::${subject.subjectName}`;
+      const paper = subject.paper;
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          subjectId: subject.subjectId,
+          code,
+          name: subject.subjectName,
+          papers: [paper],
+        });
+        return;
+      }
+
+      const current = grouped.get(key)!;
+      if (!current.papers.includes(paper)) {
+        current.papers.push(paper);
+      }
+    });
+
+    return Array.from(grouped.values());
+  }, [viewingStudent]);
+
+  const getUniqueSubjectCount = (student: { subjects: StudentSubjectEntry[] }) =>
+    new Set(student.subjects.map((subject) => subject.subjectCode)).size;
+
   return (
     <div className="flex flex-col w-full gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -370,7 +440,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               Add Student
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="w-[96vw] sm:max-w-[920px] h-[94vh] max-h-[94vh] overflow-hidden p-0">
+            <div className="h-full overflow-y-auto px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
             <DialogHeader>
               <DialogTitle>Register New Student</DialogTitle>
               <DialogDescription>
@@ -391,7 +462,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </Alert>
             )}
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
               {/* Student Name */}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="student-name">Student Name *</Label>
@@ -479,19 +550,19 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    Check subjects to select them. Then choose which paper (1, 2, 3, or 4) the student will take for each subject.
+                    Check subjects to select them. Then use paper checkboxes to choose one or multiple papers (1, 2, 3, or 4) for each subject.
                   </AlertDescription>
                 </Alert>
               </div>
 
               {/* Subject List with Paper Selection */}
-              <div className="md:col-span-2 space-y-3 max-h-96 overflow-y-auto border border-slate-200 rounded-lg p-4">
+              <div className="md:col-span-2 space-y-3 max-h-[52vh] overflow-y-auto border border-slate-200 rounded-xl p-4">
                 {filteredSubjects.length === 0 ? (
                   <p className="text-sm text-slate-500">No subjects available for {registrationLevel}</p>
                 ) : (
                   filteredSubjects.map((subject) => (
-                    <div key={subject.id} className="border-b pb-3 last:border-b-0">
-                      <div className="flex items-start gap-3 mb-3">
+                    <div key={subject.id} className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                      <div className="mb-3 flex items-start gap-3">
                         <Checkbox
                           id={subject.id}
                           checked={!!selectedSubjects[subject.id]}
@@ -502,7 +573,9 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xs font-mono font-bold text-black">{subject.standardCode}</span>
                             {selectedSubjects[subject.id] && (
-                              <span className="text-xs font-semibold text-blue-600">/{selectedSubjects[subject.id].paper.split(" ")[1]}</span>
+                              <span className="text-xs font-semibold text-blue-600">
+                                /{selectedSubjects[subject.id].selectedPapers.join(",")}
+                              </span>
                             )}
                             <Label htmlFor={subject.id} className="font-semibold cursor-pointer text-amber-600">
                               {subject.name}
@@ -521,24 +594,26 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
                       {/* Paper Selection (shown only if subject is selected) */}
                       {selectedSubjects[subject.id] && (
-                        <div className="ml-6 pl-3 border-l-2 border-slate-200">
+                        <div className="ml-6 rounded-md border border-slate-200 bg-slate-50 p-3">
                           <Label className="text-xs font-semibold text-slate-600 mb-2 block">
-                            Select Paper:
+                            Select Paper(s):
                           </Label>
-                          <Select 
-                            value={selectedSubjects[subject.id]?.paper || "Paper 1"} 
-                            onValueChange={(value: any) => setPaper(subject.id, value)}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Paper 1">Paper 1</SelectItem>
-                              <SelectItem value="Paper 2">Paper 2</SelectItem>
-                              <SelectItem value="Paper 3">Paper 3</SelectItem>
-                              <SelectItem value="Paper 4">Paper 4</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex flex-wrap gap-4">
+                            {PAPER_OPTIONS.map((paper) => (
+                              <label
+                                key={`${subject.id}-${paper}`}
+                                className="flex items-center gap-2 text-sm text-slate-700"
+                              >
+                                <Checkbox
+                                  checked={selectedSubjects[subject.id].selectedPapers.includes(paper)}
+                                  onCheckedChange={(checked) =>
+                                    togglePaperForSubject(subject.id, paper, Boolean(checked))
+                                  }
+                                />
+                                <span>{`Paper ${paper}`}</span>
+                              </label>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -548,20 +623,41 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
               {/* Total Entries Display */}
               <div className="md:col-span-2">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-slate-600">
-                    Subjects Selected: <span className="font-bold text-blue-600">{calculateTotalEntries()}</span>
+                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                  <p className="text-sm font-medium text-slate-700">
+                    Subjects Selected:{" "}
+                    <span className="font-bold text-blue-700">{Object.keys(selectedSubjects).length}</span>
+                    <span className="mx-2 text-blue-300">|</span>
+                    Total Entries: <span className="font-bold text-blue-700">{calculateTotalEntries()}</span>
                   </p>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="mb-2 text-sm font-semibold text-slate-800">Live Preview</p>
+                  {registrationPreview.length === 0 ? (
+                    <p className="text-sm text-slate-500">No subject papers selected yet.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {registrationPreview.map((item) => (
+                        <p key={item.subjectId} className="text-sm text-slate-700">
+                          {item.subjectName} {"\u2192"} {item.papers.map((paper) => `Paper ${paper}`).join(", ")}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="mt-6">
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
               <Button onClick={handleAddStudent}>Register Student</Button>
             </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -658,7 +754,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {student.subjects.length} subject{student.subjects.length !== 1 ? "s" : ""}
+                        {getUniqueSubjectCount(student)} subject{getUniqueSubjectCount(student) !== 1 ? "s" : ""}
                       </TableCell>
                       <TableCell className="font-semibold text-slate-900">
                         {student.totalEntries}
@@ -744,17 +840,30 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase mb-3">Subjects ({viewingStudent.subjects.length})</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase mb-3">
+                  Subjects ({groupedViewingSubjects.length})
+                </p>
                 <div className="space-y-2 bg-slate-50 p-3 rounded-lg border">
-                  {viewingStudent.subjects.map((subject) => (
-                    <div key={subject.subjectId} className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
+                  {groupedViewingSubjects.map((subject) => (
+                    <div
+                      key={`${subject.code}-${subject.name}`}
+                      className="flex items-center justify-between p-2 bg-white rounded border border-slate-200"
+                    >
                       <div className="flex-1">
-                        <p className="text-xs font-mono font-bold text-black">{subject.subjectStandardCode ?? subject.subjectCode}</p>
-                        <p className="text-sm font-medium text-slate-900">{subject.subjectName}</p>
+                        <p className="text-xs font-mono font-bold text-black">{subject.code}</p>
+                        <p className="text-sm font-medium text-slate-900">{subject.name}</p>
                       </div>
-                      <Badge variant="outline" className="text-blue-600 border-blue-200">
-                        {subject.paper}
-                      </Badge>
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        {subject.papers.map((paper) => (
+                          <Badge
+                            key={`${subject.code}-${subject.name}-${paper}`}
+                            variant="outline"
+                            className="text-blue-600 border-blue-200"
+                          >
+                            {paper}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -861,7 +970,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                           if (checked) {
                             setEditSelectedSubjects((prev) => ({
                               ...prev,
-                              [subject.id]: { paper: "Paper 1" },
+                              [subject.id]: { selectedPapers: [1] },
                             }));
                           } else {
                             setEditSelectedSubjects((prev) => {
@@ -877,9 +986,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                           <span className="text-xs font-mono font-bold text-black">
                             {subject.standardCode}
                           </span>
-                          <span className="text-xs font-semibold text-blue-600">/
-                            {editSelectedSubjects[subject.id]?.paper.split(" ")[1]}
-                          </span>
+                          {editSelectedSubjects[subject.id] && (
+                            <span className="text-xs font-semibold text-blue-600">
+                              /{editSelectedSubjects[subject.id].selectedPapers.join(",")}
+                            </span>
+                          )}
                           <Label htmlFor={`edit-${subject.id}`} className="font-semibold cursor-pointer text-amber-600">
                             {subject.name}
                           </Label>
@@ -899,28 +1010,39 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     {editSelectedSubjects[subject.id] && (
                       <div className="ml-6 pl-3 border-l-2 border-slate-200 mt-2">
                         <Label className="text-xs font-semibold text-slate-600 mb-2 block">
-                          Select Paper:
+                          Select Paper(s):
                         </Label>
-                        <Select 
-                          value={editSelectedSubjects[subject.id]?.paper || "Paper 1"} 
-                          onValueChange={(value: any) => {
-                            setEditSelectedSubjects((prev) => ({
-                              ...prev,
-                              [subject.id]: { paper: value },
-                            }));
-                          }}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4].map((paper) => (
-                              <SelectItem key={paper} value={`Paper ${paper}`}>
-                                Paper {paper}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex flex-wrap gap-4">
+                          {PAPER_OPTIONS.map((paper) => (
+                            <label
+                              key={`edit-${subject.id}-${paper}`}
+                              className="flex items-center gap-2 text-sm text-slate-700"
+                            >
+                              <Checkbox
+                                checked={editSelectedSubjects[subject.id].selectedPapers.includes(paper)}
+                                onCheckedChange={(checked) => {
+                                  setEditSelectedSubjects((prev) => {
+                                    if (!prev[subject.id]) return prev;
+                                    const currentPapers = prev[subject.id].selectedPapers;
+                                    const nextPapers = checked
+                                      ? Array.from(new Set([...currentPapers, paper]))
+                                      : currentPapers.filter((item) => item !== paper);
+                                    if (nextPapers.length === 0) {
+                                      const updated = { ...prev };
+                                      delete updated[subject.id];
+                                      return updated;
+                                    }
+                                    return {
+                                      ...prev,
+                                      [subject.id]: { selectedPapers: nextPapers },
+                                    };
+                                  });
+                                }}
+                              />
+                              <span>{`Paper ${paper}`}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

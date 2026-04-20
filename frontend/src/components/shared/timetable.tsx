@@ -43,6 +43,11 @@ interface ScheduleRow {
   duration: string;
 }
 
+function getPaperNumberLabel(paper: string) {
+  const paperNumber = paper.match(/\d+/)?.[0] ?? paper;
+  return paperNumber;
+}
+
 const uceSchedule: ScheduleRow[] = [
   {
     date: "2026-05-12",
@@ -211,13 +216,13 @@ function SchedulePanel({
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {statCards.map((stat) => (
           <Card key={stat.label} className={`h-full border-l-4 ${stat.className}`}>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4">
               <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-              <p className={`mt-3 text-3xl font-bold ${stat.valueClass}`}>
+              <p className={`mt-2 text-2xl font-bold ${stat.valueClass}`}>
                 {stat.value}
               </p>
             </CardContent>
@@ -225,7 +230,7 @@ function SchedulePanel({
         ))}
       </div>
 
-      <Tabs defaultValue="table" className="space-y-4">
+      <Tabs defaultValue="table" className="space-y-3">
         <TabsList>
           <TabsTrigger value="table">Table View</TabsTrigger>
           <TabsTrigger value="calendar">Calendar View</TabsTrigger>
@@ -237,14 +242,13 @@ function SchedulePanel({
               <CardTitle className="text-slate-900">{title}</CardTitle>
               <CardDescription className="text-slate-500">{description}</CardDescription>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Day & Date</TableHead>
                     <TableHead>Period</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Paper</TableHead>
+                    <TableHead>Code/Paper</TableHead>
                     <TableHead>Subject</TableHead>
                     <TableHead>Duration</TableHead>
                   </TableRow>
@@ -263,13 +267,11 @@ function SchedulePanel({
                       <TableCell>
                         <Badge variant="outline">{exam.period}</Badge>
                       </TableCell>
-                      <TableCell className="font-mono font-bold text-black">
-                        {exam.code}
+                      <TableCell className="font-mono font-bold">
+                        <span className="text-black">{exam.code}</span>
+                        <span className="text-blue-600">/{getPaperNumberLabel(exam.paper)}</span>
                       </TableCell>
-                      <TableCell className="font-semibold text-blue-600">
-                        {exam.paper}
-                      </TableCell>
-                      <TableCell className="font-medium text-amber-600">
+                      <TableCell className="font-semibold text-amber-600">
                         {exam.subject}
                       </TableCell>
                       <TableCell className="text-slate-500">
@@ -314,9 +316,13 @@ function SchedulePanel({
                   >
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                       <BookOpen className="h-4 w-4 text-red-400" />
-                      <span className="font-mono text-sm font-bold text-black">{exam.code}</span>
-                      <span className="text-sm font-semibold text-blue-600">{exam.paper}</span>
-                      <h4 className="font-semibold text-amber-600">{exam.subject}</h4>
+                      <span className="font-mono text-sm font-bold">
+                        <span className="text-black">{exam.code}</span>
+                        <span className="text-blue-600">/{getPaperNumberLabel(exam.paper)}</span>
+                      </span>
+                      <h4 className="font-semibold text-amber-600">
+                        {exam.subject}
+                      </h4>
                     </div>
                     <div className="space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
@@ -358,12 +364,11 @@ export function Timetable({ onPageChange }: TimetableProps) {
       });
       yPos += 10;
 
-      const tableColumns = ["Day & Date", "Period", "Code", "Paper", "Subject", "Duration"];
+      const tableColumns = ["Day & Date", "Period", "Code/Paper", "Subject", "Duration"];
       const tableRows = schedule.map((exam) => [
         `${exam.day}, ${new Date(exam.date).toLocaleDateString("en-GB")}`,
         exam.period,
-        exam.code,
-        exam.paper,
+        `${exam.code}/${getPaperNumberLabel(exam.paper)}`,
         exam.subject,
         exam.duration,
       ]);
@@ -376,10 +381,9 @@ export function Timetable({ onPageChange }: TimetableProps) {
         columnStyles: {
           0: { cellWidth: 34 },
           1: { cellWidth: 22 },
-          2: { cellWidth: 18, textColor: [0, 0, 0], fontStyle: "bold" },
-          3: { cellWidth: 24, textColor: [37, 99, 235], fontStyle: "bold" },
-          4: { cellWidth: 82, textColor: [217, 119, 6], fontStyle: "bold" },
-          5: { cellWidth: 22 },
+          2: { cellWidth: 25, textColor: [0, 0, 0], fontStyle: "bold", halign: "center" },
+          3: { cellWidth: 96, textColor: [0, 0, 0], fontStyle: "bold" },
+          4: { cellWidth: 24, halign: "center" },
         },
         headStyles: {
           fillColor: [200, 200, 200],
@@ -436,13 +440,13 @@ export function Timetable({ onPageChange }: TimetableProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="uce" className="w-full space-y-6">
+      <Tabs defaultValue="uce" className="w-full space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="uce">UCE Timetable</TabsTrigger>
           <TabsTrigger value="uace">UACE Timetable</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="uce" className="w-full space-y-6">
+        <TabsContent value="uce" className="w-full space-y-4">
           <div className="flex justify-end">
             <Button
               variant="outline"
@@ -460,7 +464,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
           />
         </TabsContent>
 
-        <TabsContent value="uace" className="w-full space-y-6">
+        <TabsContent value="uace" className="w-full space-y-4">
           <div className="flex justify-end">
             <Button
               variant="outline"
@@ -473,7 +477,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
           </div>
           <SchedulePanel
             title="UACE Timetable"
-            description="Official UACE paper schedule with dedicated venues and sitting times."
+            description="Official UACE paper schedule with sitting times."
             schedule={uaceSchedule}
           />
         </TabsContent>
@@ -510,6 +514,3 @@ export function Timetable({ onPageChange }: TimetableProps) {
     </div>
   );
 }
-
-
-

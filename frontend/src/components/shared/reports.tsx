@@ -130,6 +130,13 @@ type StudentLike = {
   subjects?: StudentSubjectEntry[];
 };
 
+type AppendixRow = {
+  code: string;
+  key: string;
+  name: string;
+  section?: "FOREIGN LANGUAGES" | "LOCAL LANGUAGES";
+};
+
 const uceOfficialSubjectRows: OfficialSubjectRow[] = [
   { key: "ENG", code: "112", name: "ENGLISH" },
   { key: "LIT", code: "208", name: "LIT ENG" },
@@ -181,6 +188,70 @@ const uaceOfficialSubjectRows: OfficialSubjectRow[] = [
   { key: "LUGANDA", code: "380", name: "LUGANDA" },
   { key: "RUNY", code: "383", name: "RUNYAKITARA" },
   { key: "LUSOGA", code: "386", name: "LUSOGA" },
+];
+
+const appendixUCE: AppendixRow[] = [
+  { code: "112", key: "112", name: "ENGLISH LANGUAGE" },
+  { code: "208", key: "208", name: "LIT ENG" },
+  { code: "336", key: "336", name: "KISWAHILI" },
+  { code: "223", key: "223", name: "CRE" },
+  { code: "225", key: "225", name: "IRE" },
+  { code: "241", key: "241", name: "HISTORY & POL. EDUC." },
+  { code: "273", key: "273", name: "GEOGRAPHY" },
+  { code: "", key: "sec-foreign", name: "", section: "FOREIGN LANGUAGES" },
+  { code: "301", key: "301", name: "LATIN" },
+  { code: "309", key: "309", name: "GERMAN" },
+  { code: "314", key: "314", name: "FRENCH" },
+  { code: "337", key: "337", name: "ARABIC" },
+  { code: "396", key: "396", name: "CHINESE" },
+  { code: "", key: "sec-local", name: "", section: "LOCAL LANGUAGES" },
+  { code: "335", key: "335", name: "LUGANDA" },
+  { code: "345", key: "345", name: "RUNYANKOLE / RUKIGA" },
+  { code: "385", key: "385", name: "RUNYORO/RUTOORO" },
+  { code: "315", key: "315", name: "LEB LANGO" },
+  { code: "355", key: "355", name: "LUSOGA" },
+  { code: "365", key: "365", name: "ATESO" },
+  { code: "456", key: "456", name: "MATHEMATICS" },
+  { code: "527", key: "527", name: "AGRICULTURE" },
+  { code: "535", key: "535", name: "PHYSICS" },
+  { code: "545", key: "545", name: "CHEMISTRY" },
+  { code: "553", key: "553", name: "BIOLOGY" },
+  { code: "555", key: "555", name: "PHYSICAL EDUC." },
+  { code: "612", key: "612", name: "ART & DESIGN" },
+  { code: "662", key: "662", name: "NUTRITION & FOOD TECH." },
+  { code: "745", key: "745", name: "TECH. & DESIGN" },
+  { code: "840", key: "840", name: "ICT" },
+  { code: "845", key: "845", name: "ENTREPRENEURSHIP" },
+];
+
+const appendixUACE: AppendixRow[] = [
+  { code: "S101", key: "101", name: "GP" },
+  { code: "P210", key: "210", name: "HISTORY" },
+  { code: "P220", key: "220", name: "ECONOMICS" },
+  { code: "P230", key: "230", name: "ENTREPRE" },
+  { code: "P235", key: "235", name: "IRE" },
+  { code: "P245", key: "245", name: "CRE" },
+  { code: "P250", key: "250", name: "GEOGRAPHY" },
+  { code: "P310", key: "310", name: "LIT. IN ENGLISH" },
+  { code: "P320", key: "320", name: "KISWAHILI" },
+  { code: "", key: "sec-foreign-uace", name: "", section: "FOREIGN LANGUAGES" },
+  { code: "P330", key: "330", name: "FRENCH" },
+  { code: "P340", key: "340", name: "GERMAN" },
+  { code: "P370", key: "370", name: "ARABIC" },
+  { code: "", key: "sec-local-uace", name: "", section: "LOCAL LANGUAGES" },
+  { code: "P360", key: "360", name: "LUGANDA" },
+  { code: "P364", key: "364", name: "RUNYANKOLE / RUKIGA" },
+  { code: "P366", key: "366", name: "LUSOGA" },
+  { code: "P425", key: "425", name: "MATHS" },
+  { code: "P510", key: "510", name: "PHYSICS" },
+  { code: "P515", key: "515", name: "AGRIC" },
+  { code: "P525", key: "525", name: "CHEMISTRY" },
+  { code: "P530", key: "530", name: "BIOLOGY" },
+  { code: "P615", key: "615", name: "ART" },
+  { code: "P640", key: "640", name: "FOODS & NUTRITION" },
+  { code: "S475", key: "475S", name: "SUB MATHS" },
+  { code: "P720", key: "720", name: "TECH. DRAWING" },
+  { code: "S850", key: "850", name: "SUB COMPUTER" },
 ];
 
 function mapSubjectCode(subjectCode: string) {
@@ -270,6 +341,53 @@ function getSubjectStudentCount(
 function formatPaperCell(value: unknown) {
   const numeric = Number(value ?? 0);
   return numeric > 0 ? String(numeric) : "-";
+}
+
+function getPaperNumber(paper: string | undefined) {
+  if (!paper) return "-";
+  const match = paper.match(/\d+/);
+  return match?.[0] ?? "-";
+}
+
+function getAppendixRows(level: "UCE" | "UACE") {
+  return level === "UCE" ? appendixUCE : appendixUACE;
+}
+
+function buildStudentSubjectsDisplay(
+  student: {
+    examLevel: "UCE" | "UACE";
+    subjects?: Array<{
+      subjectCode: string;
+      subjectStandardCode?: string;
+      subjectName?: string;
+      paper?: string;
+    }>;
+  },
+  subjectLookup: Map<string, { standardCode?: string; name?: string }>,
+) {
+  const seen = new Set<string>();
+  const formattedSubjects: string[] = [];
+
+  (student.subjects ?? []).forEach((subj) => {
+    const lookupKey = `${student.examLevel}:${subj.subjectCode.toUpperCase()}`;
+    const resolvedCode =
+      subj.subjectStandardCode ??
+      subjectLookup.get(lookupKey)?.standardCode ??
+      subj.subjectCode;
+    const resolvedName =
+      subj.subjectName ||
+      subjectLookup.get(lookupKey)?.name ||
+      subj.subjectCode;
+    const paperNumber = getPaperNumber(subj.paper);
+    const descriptor = `${resolvedName} (${resolvedCode}/${paperNumber})`;
+
+    if (!seen.has(descriptor)) {
+      seen.add(descriptor);
+      formattedSubjects.push(descriptor);
+    }
+  });
+
+  return formattedSubjects.join(", ");
 }
 
 function getStatusBadge(status: string) {
@@ -519,12 +637,6 @@ export function Reports({ onPageChange }: ReportsProps) {
       className: "border-l-green-500",
       valueClass: "text-slate-900",
     },
-    {
-      label: "Payment Submitted",
-      value: scopedSchools.filter((school) => school.status === "payment_submitted").length,
-      className: "border-l-blue-500",
-      valueClass: "text-slate-900",
-    },
   ];
 
   const buildExportKey = (format: "pdf" | "excel", reportType: string) =>
@@ -559,6 +671,252 @@ export function Reports({ onPageChange }: ReportsProps) {
       row.telephone,
       ...subjectsColumns.map((subject) => row[subject.key] ?? 0),
     ]);
+
+  const generateAppendixSchoolPDF = (
+    level: "UACE" | "UCE",
+    fileName: string,
+    schoolContext: {
+      name: string;
+      code: string;
+      district: string;
+      zone: string;
+      telephone: string;
+      contactPerson?: string;
+      contactEmail?: string;
+      academicYear?: string;
+      totalCandidates?: number;
+    },
+  ) => {
+    const schoolStudents = scopedStudents.filter(
+      (student) => student.schoolCode === schoolContext.code && student.examLevel === level,
+    );
+    const rows = getAppendixRows(level);
+    const subjectRows = rows.filter((row) => !row.section);
+
+    const stats = new Map<
+      string,
+      { entries: Set<string>; p1: Set<string>; p2: Set<string>; p3: Set<string>; p4: Set<string> }
+    >();
+    subjectRows.forEach((row) => {
+      stats.set(row.key, {
+        entries: new Set<string>(),
+        p1: new Set<string>(),
+        p2: new Set<string>(),
+        p3: new Set<string>(),
+        p4: new Set<string>(),
+      });
+    });
+
+    schoolStudents.forEach((student) => {
+      const studentKey = student.registrationNumber || student.id;
+      (student.subjects ?? []).forEach((subject) => {
+        const lookupKey = `${student.examLevel}:${subject.subjectCode.toUpperCase()}`;
+        const standardCode =
+          subject.subjectStandardCode ??
+          subjectLookup.get(lookupKey)?.standardCode ??
+          subject.subjectCode;
+        const paper = getPaperNumber(subject.paper);
+
+        const candidateKeys =
+          level === "UACE"
+            ? [
+                standardCode,
+                standardCode === "475" ? "475S" : "",
+                standardCode === "610" ? "850" : "",
+                standardCode === "680" ? "720" : "",
+                standardCode === "361" ? "370" : "",
+                standardCode === "380" ? "360" : "",
+                standardCode === "383" ? "364" : "",
+                standardCode === "386" ? "366" : "",
+                standardCode === "210" ? "210" : "",
+                standardCode === "221" ? "245" : "",
+                standardCode === "224" ? "235" : "",
+                standardCode === "230" ? "250" : "",
+                standardCode === "220" ? "310" : "",
+                standardCode === "340" ? "320" : "",
+                standardCode === "351" ? "330" : "",
+                standardCode === "358" ? "340" : "",
+                standardCode === "615" ? "615" : "",
+                standardCode === "635" ? "640" : "",
+              ].filter(Boolean)
+            : [standardCode];
+
+        candidateKeys.forEach((key) => {
+          const rowStats = stats.get(key);
+          if (!rowStats) return;
+          rowStats.entries.add(studentKey);
+          if (paper === "1") rowStats.p1.add(studentKey);
+          if (paper === "2") rowStats.p2.add(studentKey);
+          if (paper === "3") rowStats.p3.add(studentKey);
+          if (paper === "4") rowStats.p4.add(studentKey);
+        });
+      });
+    });
+
+    const totalCandidates = schoolContext.totalCandidates ?? schoolStudents.length;
+    const totalPaperRegistered = schoolStudents.reduce(
+      (sum, student) => sum + (student.subjects?.length ?? 0),
+      0,
+    );
+    const schoolRegFee = 25_000;
+    const studentFeeRate = 27_000;
+    const studentFeeTotal = totalCandidates * studentFeeRate;
+    const lateRegFee = lateFee;
+    const artsCodes = new Set(level === "UACE" ? ["615", "640", "310", "320", "330", "340", "370", "360", "364", "366"] : ["612", "662", "208", "336", "314", "309", "337", "335", "345", "355", "365"]);
+    let artsPapers = 0;
+    let sciencesPapers = 0;
+    stats.forEach((value, key) => {
+      const count = value.p1.size + value.p2.size + value.p3.size + value.p4.size;
+      if (artsCodes.has(key)) artsPapers += count;
+      else sciencesPapers += count;
+    });
+    const artsMarking = artsPapers * 100;
+    const sciencesMarking = sciencesPapers * 100;
+    const answerBookletRate = 25_000;
+    const answerBookletQty = 0;
+    const answerBookletTotal = answerBookletRate * answerBookletQty;
+    const totalAmount =
+      schoolRegFee +
+      studentFeeTotal +
+      lateRegFee +
+      artsMarking +
+      sciencesMarking +
+      answerBookletTotal;
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 2;
+    let y = 8;
+
+    pdf.setFont("times", "bold");
+    pdf.setFontSize(6.8);
+    pdf.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, y, { align: "center" });
+    pdf.text(level === "UACE" ? "Appendix 2" : "Appendix 1", pageWidth - 3, y - 3, {
+      align: "right",
+    });
+    y += 3;
+
+    pdf.setFont("times", "normal");
+    pdf.setFontSize(6.6);
+    pdf.text(
+      `SUMMARY OF ENTRIES ${level}: YEAR ${schoolContext.academicYear ?? "2026"}.................... TOTAL CANDIDATES...............`,
+      margin,
+      y,
+    );
+    y += 3;
+    pdf.text(`NAME OF SCHOOL: ................................................................................. REF No. .......`, margin, y);
+    y += 3;
+    pdf.text(`DISTRICT...................... ZONE:......................... TELEPHONE:............................`, margin, y);
+    y += 3;
+    pdf.text(`NAME & SIGN OF HEAD.....................................................................................`, margin, y);
+    y += 3;
+    pdf.text(`CONTACT E-MAIL ADDRESS: .................................................................................`, margin, y);
+    y += 3.5;
+
+    pdf.setFont("times", "bold");
+    pdf.setFontSize(11);
+    pdf.text("SUBJECT", 12, y);
+    pdf.text("P      A      P      E      R      S", 70, y);
+    y += 1.5;
+
+    autoTable(pdf, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      tableWidth: pageWidth - margin * 2,
+      head: [["CODE", "NAME", "ENTRIES", "1", "2", "3", "4"]],
+      body: rows.map((row) => {
+        if (row.section) {
+          return ["", row.section, "", "", "", "", ""];
+        }
+        const rowStats = stats.get(row.key);
+        return [
+          row.code,
+          row.name,
+          String(rowStats?.entries.size ?? 0),
+          String(rowStats?.p1.size ?? 0),
+          String(rowStats?.p2.size ?? 0),
+          String(rowStats?.p3.size ?? 0),
+          String(rowStats?.p4.size ?? 0),
+        ];
+      }),
+      theme: "grid",
+      styles: {
+        font: "times",
+        fontSize: 6.3,
+        lineWidth: 0.25,
+        lineColor: [0, 0, 0],
+        textColor: [0, 0, 0],
+        cellPadding: { top: 0.8, right: 1, bottom: 0.8, left: 1 },
+      },
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        lineWidth: 0.25,
+        lineColor: [0, 0, 0],
+        fontStyle: "bold",
+      },
+      columnStyles: {
+        0: { cellWidth: 14, halign: "left", fontStyle: "bold" },
+        1: { cellWidth: 65 },
+        2: { cellWidth: 18, halign: "center", fontStyle: "bold" },
+        3: { cellWidth: 16, halign: "center" },
+        4: { cellWidth: 16, halign: "center" },
+        5: { cellWidth: 16, halign: "center" },
+        6: { cellWidth: 16, halign: "center" },
+      },
+      didParseCell: (hookData) => {
+        const row = rows[hookData.row.index];
+        if (hookData.section === "body" && row?.section) {
+          hookData.cell.styles.fontStyle = "bold";
+          if (hookData.column.index !== 1) hookData.cell.text = [""];
+        }
+      },
+    });
+
+    const summaryStartY = ((pdf as any).lastAutoTable?.finalY ?? y) - 0.4;
+    autoTable(pdf, {
+      startY: summaryStartY,
+      margin: { left: margin, right: margin },
+      tableWidth: pageWidth - margin * 2,
+      body: [
+        ["", "", "", "FOR OFFICIAL USE", "", "AMOUNT"],
+        ["", "", "", "SCHOOL REG FEE", "", schoolRegFee.toLocaleString()],
+        ["", "", "", "STUDENTS’ FEE", `${studentFeeRate.toLocaleString()}   X ${totalCandidates}`, ""],
+        ["", "", "", "LATE REG. FEE\n(If charged)", `2,000   X ______`, lateRegFee ? lateRegFee.toLocaleString() : ""],
+        ["", "", "", "MARKING GUIDE\nFEE", "ARTS", artsMarking.toLocaleString()],
+        ["", "", "", "", "SCIENCES", sciencesMarking.toLocaleString()],
+        ["TOTAL SUBJECT PAPER\nREGISTERED", "", "", "ANSWER\nBOOKLETS\n(optional)", `${answerBookletRate.toLocaleString()}/=  X ${answerBookletQty}`, ""],
+        ["", "", "", "TOTAL AMOUNT", "", totalAmount.toLocaleString()],
+        ["AMOUNT IN WORDS:", "", "", "", "", ""],
+        ["CHECKED BY", "", "", "", "DATE:", ""],
+      ],
+      theme: "grid",
+      styles: {
+        font: "times",
+        fontSize: 6.3,
+        lineWidth: 0.25,
+        lineColor: [0, 0, 0],
+        textColor: [0, 0, 0],
+        cellPadding: { top: 0.8, right: 1, bottom: 0.8, left: 1 },
+      },
+      columnStyles: {
+        0: { cellWidth: 14, fontStyle: "bold" },
+        1: { cellWidth: 51 },
+        2: { cellWidth: 16 },
+        3: { cellWidth: 28, fontStyle: "bold" },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 45, halign: "right", fontStyle: "bold" },
+      },
+      didParseCell: (hookData) => {
+        if (hookData.row.index === 0) hookData.cell.styles.fontStyle = "bold";
+        if (hookData.row.index === 6 && hookData.column.index === 0) hookData.cell.styles.halign = "center";
+        if (hookData.row.index === 9 && hookData.column.index === 4) hookData.cell.styles.halign = "left";
+      },
+    });
+
+    pdf.save(`${fileName}.pdf`);
+    toast.success(`${level} official form exported successfully`);
+  };
 
   const generateOfficialFormPDF = (
     level: "UACE" | "UCE",
@@ -725,6 +1083,210 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const generateUCEFormPDF = (rows: FormRow[], fileName: string) =>
     generateOfficialFormPDF("UCE", rows, fileName);
+
+  const generateAppendix2PDF = () => {
+    console.log("[DEBUG] Starting generateAppendix2PDF...");
+    try {
+      const summaryLevel = "UACE";
+      console.log(`[DEBUG] Level: ${summaryLevel}, Filtering students...`);
+      const summarySchoolCodes = new Set(
+        scopedStudents
+          .filter((student) => student.examLevel === summaryLevel)
+          .map((student) => student.schoolCode),
+      );
+      const summarySchools = scopedSchools.filter((school) => summarySchoolCodes.has(school.code));
+      const summaryStudents = scopedStudents.filter(
+        (student) =>
+          student.examLevel === summaryLevel && summarySchoolCodes.has(student.schoolCode),
+      );
+
+      console.log(`[DEBUG] Found ${summaryStudents.length} students for Appendix 2`);
+
+      if (summaryStudents.length === 0) {
+        toast.error("No UACE data available for PDF generation");
+        return;
+      }
+
+      const headerSchool =
+        selectedSchool !== "all" && summarySchoolCodes.has(selectedSchool)
+          ? scopedSchools.find((school) => school.code === selectedSchool)
+          : undefined;
+
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 10;
+      let y = 10;
+
+      // Header: Appendix 2
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text("Appendix 2", pageWidth - margin - 20, y);
+      y += 6;
+
+      // Title
+      pdf.setFontSize(12);
+      pdf.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, y, { align: "center" });
+      y += 5;
+
+      // Subtitle
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`SUMMARY OF ENTRIES UACE: YEAR 2026   TOTAL CANDIDATES: ${summaryStudents.length}`, margin, y);
+      y += 5;
+
+      // School Info Lines
+      const schoolName = headerSchool?.name || "............................................................................";
+      const schoolCode = headerSchool?.code || "..........";
+      pdf.text(`NAME OF SCHOOL: ${schoolName}   REF No. ${schoolCode}`, margin, y);
+      y += 5;
+
+      const district = headerSchool?.district || "...........................";
+      const zone = headerSchool?.zone || "...........................";
+      const telephone = headerSchool?.telephone || "...........................";
+      pdf.text(`DISTRICT: ${district}   ZONE: ${zone}   TELEPHONE: ${telephone}`, margin, y);
+      y += 5;
+
+      pdf.text("NAME & SIGN OF HEAD: ...................................................................................................", margin, y);
+      y += 5;
+
+      const email = headerSchool?.contactEmail || "............................................................................";
+      pdf.text(`CONTACT E-MAIL ADDRESS: ${email}`, margin, y);
+      y += 6;
+
+      // Subject Table Header Label
+      pdf.setFont("helvetica", "bold");
+      pdf.text("SUBJECT", margin, y);
+      pdf.text("P     A     P     E     R     S", margin + 145, y, { align: "center" });
+      y += 1;
+
+      // Prepare Table Data
+      const tableData = appendixUACE.map((subj) => {
+        if (subj.section) {
+          return [
+            { content: subj.section, colSpan: 2, styles: { fontStyle: "bold", halign: "left" } },
+            "", "", "", "", ""
+          ];
+        }
+
+        const subjectStudents = summaryStudents.filter(s => 
+          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key)
+        );
+        
+        const entries = subjectStudents.length;
+        
+        // Paper counts
+        const p1 = subjectStudents.filter(s => 
+          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "1")
+        ).length;
+        const p2 = subjectStudents.filter(s => 
+          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "2")
+        ).length;
+        const p3 = subjectStudents.filter(s => 
+          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "3")
+        ).length;
+        const p4 = subjectStudents.filter(s => 
+          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "4")
+        ).length;
+
+        return [
+          `${subj.code} ${subj.name}`,
+          entries > 0 ? String(entries) : "",
+          p1 > 0 ? String(p1) : "",
+          p2 > 0 ? String(p2) : "",
+          p3 > 0 ? String(p3) : "",
+          p4 > 0 ? String(p4) : ""
+        ];
+      });
+
+      autoTable(pdf, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        head: [["CODE NAME", "ENTRIES", "1", "2", "3", "4"]],
+        body: tableData,
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          cellPadding: 1,
+          lineWidth: 0.2,
+          lineColor: [0, 0, 0],
+          textColor: [0, 0, 0],
+        },
+        headStyles: {
+          fillColor: [255, 255, 255],
+          fontStyle: "bold",
+          halign: "center",
+        },
+        columnStyles: {
+          0: { cellWidth: 80, halign: "left" },
+          1: { cellWidth: 25, halign: "center" },
+          2: { cellWidth: 20, halign: "center" },
+          3: { cellWidth: 20, halign: "center" },
+          4: { cellWidth: 20, halign: "center" },
+          5: { cellWidth: 20, halign: "center" },
+        },
+      });
+
+      y = (pdf as any).lastAutoTable.finalY;
+
+      // Bottom Section
+      const bottomTableData = [
+        ["", "", "FOR OFFICIAL USE", "AMOUNT"],
+        ["", "", "SCHOOL REG FEE", "25,000"],
+        ["", "", { content: "STUDENTS’ FEE", styles: { valign: "middle" } }, { content: "27,000 X _______", styles: { halign: "left" } }],
+        ["", "", { content: "LATE REG. FEE\n(If charged)", styles: { valign: "middle" } }, { content: "2,000 X _______", styles: { halign: "left" } }],
+        ["", "", "MARKING GUIDE\nFEE", { content: "ARTS                       25,000\nSCIENCES                25,000", styles: { halign: "left" } }],
+        [{ content: "TOTAL SUBJECT PAPER REGISTERED", colSpan: 2, rowSpan: 2, styles: { halign: "center", valign: "middle", fontStyle: "bold", fontSize: 10 } }, 
+         { content: "ANSWER BOOKLETS\n(optional)", styles: { fontStyle: "bold" } }, "25,000/= X _______"],
+        ["TOTAL AMOUNT", ""],
+      ];
+
+      autoTable(pdf, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        body: bottomTableData,
+        theme: "grid",
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          lineWidth: 0.2,
+          lineColor: [0, 0, 0],
+          textColor: [0, 0, 0],
+        },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 60, fontStyle: "bold" },
+          3: { cellWidth: 50 },
+        },
+        didParseCell: (data) => {
+          if (data.row.index === 0) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.halign = "center";
+          }
+          // Hide borders for the empty cells in the first few rows
+          if (data.row.index < 5 && data.column.index < 2) {
+            data.cell.styles.lineWidth = 0;
+          }
+        }
+      });
+
+      y = (pdf as any).lastAutoTable.finalY + 5;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.text("AMOUNT IN WORDS: ..........................................................................................................", margin, y);
+      y += 7;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.text("CHECKED BY", margin, y);
+      pdf.text("DATE: ...........................................................", pageWidth - margin - 80, y);
+
+      pdf.save("WAKISSHA-Appendix-2-UACE.pdf");
+      toast.success("Appendix 2 PDF generated successfully");
+    } catch (error) {
+      toast.error("Failed to generate Appendix 2 PDF");
+      console.error(error);
+    }
+  };
 
   const generateReadableSummaryPDF = () => {
     try {
@@ -1203,35 +1765,49 @@ export function Reports({ onPageChange }: ReportsProps) {
           student.schoolCode === selected.code &&
           student.examLevel === selectedSchoolReportLevel,
       );
+      const groupedStudents = new Map<string, (typeof rows)[number]>();
+      rows.forEach((student) => {
+        const key = student.id || student.registrationNumber;
+        if (!groupedStudents.has(key)) {
+          groupedStudents.set(key, student);
+        } else {
+          const existing = groupedStudents.get(key)!;
+          const mergedSubjects = [...(existing.subjects ?? []), ...(student.subjects ?? [])];
+          groupedStudents.set(key, { ...existing, subjects: mergedSubjects });
+        }
+      });
+      const studentRows = Array.from(groupedStudents.values());
+
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(14);
       pdf.text("WAKISSHA STUDENTS REGISTERED LIST", 105, 16, { align: "center" });
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      pdf.text(`School: ${selected.name}`, 14, 24);
-      pdf.text(`Level: ${selectedSchoolReportLevel}   Academic Year: ${selected.academicYear}`, 14, 29);
+      pdf.setFontSize(9.5);
+      const headerY = 24;
+      pdf.text(`School: ${selected.name}`, 14, headerY);
+      pdf.text(`Level: ${selectedSchoolReportLevel}`, 100, headerY, { align: "center" });
+      pdf.text(`Academic Year: ${selected.academicYear ?? "2026"}`, 196, headerY, { align: "right" });
 
       autoTable(pdf, {
-        startY: 34,
+        startY: 30,
         margin: { left: 12, right: 12 },
-        head: [["Reg No", "Student Name", "Subject Code", "Subject Name", "Paper"]],
-        body: rows.flatMap((student) =>
-          (student.subjects ?? []).map((subj) => [
-            student.registrationNumber,
-            student.studentName,
-            subj.subjectStandardCode ??
-              subjectLookup.get(`${student.examLevel}:${subj.subjectCode.toUpperCase()}`)?.standardCode ??
-              subj.subjectCode,
-            subj.subjectName ||
-              subjectLookup.get(`${student.examLevel}:${subj.subjectCode.toUpperCase()}`)?.name ||
-              subj.subjectCode,
-            subj.paper || "-",
-          ])
-        ),
-        styles: { fontSize: 8.2, lineWidth: 0.5, lineColor: [0, 0, 0], textColor: [0, 0, 0] },
+        head: [["Reg No", "Student Name", "Exam Level", "Subjects (Code/Paper)"]],
+        body: studentRows.map((student) => [
+          student.registrationNumber,
+          student.studentName,
+          student.examLevel,
+          buildStudentSubjectsDisplay(student, subjectLookup),
+        ]),
+        styles: { fontSize: 8.5, lineWidth: 0.45, lineColor: [0, 0, 0], textColor: [0, 0, 0], cellPadding: 1.8, valign: "top" },
         headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: "bold", lineColor: [0, 0, 0], lineWidth: 0.5 },
         alternateRowStyles: { fillColor: [255, 255, 255], lineColor: [0, 0, 0], textColor: [0, 0, 0] },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 42 },
+          2: { cellWidth: 20, halign: "center" },
+          3: { cellWidth: "auto" },
+        },
       });
 
       pdf.save(`Students-List-${selected.code}-${selectedSchoolReportLevel}.pdf`);
@@ -1254,23 +1830,26 @@ export function Reports({ onPageChange }: ReportsProps) {
           student.schoolCode === selected.code &&
           student.examLevel === selectedSchoolReportLevel,
       );
+      const groupedStudents = new Map<string, (typeof rows)[number]>();
+      rows.forEach((student) => {
+        const key = student.id || student.registrationNumber;
+        if (!groupedStudents.has(key)) {
+          groupedStudents.set(key, student);
+        } else {
+          const existing = groupedStudents.get(key)!;
+          const mergedSubjects = [...(existing.subjects ?? []), ...(student.subjects ?? [])];
+          groupedStudents.set(key, { ...existing, subjects: mergedSubjects });
+        }
+      });
+      const studentRows = Array.from(groupedStudents.values());
+
       const worksheet = XLSXUtils.json_to_sheet(
-        rows.flatMap((student) =>
-          (student.subjects ?? []).map((subj) => ({
-            RegistrationNumber: student.registrationNumber,
-            StudentName: student.studentName,
-            ExamLevel: student.examLevel,
-            SubjectCode:
-              subj.subjectStandardCode ??
-              subjectLookup.get(`${student.examLevel}:${subj.subjectCode.toUpperCase()}`)?.standardCode ??
-              subj.subjectCode,
-            SubjectName:
-              subj.subjectName ||
-              subjectLookup.get(`${student.examLevel}:${subj.subjectCode.toUpperCase()}`)?.name ||
-              subj.subjectCode,
-            Paper: subj.paper || "-",
-          }))
-        ),
+        studentRows.map((student) => ({
+          RegistrationNumber: student.registrationNumber,
+          StudentName: student.studentName,
+          ExamLevel: student.examLevel,
+          Subjects: buildStudentSubjectsDisplay(student, subjectLookup),
+        })),
       );
       const workbook = XLSXUtils.book_new();
       XLSXUtils.book_append_sheet(workbook, worksheet, "StudentsList");
@@ -1283,6 +1862,7 @@ export function Reports({ onPageChange }: ReportsProps) {
   };
 
   const handleExport = async (format: "pdf" | "excel", reportType: string) => {
+    console.log(`[DEBUG] handleExport called with format: ${format}, reportType: ${reportType}`);
     const key = buildExportKey(format, reportType);
     if (exportingKey) return;
     setExportingKey(key);
@@ -1317,7 +1897,10 @@ export function Reports({ onPageChange }: ReportsProps) {
       } else if (reportType === "Quick Summary") {
         generateUACEFormExcel(consolidatedRows, "UACE-quick-summary");
       } else if (reportType === "Readable Summary") {
-        generateReadableSummaryPDF();
+        console.log("[DEBUG] Triggering Appendix 2 PDF generator (NEW FORMAT)");
+        // DISCONNECTED OLD LOGIC: generateReadableSummaryPDF();
+        // CONNECTED NEW LOGIC:
+        generateAppendix2PDF();
       } else if (reportType === "Single School") {
         if (format === "pdf") {
           exportSingleSchoolToPDF("Single-School-Report");
@@ -1345,6 +1928,8 @@ export function Reports({ onPageChange }: ReportsProps) {
         } else {
           exportSelectedSchoolStudentsExcel();
         }
+      } else if (reportType === "Appendix 2 Form") {
+        generateAppendix2PDF();
       }
     } finally {
       setExportingKey(null);
@@ -1352,7 +1937,7 @@ export function Reports({ onPageChange }: ReportsProps) {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 anim-fade-up">
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 anim-fade-up">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
@@ -1388,7 +1973,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-3">
         {summaryCards.map((card) => (
           <Card key={card.label} className={`border-l-4 ${card.className}`}>
             <CardContent className="pt-6">
@@ -1401,7 +1986,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         ))}
       </div>
 
-      <Tabs defaultValue={isAdmin ? "consolidated" : "school-wise"} className="space-y-4">
+      <Tabs defaultValue={isAdmin ? "consolidated" : "school-wise"} className="space-y-3">
         <TabsList className={`grid w-full ${isAdmin ? "grid-cols-3" : "grid-cols-1"}`}>
           {isAdmin && <TabsTrigger value="consolidated">Consolidated</TabsTrigger>}
           {isAdmin && <TabsTrigger value="subject-wise">Subject-Wise</TabsTrigger>}
@@ -1657,7 +2242,7 @@ export function Reports({ onPageChange }: ReportsProps) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="school-wise">
+        <TabsContent value="school-wise" className="mt-0">
           <Card>
             <CardHeader className="border-b border-slate-200 py-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1729,14 +2314,14 @@ export function Reports({ onPageChange }: ReportsProps) {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4">
               {!selectedSchoolData || !selectedSchoolProfile ? (
                 <div className="bg-white shadow-sm border border-slate-200 rounded-2xl py-16 text-center text-slate-500">
                   <School className="mx-auto mb-3 h-12 w-12 opacity-50" />
                   <p>Select a school to view the detailed report.</p>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                     <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                       <div className="min-w-0 space-y-0.5">
@@ -1758,11 +2343,9 @@ export function Reports({ onPageChange }: ReportsProps) {
                         </div>
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                            Activation Code
+                            Payment Status
                           </p>
-                          <p className="mt-1 font-semibold text-slate-900">
-                            {selectedSchoolData.activationCode || "Pending activation"}
-                          </p>
+                          <div className="mt-1">{getStatusBadge(selectedSchoolData.status)}</div>
                         </div>
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -1776,7 +2359,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <Card className="border-l-4 border-l-red-600">
                       <CardContent className="pt-6">
                         <p className="text-sm text-slate-500">Total Students</p>
@@ -1795,20 +2378,12 @@ export function Reports({ onPageChange }: ReportsProps) {
                         </p>
                       </CardContent>
                     </Card>
-                    <Card className="border-l-4 border-l-blue-500">
-                      <CardContent className="pt-6">
-                        <p className="text-sm text-slate-500">Fees Status</p>
-                        <div className="mt-3">
-                          {getStatusBadge(selectedSchoolData.status)}
-                        </div>
-                      </CardContent>
-                    </Card>
                   </div>
 
-                  <div className="flex flex-wrap justify-end gap-2">
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                     <Button
                       variant="outline"
-                      size="sm"
+                      className="w-full justify-center"
                       onClick={() => handleExport("pdf", "Single School")}
                       disabled={isExporting("pdf", "Single School")}
                     >
@@ -1826,7 +2401,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
+                      className="w-full justify-center"
                       onClick={() => handleExport("excel", "Single School")}
                       disabled={isExporting("excel", "Single School")}
                     >
@@ -1844,7 +2419,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
+                      className="w-full justify-center"
                       onClick={() => handleExport("pdf", "School Students List")}
                       disabled={isExporting("pdf", "School Students List")}
                     >
@@ -1862,7 +2437,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                     </Button>
                     <Button
                       variant="outline"
-                      size="sm"
+                      className="w-full justify-center"
                       onClick={() => handleExport("excel", "School Students List")}
                       disabled={isExporting("excel", "School Students List")}
                     >
@@ -1878,6 +2453,26 @@ export function Reports({ onPageChange }: ReportsProps) {
                         </>
                       )}
                     </Button>
+                    {selectedSchoolReportLevel === "UACE" && (
+                      <Button
+                        variant="default"
+                        className="w-full justify-center bg-red-600 hover:bg-red-700 text-white"
+                        onClick={() => handleExport("pdf", "Appendix 2 Form")}
+                        disabled={isExporting("pdf", "Appendix 2 Form")}
+                      >
+                        {isExporting("pdf", "Appendix 2 Form") ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4" />
+                            Appendix 2 Form (PDF)
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
