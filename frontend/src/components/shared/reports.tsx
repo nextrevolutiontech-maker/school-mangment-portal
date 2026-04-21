@@ -663,7 +663,7 @@ export function Reports({ onPageChange }: ReportsProps) {
     return row;
   };
 
-  const summaryCards = [
+  const summaryCards = isAdmin ? [
     {
       label: "Registered Schools",
       value: scopedSchools.length,
@@ -680,6 +680,25 @@ export function Reports({ onPageChange }: ReportsProps) {
       label: "Active Schools",
       value: scopedSchools.filter((school) => school.status === "active").length,
       className: "border-l-green-500",
+      valueClass: "text-slate-900",
+    },
+  ] : [
+    {
+      label: "My Registered Students",
+      value: scopedStudents.length,
+      className: "border-l-blue-600",
+      valueClass: "text-slate-900",
+    },
+    {
+      label: "Subjects Registered",
+      value: new Set(scopedStudents.flatMap(s => s.subjects?.map(subj => mapSubjectCode(subj.subjectCode)) ?? [])).size,
+      className: "border-l-orange-500",
+      valueClass: "text-slate-900",
+    },
+    {
+      label: "Total Papers",
+      value: scopedStudents.reduce((acc, s) => acc + (s.subjects?.length ?? 0), 0),
+      className: "border-l-indigo-500",
       valueClass: "text-slate-900",
     },
   ];
@@ -2036,8 +2055,9 @@ export function Reports({ onPageChange }: ReportsProps) {
           </p>
           <h1 className="text-3xl font-bold text-shimmer">Reports</h1>
           <p className="max-w-3xl text-slate-500">
-            Generate UACE consolidated exports, subject-wise breakdowns, and
-            dynamic single-school reports for the Phase 1 frontend demo.
+            {isAdmin 
+              ? "Generate UACE consolidated exports, subject-wise breakdowns, and dynamic single-school reports for the WAKISSHA portal."
+              : "Generate and download your official school registration summary and student subject breakdown."}
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">

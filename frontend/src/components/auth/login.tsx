@@ -38,33 +38,6 @@ export function Login() {
     }
   };
 
-  const demoAccounts = [
-    {
-      identifier: "admin@wakissha.ug",
-      password: "wakissha2026",
-      role: "WAKISSHA Admin",
-      description: "Full system access - schools, payments, reports",
-    },
-    {
-      identifier: "WAK26-0001",
-      password: "demo123",
-      role: "AMITY SECONDARY SCHOOL",
-      description: "Active school - can add students and submit forms",
-    },
-    {
-      identifier: "WAK26-0002",
-      password: "demo123",
-      role: "Wakiso Hills College",
-      description: "Verified - payment confirmed, awaiting activation",
-    },
-    {
-      identifier: "WAK26-0003",
-      password: "demo123",
-      role: "Entebbe High School",
-      description: "Pending - awaiting payment verification",
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-[#F4F7FC] p-4 text-slate-900 sm:p-6">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col justify-center gap-6">
@@ -216,30 +189,6 @@ export function Login() {
             </div>
           </div>
         </Card>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {demoAccounts.map((account) => (
-            <button
-              key={account.identifier}
-              type="button"
-              className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4 text-left transition-all duration-200 ease-in-out hover:border-blue-200 hover:bg-blue-50 hover:-translate-y-1 hover:shadow-md"
-              onClick={() => {
-                setIdentifier(account.identifier);
-                setPassword(account.password);
-              }}
-            >
-              <p className="text-sm font-semibold text-slate-900">
-                {account.role}
-              </p>
-              <p className="mt-1 text-xs font-medium text-blue-700">
-                {account.identifier}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                {account.description}
-              </p>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
