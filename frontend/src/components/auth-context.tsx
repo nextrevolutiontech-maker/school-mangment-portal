@@ -304,6 +304,8 @@ const initialSubjects: Subject[] = [
   { id: "subj-21-uce", name: "Technical & Design", code: "TD", standardCode: "745", educationLevel: "UCE", optional: true },
   { id: "subj-22", name: "ICT", code: "CPS", standardCode: "840", educationLevel: "UCE", optional: true },
   { id: "subj-23-uce", name: "Entrepreneurship", code: "ENT", standardCode: "845", educationLevel: "UCE", optional: true },
+  { id: "subj-ateso-uce", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UCE", optional: true },
+  { id: "subj-chinese-uce", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UCE", optional: true },
   // UACE Subjects
   { id: "subj-24", name: "General Paper", code: "GP", standardCode: "101", educationLevel: "UACE", optional: false },
   { id: "subj-25", name: "Subsidiary Mathematics", code: "SUB_MATHS", standardCode: "475", educationLevel: "UACE", optional: true },
@@ -326,6 +328,11 @@ const initialSubjects: Subject[] = [
   { id: "subj-19-uace", name: "Fine Art", code: "ART", standardCode: "615", educationLevel: "UACE", optional: true },
   { id: "subj-21-uace", name: "Technical Drawing", code: "TD", standardCode: "680", educationLevel: "UACE", optional: true },
   { id: "subj-23-uace", name: "Entrepreneurship", code: "ENT", standardCode: "268", educationLevel: "UACE", optional: true },
+  { id: "subj-econ-uace", name: "Economics", code: "ECON", standardCode: "220", educationLevel: "UACE", optional: true },
+  { id: "subj-hist-uace", name: "History", code: "HIST", standardCode: "210", educationLevel: "UACE", optional: true },
+  { id: "subj-fn-uace", name: "Food and Nutrition", code: "FN", standardCode: "640", educationLevel: "UACE", optional: true },
+  { id: "subj-chinese-uace", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UACE", optional: true },
+  { id: "subj-ateso-uace", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UACE", optional: true },
 ];
 
 const initialSchools: SchoolRecord[] = [

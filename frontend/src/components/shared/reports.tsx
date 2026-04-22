@@ -53,7 +53,7 @@ const formBaseColumns: FormColumn[] = [
   { key: "schoolName", label: "Name of school" },
   { key: "district", label: "District" },
   { key: "zone", label: "Zone / Centre" },
-  { key: "registeredSubjects", label: "Registered subjects" },
+  { key: "candidatesRegistered", label: "Candidates Registered" },
   { key: "telephone", label: "Telephone" },
 ];
 
@@ -463,6 +463,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       : students;
   const [selectedSchool, setSelectedSchool] = useState("all");
   const [selectedSubjectCode, setSelectedSubjectCode] = useState("all");
+  const [subjectWiseLevelFilter, setSubjectWiseLevelFilter] = useState<"UCE" | "UACE">("UCE");
   const [selectedSchoolReportLevel, setSelectedSchoolReportLevel] = useState<"UCE" | "UACE">("UCE");
   const [exportingKey, setExportingKey] = useState<string | null>(null);
   const [educationLevelFilter, setEducationLevelFilter] = useState<EducationLevelFilter>("UCE");
@@ -522,7 +523,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         schoolName: school.name,
         district: school.district,
         zone: school.zone,
-        registeredSubjects,
+        candidatesRegistered: schoolStudents.length,
         telephone: school.phone,
       };
 
@@ -537,39 +538,37 @@ export function Reports({ onPageChange }: ReportsProps) {
 
   const subjectWiseData = useMemo<SubjectWiseReportRow[]>(
     () =>
-      ["UCE", "UACE"].flatMap((level) =>
-        getOfficialSubjectRows(level).map((subject) => {
-          const subjectStudents = new Set<string>();
-          const subjectSchools = new Set<string>();
-          let totalEntries = 0;
+      getOfficialSubjectRows(subjectWiseLevelFilter).map((subject) => {
+        const subjectStudents = new Set<string>();
+        const subjectSchools = new Set<string>();
+        let totalEntries = 0;
 
-          scopedStudents.forEach((student) => {
-            if (student.examLevel !== level) return;
+        scopedStudents.forEach((student) => {
+          if (student.examLevel !== subjectWiseLevelFilter) return;
 
-            const matchingEntries =
-              student.subjects?.filter(
-                (entry) => mapSubjectCode(entry.subjectCode) === subject.key,
-              ) ?? [];
+          const matchingEntries =
+            student.subjects?.filter(
+              (entry) => mapSubjectCode(entry.subjectCode) === subject.key,
+            ) ?? [];
 
-            if (matchingEntries.length > 0) {
-              subjectStudents.add(student.id);
-              subjectSchools.add(student.schoolCode);
-              totalEntries += matchingEntries.length;
-            }
-          });
+          if (matchingEntries.length > 0) {
+            subjectStudents.add(student.id);
+            subjectSchools.add(student.schoolCode);
+            totalEntries += matchingEntries.length;
+          }
+        });
 
-          return {
-            key: buildSubjectLevelKey(subject.key, level),
-            code: subject.code,
-            subject: subject.name,
-            level,
-            totalSchools: subjectSchools.size,
-            totalStudents: subjectStudents.size,
-            totalEntries,
-          };
-        }),
-      ),
-    [scopedStudents],
+        return {
+          key: buildSubjectLevelKey(subject.key, subjectWiseLevelFilter),
+          code: subject.code,
+          subject: subject.name,
+          level: subjectWiseLevelFilter,
+          totalSchools: subjectSchools.size,
+          totalStudents: subjectStudents.size,
+          totalEntries,
+        };
+      }),
+    [scopedStudents, subjectWiseLevelFilter],
   );
 
   const subjectStudentsList = useMemo(() => {
@@ -731,7 +730,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       row.schoolName,
       row.district,
       row.zone,
-      row.registeredSubjects,
+      row.candidatesRegistered,
       row.telephone,
       ...subjectsColumns.map((subject) => row[subject.key] ?? 0),
     ]);
@@ -1035,7 +1034,7 @@ export function Reports({ onPageChange }: ReportsProps) {
           pdf.text(`Email: ${schoolContext.contactEmail}`, margin + 2, yPos);
           yPos += 3;
         }
-        const totalCandidates = schoolContext.totalCandidates ?? rows.reduce((sum, row) => sum + Number(row.registeredSubjects || 0), 0);
+        const totalCandidates = schoolContext.totalCandidates ?? rows.reduce((sum, row) => sum + Number(row.candidatesRegistered || 0), 0);
         pdf.text(`Total Candidates: ${totalCandidates}`, margin + 2, yPos);
         yPos += 5;
       }
@@ -1056,10 +1055,24 @@ export function Reports({ onPageChange }: ReportsProps) {
         row.schoolName,
         row.district,
         row.zone,
-        row.registeredSubjects,
+        row.candidatesRegistered,
         row.telephone,
         ...subjectsColumns.map((subject) => String(row[subject.key] ?? 0)),
       ]);
+
+      // Add Totals Row
+      const totalsRow = [
+        "TOTALS",
+        "",
+        "",
+        "",
+        String(rows.reduce((sum, r) => sum + (Number(r.candidatesRegistered) || 0), 0)),
+        "-",
+        ...subjectsColumns.map((subj) => 
+          String(rows.reduce((sum, r) => sum + (Number(r[subj.key]) || 0), 0))
+        )
+      ];
+      tableData.push(totalsRow);
 
       // BLACK & WHITE TABLE ONLY - No colors, no styling
       // Calculate dynamic column widths to fit all subjects on landscape page
@@ -1067,7 +1080,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       const totalCols = tableHeaders.length;
       
       // Allocate proportional widths
-      // Base columns: Ref(10), School(35), District(15), Zone(18), Subjects(12), Phone(15) = 105mm
+      // Base columns: Ref(10), School(35), District(15), Zone(18), Candidates(12), Phone(15) = 105mm
       // Remaining width for subject columns
       const baseColsWidth = 10 + 35 + 15 + 18 + 12 + 15;
       const subjectColsWidth = Math.max(usableWidth - baseColsWidth, 50);
@@ -1079,7 +1092,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       columnStylesObj[1] = { cellWidth: 35, halign: "left", fontSize: 6 };    // School Name
       columnStylesObj[2] = { cellWidth: 15, halign: "center", fontSize: 6 };  // District
       columnStylesObj[3] = { cellWidth: 18, halign: "center", fontSize: 6 };  // Zone
-      columnStylesObj[4] = { cellWidth: 12, halign: "center", fontSize: 6 };  // Registered Subjects
+      columnStylesObj[4] = { cellWidth: 12, halign: "center", fontSize: 6 };  // Candidates Registered
       columnStylesObj[5] = { cellWidth: 15, halign: "center", fontSize: 6 };  // Telephone
       for (let i = 6; i < totalCols; i++) {
         columnStylesObj[i] = { cellWidth: subjectColWidth, halign: "center", fontSize: 5.5 };
@@ -1116,11 +1129,31 @@ export function Reports({ onPageChange }: ReportsProps) {
           lineColor: [0, 0, 0],
           textColor: [0, 0, 0],
         },
+        didParseCell: (data) => {
+          // Style totals row
+          if (data.row.index === tableData.length - 1) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [245, 245, 245];
+          }
+        }
       });
 
       // Signature section
       const finalY = (pdf as any).lastAutoTable?.finalY ?? 150;
       let sigY = finalY + 15;
+
+      // Add dynamic totals section below table if needed
+      const summaryData = calculateFeeSummary(rows);
+      
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      pdf.text("SUMMARY TOTALS:", margin, sigY);
+      sigY += 5;
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`Total Candidates: ${summaryData.totalStudents}`, margin + 2, sigY);
+      sigY += 4;
+      pdf.text(`Total Amount: ${summaryData.totalAmount.toLocaleString()} UGX`, margin + 2, sigY);
+      sigY += 10;
 
       if (schoolContext && schoolContext.contactPerson) {
         pdf.setFont("helvetica", "normal");
@@ -1148,26 +1181,15 @@ export function Reports({ onPageChange }: ReportsProps) {
   const generateUCEFormPDF = (rows: FormRow[], fileName: string) =>
     generateOfficialFormPDF("UCE", rows, fileName);
 
-  const generateAppendix2PDF = () => {
-    console.log("[DEBUG] Starting generateAppendix2PDF...");
+  const generateSummaryPDF = (level: "UCE" | "UACE") => {
+    console.log(`[DEBUG] Starting generateSummaryPDF for ${level}...`);
     try {
-      const summaryLevel = "UACE";
-      console.log(`[DEBUG] Level: ${summaryLevel}, Filtering students...`);
-      const summarySchoolCodes = new Set(
-        scopedStudents
-          .filter((student) => student.examLevel === summaryLevel)
-          .map((student) => student.schoolCode),
-      );
-      const summarySchools = scopedSchools.filter((school) => summarySchoolCodes.has(school.code));
       const summaryStudents = scopedStudents.filter(
-        (student) =>
-          student.examLevel === summaryLevel && summarySchoolCodes.has(student.schoolCode),
+        (student) => student.examLevel === level
       );
-
-      console.log(`[DEBUG] Found ${summaryStudents.length} students for Appendix 2`);
 
       if (summaryStudents.length === 0) {
-        toast.error("No UACE data available for PDF generation");
+        toast.error(`No ${level} data available for PDF generation`);
         return;
       }
 
@@ -1184,37 +1206,27 @@ export function Reports({ onPageChange }: ReportsProps) {
       // Calculations
       const totalStudentsCount = summaryStudents.length;
       const schoolRegFee = 25000; // Fixed per school
-      const studentsFee = totalStudentsCount * 27000;
+      const studentFeeRate = level === "UACE" ? 27000 : 25000;
+      const studentsFee = totalStudentsCount * studentFeeRate;
       
-      // LATE REG FEE - Only for students registered after a certain date (simulated for now)
-      // In a real scenario, you'd check student.registrationDate
       const lateStudentsCount = summaryStudents.filter(s => {
         if (!s.registrationDate) return false;
         const regDate = new Date(s.registrationDate);
-        const deadline = new Date("2026-04-15"); // Example deadline
+        const deadline = new Date("2026-04-15");
         return regDate > deadline;
       }).length;
       const lateRegFeeAmount = lateStudentsCount * (lateFee || 2000);
 
-      const markingGuideFeeArts = 25000; // Fixed
-      const markingGuideFeeSciences = 25000; // Fixed
+      const markingGuideFeeArts = 25000; 
+      const markingGuideFeeSciences = 25000; 
       
-      // ANSWER BOOKLETS - Optional, simulated input for now (could be a state/prop)
-      // Defaulting to total students for now as per "Allow input" requirement
       const bookletRequestedCount = totalStudentsCount; 
       const answerBookletsFee = bookletRequestedCount * 25000;
       
       const totalAmount = schoolRegFee + studentsFee + lateRegFeeAmount + markingGuideFeeArts + markingGuideFeeSciences + answerBookletsFee;
 
-      let totalSubjectPapersRegistered = 0;
-
-      // Header: Appendix 2
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.text("Appendix 2", pageWidth - margin - 20, y);
-      y += 6;
-
       // Title
+      pdf.setFont("helvetica", "bold");
       pdf.setFontSize(12);
       pdf.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, y, { align: "center" });
       y += 5;
@@ -1222,7 +1234,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       // Subtitle
       pdf.setFontSize(10);
       pdf.setFont("helvetica", "normal");
-      pdf.text(`SUMMARY OF ENTRIES UACE: YEAR 2026   TOTAL CANDIDATES: ${totalStudentsCount}`, margin, y);
+      pdf.text(`SUMMARY OF ENTRIES ${level}: YEAR 2026   TOTAL CANDIDATES: ${totalStudentsCount}`, margin, y);
       y += 5;
 
       // School Info Lines
@@ -1246,72 +1258,49 @@ export function Reports({ onPageChange }: ReportsProps) {
 
       // Subject Table Header Label
       pdf.setFont("helvetica", "bold");
-      pdf.text("SUBJECT", margin, y);
-      pdf.text("P     A     P     E     R     S", margin + 145, y, { align: "center" });
+      pdf.text("SUBJECT ENTRIES SUMMARY", margin, y);
       y += 1;
 
       // Prepare Table Data
-      const tableData = appendixUACE.map((subj) => {
+      const appendixRows = level === "UCE" ? appendixUCE : appendixUACE;
+      const tableData = appendixRows.map((subj) => {
         if (subj.section) {
           return [
             { content: subj.section, colSpan: 2, styles: { fontStyle: "bold", halign: "left" } },
-            "", "", "", "", ""
+            ""
           ];
         }
 
-        // 1. ENTRIES: Total unique students who selected this subject
         const subjectStudents = summaryStudents.filter(s => 
           s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key)
         );
         
         const entries = subjectStudents.length;
         
-        // 2. Paper counts: Independent counts for each paper (1, 2, 3, 4)
-        // Rule: If count is 0, show "-"
-        const p1Count = subjectStudents.reduce((count, s) => {
-          const hasPaper = s.subjects?.some(sub => 
-            mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "1"
-          );
-          return count + (hasPaper ? 1 : 0);
-        }, 0);
-
-        const p2Count = subjectStudents.reduce((count, s) => {
-          const hasPaper = s.subjects?.some(sub => 
-            mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "2"
-          );
-          return count + (hasPaper ? 1 : 0);
-        }, 0);
-
-        const p3Count = subjectStudents.reduce((count, s) => {
-          const hasPaper = s.subjects?.some(sub => 
-            mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "3"
-          );
-          return count + (hasPaper ? 1 : 0);
-        }, 0);
-
-        const p4Count = subjectStudents.reduce((count, s) => {
-          const hasPaper = s.subjects?.some(sub => 
-            mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "4"
-          );
-          return count + (hasPaper ? 1 : 0);
-        }, 0);
-
-        totalSubjectPapersRegistered += (p1Count + p2Count + p3Count + p4Count);
-
         return [
           `${subj.code} ${subj.name}`,
-          entries > 0 ? String(entries) : "-",
-          p1Count > 0 ? String(p1Count) : "-",
-          p2Count > 0 ? String(p2Count) : "-",
-          p3Count > 0 ? String(p3Count) : "-",
-          p4Count > 0 ? String(p4Count) : "-"
+          entries > 0 ? String(entries) : "-"
         ];
       });
+
+      // Add Totals Row to Table Data
+      const totalSubjectEntries = appendixRows.reduce((sum, subj) => {
+        if (subj.section) return sum;
+        const count = summaryStudents.filter(s => 
+          s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key)
+        ).length;
+        return sum + count;
+      }, 0);
+
+      tableData.push([
+        { content: "TOTAL CANDIDATES PER SUBJECT", styles: { fontStyle: "bold", halign: "right" } },
+        { content: String(totalSubjectEntries), styles: { fontStyle: "bold", halign: "center" } }
+      ]);
 
       autoTable(pdf, {
         startY: y,
         margin: { left: margin, right: margin },
-        head: [["CODE NAME", "ENTRIES", "1", "2", "3", "4"]],
+        head: [["CODE NAME", "Total number of candidates registering that subject"]],
         body: tableData,
         theme: "grid",
         styles: {
@@ -1327,12 +1316,8 @@ export function Reports({ onPageChange }: ReportsProps) {
           halign: "center",
         },
         columnStyles: {
-          0: { cellWidth: 80, halign: "left" },
-          1: { cellWidth: 25, halign: "center" },
-          2: { cellWidth: 20, halign: "center" },
-          3: { cellWidth: 20, halign: "center" },
-          4: { cellWidth: 20, halign: "center" },
-          5: { cellWidth: 20, halign: "center" },
+          0: { cellWidth: 100, halign: "left" },
+          1: { cellWidth: 90, halign: "center" },
         },
       });
 
@@ -1342,10 +1327,10 @@ export function Reports({ onPageChange }: ReportsProps) {
       const bottomTableData = [
         ["", "", "FOR OFFICIAL USE", "AMOUNT"],
         ["", "", "SCHOOL REG FEE", schoolRegFee.toLocaleString()],
-        ["", "", { content: "STUDENTS’ FEE", styles: { valign: "middle" } }, { content: `27,000 X ${totalStudentsCount} = ${studentsFee.toLocaleString()}`, styles: { halign: "left" } }],
+        ["", "", { content: "STUDENTS’ FEE", styles: { valign: "middle" } }, { content: `${studentFeeRate.toLocaleString()} X ${totalStudentsCount} = ${studentsFee.toLocaleString()}`, styles: { halign: "left" } }],
         ["", "", { content: "LATE REG. FEE\n(If charged)", styles: { valign: "middle" } }, { content: `2,000 X ${lateStudentsCount} = ${lateRegFeeAmount.toLocaleString()}`, styles: { halign: "left" } }],
         ["", "", "MARKING GUIDE\nFEE", { content: `ARTS                       ${markingGuideFeeArts.toLocaleString()}\nSCIENCES                ${markingGuideFeeSciences.toLocaleString()}`, styles: { halign: "left" } }],
-        [{ content: "TOTAL SUBJECT PAPER REGISTERED", colSpan: 2, rowSpan: 2, styles: { halign: "center", valign: "middle", fontStyle: "bold", fontSize: 10 } }, 
+        [{ content: "TOTAL ENTRIES REGISTERED", colSpan: 2, rowSpan: 2, styles: { halign: "center", valign: "middle", fontStyle: "bold", fontSize: 10 } }, 
          { content: "ANSWER BOOKLETS\n(optional)", styles: { fontStyle: "bold" } }, `25,000/= X ${bookletRequestedCount} = ${answerBookletsFee.toLocaleString()}`],
         ["TOTAL AMOUNT", totalAmount.toLocaleString()],
       ];
@@ -1373,7 +1358,6 @@ export function Reports({ onPageChange }: ReportsProps) {
             data.cell.styles.fontStyle = "bold";
             data.cell.styles.halign = "center";
           }
-          // Hide borders for the empty cells in the first few rows
           if (data.row.index < 5 && data.column.index < 2) {
             data.cell.styles.lineWidth = 0;
           }
@@ -1390,13 +1374,16 @@ export function Reports({ onPageChange }: ReportsProps) {
       pdf.text("CHECKED BY", margin, y);
       pdf.text(`DATE: ${new Date().toLocaleDateString()}`, pageWidth - margin - 80, y);
 
-      pdf.save("WAKISSHA-Appendix-2-UACE.pdf");
-      toast.success("Appendix 2 PDF generated successfully");
+      pdf.save(`Summary-of-Entries-${level}.pdf`);
+      toast.success(`${level} Summary of Entries PDF generated`);
     } catch (error) {
-      toast.error("Failed to generate Appendix 2 PDF");
+      toast.error(`Failed to generate ${level} Summary PDF`);
       console.error(error);
     }
   };
+
+  const generateAppendix2PDF = () => generateSummaryPDF("UACE");
+  const generateAppendix1PDF = () => generateSummaryPDF("UCE");
 
   const generateReadableSummaryPDF = () => {
     try {
@@ -1536,8 +1523,8 @@ export function Reports({ onPageChange }: ReportsProps) {
         margin: { left: margin, right: margin },
         tableWidth: pageWidth - margin * 2,
         body: [
-          ["Total Schools", String(summarySchools.length), "Total Students", String(summaryStudents.length)],
-          ["Total Entries", String(totalEntries), "Registered Subjects", String(totalRegisteredSubjects)],
+          ["Total Schools", String(summarySchools.length), "Total Students (Candidates)", String(summaryStudents.length)],
+          ["Registered Subjects", String(totalRegisteredSubjects), "", ""],
         ],
         theme: "grid",
         styles: {
@@ -2038,8 +2025,10 @@ export function Reports({ onPageChange }: ReportsProps) {
         } else {
           exportSelectedSchoolStudentsExcel();
         }
-      } else if (reportType === "Appendix 2 Form") {
+      } else if (reportType === "Summary of Entries (UACE)") {
         generateAppendix2PDF();
+      } else if (reportType === "Summary of Entries (UCE)") {
+        generateAppendix1PDF();
       }
     } finally {
       setExportingKey(null);
@@ -2063,23 +2052,6 @@ export function Reports({ onPageChange }: ReportsProps) {
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button variant="outline" onClick={() => onPageChange("timetable")}>
             Go to Timetable
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => handleExport("pdf", "Readable Summary")}
-            disabled={isExporting("pdf", "Readable Summary")}
-          >
-            {isExporting("pdf", "Readable Summary") ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                Download Summary
-              </>
-            )}
           </Button>
         </div>
       </div>
@@ -2131,10 +2103,10 @@ export function Reports({ onPageChange }: ReportsProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleExport("pdf", "UACE Consolidated")}
-                      disabled={isExporting("pdf", "UACE Consolidated")}
+                      onClick={() => handleExport("pdf", "School Students List")}
+                      disabled={isExporting("pdf", "School Students List")}
                     >
-                      {isExporting("pdf", "UACE Consolidated") ? (
+                      {isExporting("pdf", "School Students List") ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Generating...
@@ -2142,17 +2114,17 @@ export function Reports({ onPageChange }: ReportsProps) {
                       ) : (
                         <>
                           <FileText className="h-4 w-4" />
-                          Download Report
+                          Students List (PDF)
                         </>
                       )}
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleExport("excel", "UACE Consolidated")}
-                      disabled={isExporting("excel", "UACE Consolidated")}
+                      onClick={() => handleExport("excel", "School Students List")}
+                      disabled={isExporting("excel", "School Students List")}
                     >
-                      {isExporting("excel", "UACE Consolidated") ? (
+                      {isExporting("excel", "School Students List") ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Generating...
@@ -2160,7 +2132,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                       ) : (
                         <>
                           <FileSpreadsheet className="h-4 w-4" />
-                          Download Excel
+                          Students List (Excel)
                         </>
                       )}
                     </Button>
@@ -2187,13 +2159,26 @@ export function Reports({ onPageChange }: ReportsProps) {
                         <TableCell className="font-semibold text-slate-900">{row.schoolName}</TableCell>
                         <TableCell>{row.district}</TableCell>
                         <TableCell>{row.zone}</TableCell>
-                        <TableCell>{row.registeredSubjects}</TableCell>
+                        <TableCell>{row.candidatesRegistered}</TableCell>
                         <TableCell>{row.telephone}</TableCell>
                         {(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns).map((subject) => (
                           <TableCell key={`${subject.key}-${idx}`}>{row[subject.key] ?? 0}</TableCell>
                         ))}
                       </TableRow>
                     ))}
+                    {/* Totals Row */}
+                    <TableRow className="bg-slate-50 font-bold border-t-2 border-slate-200">
+                      <TableCell colSpan={4} className="text-right">TOTALS</TableCell>
+                      <TableCell>
+                        {consolidatedRows.reduce((sum, row) => sum + (Number(row.candidatesRegistered) || 0), 0)}
+                      </TableCell>
+                      <TableCell>-</TableCell>
+                      {(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns).map((subject) => (
+                        <TableCell key={`total-${subject.key}`}>
+                          {consolidatedRows.reduce((sum, row) => sum + (Number(row[subject.key]) || 0), 0)}
+                        </TableCell>
+                      ))}
+                    </TableRow>
                   </TableBody>
                 </Table>
               </div>
@@ -2217,10 +2202,10 @@ export function Reports({ onPageChange }: ReportsProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleExport("pdf", "Subject-Wise")}
-                    disabled={isExporting("pdf", "Subject-Wise")}
+                    onClick={() => handleExport("pdf", "School Students List")}
+                    disabled={isExporting("pdf", "School Students List")}
                   >
-                    {isExporting("pdf", "Subject-Wise") ? (
+                    {isExporting("pdf", "School Students List") ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Generating...
@@ -2228,25 +2213,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                     ) : (
                       <>
                         <FileText className="h-4 w-4" />
-                        Download Report
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport("excel", "Subject-Wise")}
-                    disabled={isExporting("excel", "Subject-Wise")}
-                  >
-                    {isExporting("excel", "Subject-Wise") ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <FileSpreadsheet className="h-4 w-4" />
-                        Download Excel
+                        Students List (PDF)
                       </>
                     )}
                   </Button>
@@ -2255,19 +2222,30 @@ export function Reports({ onPageChange }: ReportsProps) {
             </CardHeader>
             <CardContent className="pt-6 space-y-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <Select value={selectedSubjectCode} onValueChange={setSelectedSubjectCode}>
-                  <SelectTrigger className="w-full lg:w-[320px]">
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Subjects</SelectItem>
-                    {subjectWiseData.map((subject) => (
-                      <SelectItem key={subject.key} value={subject.key}>
-                        {subject.code} - {subject.subject} ({subject.level})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Select value={subjectWiseLevelFilter} onValueChange={(value: "UCE" | "UACE") => setSubjectWiseLevelFilter(value)}>
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UCE">UCE (O Level)</SelectItem>
+                      <SelectItem value="UACE">UACE (A Level)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedSubjectCode} onValueChange={setSelectedSubjectCode}>
+                    <SelectTrigger className="w-full lg:w-[320px]">
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Subjects</SelectItem>
+                      {subjectWiseData.map((subject) => (
+                        <SelectItem key={subject.key} value={subject.key}>
+                          {subject.code} - {subject.subject}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="text-sm text-slate-500">
                   Students in selected subject:{" "}
                   <span className="font-semibold text-slate-900">{subjectStudentsList.length}</span>
@@ -2282,8 +2260,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                     <TableHead>Subject</TableHead>
                     <TableHead>Level</TableHead>
                     <TableHead className="text-right">Total Schools</TableHead>
-                    <TableHead className="text-right">Total Students</TableHead>
-                    <TableHead className="text-right">Total Entries</TableHead>
+                    <TableHead className="text-right">Total Students (Candidates)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -2304,11 +2281,18 @@ export function Reports({ onPageChange }: ReportsProps) {
                       <TableCell className="text-right font-semibold text-slate-900">
                         {subject.totalStudents}
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-slate-900">
-                        {subject.totalEntries}
-                      </TableCell>
                     </TableRow>
                   ))}
+                  {/* Totals Row */}
+                  <TableRow className="bg-slate-50 font-bold border-t-2 border-slate-200">
+                    <TableCell colSpan={3} className="text-right uppercase">System-Wide Totals</TableCell>
+                    <TableCell className="text-right">
+                      {subjectWiseData.reduce((sum, s) => sum + s.totalSchools, 0)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {subjectWiseData.reduce((sum, s) => sum + s.totalStudents, 0)}
+                    </TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
               </div>
@@ -2491,99 +2475,51 @@ export function Reports({ onPageChange }: ReportsProps) {
                     </Card>
                   </div>
 
-                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                     <Button
                       variant="outline"
-                      className="w-full justify-center"
-                      onClick={() => handleExport("pdf", "Single School")}
-                      disabled={isExporting("pdf", "Single School")}
-                    >
-                      {isExporting("pdf", "Single School") ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-4 w-4" />
-                          Download Report
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-center"
-                      onClick={() => handleExport("excel", "Single School")}
-                      disabled={isExporting("excel", "Single School")}
-                    >
-                      {isExporting("excel", "Single School") ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <FileSpreadsheet className="h-4 w-4" />
-                          Download Excel
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-center"
+                      className="w-full justify-center h-11 rounded-xl border-slate-200"
                       onClick={() => handleExport("pdf", "School Students List")}
                       disabled={isExporting("pdf", "School Students List")}
                     >
                       {isExporting("pdf", "School Students List") ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
-                        <>
-                          <FileText className="h-4 w-4" />
-                          Download Students List (PDF)
-                        </>
+                        <FileText className="h-4 w-4 mr-2" />
                       )}
+                      Students List (PDF)
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full justify-center"
+                      className="w-full justify-center h-11 rounded-xl border-slate-200"
                       onClick={() => handleExport("excel", "School Students List")}
                       disabled={isExporting("excel", "School Students List")}
                     >
                       {isExporting("excel", "School Students List") ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
-                        <>
-                          <FileSpreadsheet className="h-4 w-4" />
-                          Download Students List (Excel)
-                        </>
+                        <FileSpreadsheet className="h-4 w-4 mr-2" />
                       )}
+                      Students List (Excel)
                     </Button>
-                    {selectedSchoolReportLevel === "UACE" && (
-                      <Button
-                        variant="default"
-                        className="w-full justify-center bg-red-600 hover:bg-red-700 text-white"
-                        onClick={() => handleExport("pdf", "Appendix 2 Form")}
-                        disabled={isExporting("pdf", "Appendix 2 Form")}
-                      >
-                        {isExporting("pdf", "Appendix 2 Form") ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="h-4 w-4" />
-                            Appendix 2 Form (PDF)
-                          </>
-                        )}
-                      </Button>
-                    )}
+                    <Button
+                      variant="default"
+                      className="w-full justify-center h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white"
+                      onClick={() => handleExport("pdf", "Summary of Entries (UACE)")}
+                      disabled={isExporting("pdf", "Summary of Entries (UACE)")}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      UACE Summary of Entries (PDF)
+                    </Button>
+                    <Button
+                      variant="default"
+                      className="w-full justify-center h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => handleExport("pdf", "Summary of Entries (UCE)")}
+                      disabled={isExporting("pdf", "Summary of Entries (UCE)")}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      UCE Summary of Entries (Appendix 1)
+                    </Button>
                   </div>
                 </div>
               )}

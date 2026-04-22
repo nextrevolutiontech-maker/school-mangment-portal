@@ -86,11 +86,12 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
     email: "",
     phone: "",
     address: "",
-    educationLevel: "UCE" as const,
-    zone_id: "zone-1",
+    educationLevel: "UCE" as "UCE" | "UACE" | "BOTH",
+    zone_id: "",
     schoolLogo: "",
     contactPerson: "",
     contactDesignation: "",
+    contactPhone: "",
   });
 
   const filteredSchools = useMemo(() => {
@@ -143,10 +144,11 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
       phone: "",
       address: "",
       educationLevel: "UCE",
-      zone_id: "zone-1",
+      zone_id: "",
       schoolLogo: "",
       contactPerson: "",
       contactDesignation: "",
+      contactPhone: "",
     });
     setLogoPreview("");
     setLogoFile(null);
@@ -301,6 +303,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   <SelectContent className="rounded-xl border-slate-200">
                     <SelectItem value="UCE">UCE (O' Level)</SelectItem>
                     <SelectItem value="UACE">UACE (A' Level)</SelectItem>
+                    <SelectItem value="BOTH">Both (UCE & UACE)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -310,7 +313,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                     setNewSchool({ ...newSchool, zone_id: value })
                   }
                 >
-                  <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                  <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white">
                     <SelectValue placeholder="Select zone" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-slate-200">
@@ -322,7 +325,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-[11px] text-slate-500 leading-relaxed italic">
                   If a school does not know its zone, select 'I don't know'. WAKISSHA admin will allocate the correct zone.
                 </p>
               </div>
@@ -330,7 +333,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                 <Label htmlFor="schoolLogo" className="text-sm font-semibold text-slate-700">School Logo (Optional)</Label>
                 <div className="flex flex-col gap-3">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 h-11 px-3 rounded-xl border border-slate-200 bg-slate-50/50">
+                    <div className="flex items-center gap-3 h-11 px-3 rounded-xl border border-slate-200 bg-white">
                       <Input
                         id="schoolLogo"
                         type="file"
@@ -339,7 +342,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                         className="flex-1 border-0 bg-transparent p-0 h-auto focus-visible:ring-0 cursor-pointer text-sm"
                       />
                     </div>
-                    <p className="text-xs text-slate-500 mt-2">
+                    <p className="text-[11px] text-slate-500 mt-2 italic">
                       PNG, JPEG or WebP. Max 2MB.
                     </p>
                   </div>
@@ -366,10 +369,25 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                       contactPerson: event.target.value,
                     })
                   }
-                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500 bg-white"
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="contactPhone" className="text-sm font-semibold text-slate-700">Contact Person Phone (Optional)</Label>
+                <Input
+                  id="contactPhone"
+                  placeholder="e.g. +256 700 000 000"
+                  value={newSchool.contactPhone}
+                  onChange={(event) =>
+                    setNewSchool({
+                      ...newSchool,
+                      contactPhone: event.target.value,
+                    })
+                  }
+                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500 bg-white"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="contactDesignation" className="text-sm font-semibold text-slate-700">Contact Designation (Optional)</Label>
                 <Input
                   id="contactDesignation"
@@ -381,7 +399,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                       contactDesignation: event.target.value,
                     })
                   }
-                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500 bg-white"
                 />
               </div>
               <div className="md:col-span-2">
