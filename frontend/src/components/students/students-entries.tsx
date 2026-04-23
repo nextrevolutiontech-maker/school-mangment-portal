@@ -195,8 +195,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
           autoPapers = [1]; // General Paper -> Only Paper 1
         } else if (subject.code === "MATH" || subject.standardCode === "456" || subject.standardCode === "475") {
           autoPapers = [1]; // Mathematics -> Only Paper 1
-        } else if (subject.code === "PHY" || subject.code === "CHEM" || subject.standardCode === "535" || subject.standardCode === "545") {
-          autoPapers = [1, 2]; // Physics & Chemistry -> Paper 1 & 2 auto
+        } else if (subject.code === "PHY" || subject.code === "CHEM" || subject.code === "BIO" || subject.standardCode === "535" || subject.standardCode === "545" || subject.standardCode === "553") {
+          autoPapers = [1, 2]; // Physics, Chemistry, Biology -> P1 mandatory + choice (default P2)
         } else if (subject.code === "TD" || subject.standardCode === "680" || subject.standardCode === "745") {
           autoPapers = [1, 2, 3]; // Technical Drawing / Design -> Paper 1, 2, 3
         } else if (subject.code === "GEOG" || subject.standardCode === "273" || subject.standardCode === "230") {
@@ -205,6 +205,10 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
           autoPapers = [1]; // Subsidiary Mathematics -> Only Paper 1
         } else if (subject.code === "SUB_ICT" || subject.standardCode === "610" || subject.standardCode === "840") {
           autoPapers = [1, 2]; // Subsidiary ICT -> P1 compulsory, default P2
+        } else if (subject.code === "ENG" || subject.standardCode === "112") {
+          autoPapers = [1, 2]; // English -> Paper 1 & 2
+        } else if (subject.code === "HIST" || subject.standardCode === "241" || subject.code === "CRE" || subject.standardCode === "223" || subject.code === "IRE" || subject.standardCode === "225" || subject.code === "LIT" || subject.standardCode === "208") {
+          autoPapers = [1]; // Paper 1 only subjects
         } else if (subject.code === "CHINESE" || subject.standardCode === "396") {
           autoPapers = [1, 2]; // Chinese -> Paper 1 & 2
         } else if (subject.code === "ATESO" || subject.standardCode === "365") {
@@ -232,6 +236,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         if (subj.code === "GEOG" || subj.standardCode === "273" || subj.standardCode === "230") papers = [1];
         if (subj.code === "ENG" || subj.standardCode === "112") papers = [1, 2];
         if (subj.code === "TD" || subj.standardCode === "680" || subj.standardCode === "745") papers = [1, 2, 3];
+        if (subj.code === "HIST" || subj.standardCode === "241" || subj.code === "CRE" || subj.standardCode === "223" || subj.code === "IRE" || subj.standardCode === "225" || subj.code === "LIT" || subj.standardCode === "208") papers = [1];
         
         acc[subj.id] = { selectedPapers: papers };
         return acc;
@@ -513,7 +518,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     <div className="flex flex-col w-full gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">
             Student Registration
           </p>
           <h1 className="text-3xl font-bold text-slate-900">Student Entries</h1>
@@ -647,6 +652,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                   filteredSubjects.map((subject) => {
                     const isSelected = !!selectedSubjects[subject.id];
                     const isCompulsory = !subject.optional;
+                    const isSubsidiary = subject.code === "SUB_ICT" || subject.code === "SUB_MATHS";
                     
                     return (
                       <div 
@@ -677,41 +683,48 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                             </div>
                             
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge variant={isCompulsory ? "default" : "outline"} className="text-[10px] px-1.5 h-4">
-                                {isCompulsory ? "Compulsory" : "Optional"}
-                              </Badge>
+                              {isCompulsory ? (
+                                <Badge className="bg-blue-600 text-white border-none text-[10px] px-2 h-5 font-bold uppercase tracking-wider">
+                                  Compulsory
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] px-2 h-5 font-bold uppercase tracking-wider border-slate-300 text-slate-500">
+                                  Optional
+                                </Badge>
+                              )}
                               {isSelected && (
-                                <span className="text-[10px] font-bold text-blue-600">
-                                  Papers: {selectedSubjects[subject.id].selectedPapers.join(",")}
-                                </span>
+                                <Badge variant="secondary" className={`text-[10px] px-2 h-5 font-bold ${isSubsidiary ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
+                                  Papers: {selectedSubjects[subject.id].selectedPapers.join(", ")}
+                                </Badge>
                               )}
                             </div>
 
-                            {/* Rule description text */}
-                            <p className="text-[10px] text-slate-500 mt-1.5 leading-tight font-medium">
-                              {subject.code === "GP" || subject.standardCode === "101" ? "Paper 1 (Compulsory)" :
-                               subject.code === "MATH" || subject.standardCode === "456" || subject.standardCode === "475" ? "Paper 1 (Compulsory)" :
-                               subject.code === "GEOG" || subject.standardCode === "273" || subject.standardCode === "230" ? "Paper 1 (Compulsory)" :
-                               subject.code === "TD" || subject.standardCode === "680" || subject.standardCode === "745" ? "Papers 1, 2, 3 (Compulsory)" :
-                               subject.code === "SUB_ICT" || subject.standardCode === "610" || subject.standardCode === "840" ? "P1 (Comp) + (P2 or P3)" :
-                               subject.code === "PHY" || subject.code === "CHEM" ? "Papers 1 & 2" :
-                               subject.code === "SUB_MATHS" || subject.standardCode === "475S" ? "Paper 1" :
-                               subject.code === "CHINESE" || subject.standardCode === "396" ? "Papers 1 & 2" :
-                               subject.code === "ATESO" || subject.standardCode === "365" ? "Papers 1 & 2" :
-                               "Papers 1 & 2"}
-                            </p>
+                            {/* Rule description text - Increased font size and clarity */}
+                            <div className="pt-1">
+                              <p className={`text-[11px] font-bold leading-tight ${isSubsidiary ? "text-blue-600" : "text-slate-500"}`}>
+                                {subject.code === "GP" || subject.standardCode === "101" ? "Paper 1 only" :
+                                 subject.code === "MATH" || subject.standardCode === "456" || subject.standardCode === "475" ? "Paper 1 only" :
+                                 subject.code === "GEOG" || subject.standardCode === "273" || subject.standardCode === "230" ? "Paper 1 (Compulsory)" :
+                                 subject.code === "TD" || subject.standardCode === "680" || subject.standardCode === "745" ? "Papers 1, 2, 3 (Compulsory)" :
+                                 subject.code === "SUB_ICT" || subject.code === "PHY" || subject.code === "CHEM" || subject.code === "BIO" ? "Paper 1 + choose Paper 2 or 3" :
+                                 subject.code === "SUB_MATHS" || subject.standardCode === "475S" ? "Paper 1 only" :
+                                 subject.code === "ENG" || subject.standardCode === "112" ? "Papers 1 & 2" :
+                                 subject.code === "HIST" || subject.standardCode === "241" || subject.code === "CRE" || subject.standardCode === "223" || subject.code === "IRE" || subject.standardCode === "225" || subject.code === "LIT" || subject.standardCode === "208" ? "Paper 1 only" :
+                                 "Papers 1 & 2"}
+                              </p>
+                            </div>
 
-                            {/* Special Rule Logic Display for Subsidiary ICT */}
-                            {subject.code === "SUB_ICT" && isSelected && (
-                              <div className="mt-2 space-y-2 pt-2 border-t border-blue-100">
-                                <Label className="text-[10px] font-bold text-slate-600 uppercase">Choose Paper 2 OR 3:</Label>
-                                <div className="flex gap-4">
+                            {/* Special Rule Logic Display for Subsidiary ICT and Sciences */}
+                            {(subject.code === "SUB_ICT" || subject.code === "PHY" || subject.code === "CHEM" || subject.code === "BIO") && isSelected && (
+                              <div className={`mt-3 space-y-2 pt-3 border-t ${isSubsidiary ? "border-blue-200" : "border-orange-200"}`}>
+                                <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Choose Paper 2 OR 3:</Label>
+                                <div className="flex gap-6">
                                   {[2, 3].map((p) => (
-                                    <label key={p} className="flex items-center gap-2 text-xs cursor-pointer">
+                                    <label key={p} className="flex items-center gap-2 text-sm font-bold cursor-pointer group">
                                       <input 
                                         type="radio"
-                                        name={`ict-paper-${subject.id}`}
-                                        className="h-3.5 w-3.5 border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        name={`${subject.code}-paper-${subject.id}`}
+                                        className={`h-4 w-4 border-slate-300 focus:ring-offset-0 ${isSubsidiary ? "text-blue-600 focus:ring-blue-500" : "text-orange-600 focus:ring-orange-500"}`}
                                         checked={selectedSubjects[subject.id].selectedPapers.includes(p as any)}
                                         onChange={() => {
                                           setSelectedSubjects(prev => ({
@@ -720,24 +733,21 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                           }));
                                         }}
                                       />
-                                      <span className="font-medium text-slate-700">P{p}</span>
+                                      <span className={`transition-colors ${selectedSubjects[subject.id].selectedPapers.includes(p as any) ? isSubsidiary ? "text-blue-700" : "text-orange-700" : "text-slate-600"}`}>
+                                        Paper {p}
+                                      </span>
                                     </label>
                                   ))}
                                 </div>
                               </div>
                             )}
 
-                            {/* Special Logic for TD / Technical Drawing (Auto 1,2,3) */}
-                            {subject.code === "TD" && isSelected && (
-                              <div className="mt-2 space-y-1 pt-2 border-t border-blue-100">
-                                <span className="text-[10px] font-bold text-blue-600">Auto-assigned: P1, P2, P3</span>
-                              </div>
-                            )}
-
-                            {/* Special Logic for PHY/CHEM (Auto 1,2) */}
-                            {(subject.code === "PHY" || subject.code === "CHEM") && isSelected && (
-                              <div className="mt-2 space-y-1 pt-2 border-t border-blue-100">
-                                <span className="text-[10px] font-bold text-blue-600">Auto-assigned: P1, P2</span>
+                            {/* Auto-assigned indicators */}
+                            {isSelected && (subject.code === "TD" || subject.code === "ENG" || subject.standardCode === "112") && (
+                              <div className={`mt-2 py-1 px-2 rounded-md inline-block ${isSubsidiary ? "bg-blue-100" : "bg-orange-100"}`}>
+                                <span className={`text-[10px] font-black uppercase tracking-wider ${isSubsidiary ? "text-blue-700" : "text-orange-700"}`}>
+                                  {subject.code === "TD" ? "Auto-assigned: P1, P2, P3" : "Auto-assigned: P1, P2"}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -750,12 +760,15 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
               {/* Total Entries Display */}
               <div className="md:col-span-2">
-                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-                  <p className="text-sm font-medium text-slate-700">
-                    Subjects Selected:{" "}
-                    <span className="font-bold text-blue-700">{Object.keys(selectedSubjects).length}</span>
-                    <span className="mx-2 text-blue-300">|</span>
-                    Total Entries: <span className="font-bold text-blue-700">{calculateTotalEntries()}</span>
+                <div className="rounded-xl border-2 border-blue-500 bg-blue-50 px-6 py-4 shadow-sm">
+                  <p className="text-base font-bold text-blue-900 flex items-center justify-center gap-6">
+                    <span className="flex items-center gap-2">
+                      Subjects Selected: <span className="text-2xl font-black text-blue-600 tracking-tighter">{Object.keys(selectedSubjects).length}</span>
+                    </span>
+                    <span className="h-8 w-px bg-blue-200"></span>
+                    <span className="flex items-center gap-2">
+                      Total Entries: <span className="text-2xl font-black text-blue-600 tracking-tighter">{calculateTotalEntries()}</span>
+                    </span>
                   </p>
                 </div>
               </div>
@@ -805,7 +818,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     <div className="h-10 w-px bg-slate-200"></div>
                     <div>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Registered</p>
-                      <p className="text-lg font-black text-red-600 leading-none">{filteredStudents.length}</p>
+                      <p className="text-lg font-black text-orange-600 leading-none">{filteredStudents.length}</p>
                     </div>
                   </div>
                 </div>
@@ -914,7 +927,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                 <Edit2 className="h-4 w-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeleteStudent(student)} className="text-red-600">
+                              <DropdownMenuItem onClick={() => handleDeleteStudent(student)} className="text-orange-600">
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
                               </DropdownMenuItem>

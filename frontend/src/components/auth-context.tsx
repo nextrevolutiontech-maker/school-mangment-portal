@@ -294,7 +294,7 @@ const initialSubjects: Subject[] = [
   { id: "subj-11-uce", name: "Luganda", code: "LUGANDA", standardCode: "335", educationLevel: "UCE", optional: true },
   { id: "subj-12-uce", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "345", educationLevel: "UCE", optional: true },
   { id: "subj-13-uce", name: "Lusoga", code: "LUSOGA", standardCode: "355", educationLevel: "UCE", optional: true },
-  { id: "subj-14-uce", name: "Mathematics", code: "MATH", standardCode: "456", educationLevel: "UCE", optional: false },
+  { id: "subj-14-uce", name: "Mathematics", code: "MATH", standardCode: "456", educationLevel: "UCE", optional: true },
   { id: "subj-15-uce", name: "Agriculture", code: "AGRIC", standardCode: "527", educationLevel: "UCE", optional: true },
   { id: "subj-16-uce", name: "Physics", code: "PHY", standardCode: "535", educationLevel: "UCE", optional: true },
   { id: "subj-17-uce", name: "Chemistry", code: "CHEM", standardCode: "545", educationLevel: "UCE", optional: true },

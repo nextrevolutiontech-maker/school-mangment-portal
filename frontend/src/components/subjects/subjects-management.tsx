@@ -146,7 +146,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 anim-fade-up">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">
             Subjects Registry
           </p>
           <h1 className="text-3xl font-bold text-shimmer">Subjects Management</h1>

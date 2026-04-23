@@ -41,7 +41,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       subtitle: "Across all levels",
       icon: Users,
       borderClass: "border-l-red-600",
-      iconClass: "bg-red-600/10 text-red-600",
+      iconClass: "bg-orange-600/10 text-orange-600",
     },
     {
       title: "UCE Students",
@@ -343,7 +343,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-red-500" />
+                    <BookOpen className="h-4 w-4 text-orange-500" />
                     <span className="truncate font-semibold text-slate-900">
                       {item.subject}
                     </span>
@@ -391,7 +391,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
                 className="bg-white shadow-sm border border-slate-200 rounded-2xl p-3"
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-600/10 text-orange-600">
                     <Calendar className="h-4 w-4" />
                   </div>
                   <Badge variant="info">Upcoming</Badge>
@@ -414,7 +414,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
           className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
           onClick={() => onPageChange("add-student")}
         >
-          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600/10 text-red-600">
+          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-600/10 text-orange-600">
             <Users className="h-5 w-5" />
           </div>
           <div>

@@ -49,58 +49,58 @@ type FormColumn = {
 };
 
 const formBaseColumns: FormColumn[] = [
-  { key: "refNo", label: "Ref" },
-  { key: "schoolName", label: "Name of school" },
-  { key: "district", label: "District" },
-  { key: "zone", label: "Zone / Centre" },
-  { key: "candidatesRegistered", label: "Candidates Registered" },
-  { key: "telephone", label: "Telephone" },
+  { key: "refNo", label: "REF" },
+  { key: "schoolName", label: "NAME OF SCHOOL" },
+  { key: "district", label: "DISTRICT" },
+  { key: "zone", label: "ZONE / CENTRE" },
+  { key: "candidatesRegistered", label: "CANDIDATES REGISTERED" },
+  { key: "telephone", label: "TELEPHONE" },
 ];
 
 const uaceSubjectColumns: FormColumn[] = [
-  { key: "GP", label: "General Paper" },
-  { key: "SUB_MATHS", label: "Subsidiary Mathematics" },
-  { key: "SUB_ICT", label: "Subsidiary ICT" },
-  { key: "HIST", label: "History" },
-  { key: "ENT", label: "Entrepreneurship" },
+  { key: "GP", label: "GP" },
+  { key: "SUB_MATHS", label: "SUB MATHS" },
+  { key: "SUB_ICT", label: "SUB ICT" },
+  { key: "HIST", label: "HIST" },
+  { key: "ENT", label: "ENT" },
   { key: "IRE", label: "IRE" },
   { key: "CRE", label: "CRE" },
-  { key: "GEOG", label: "Geography" },
-  { key: "LIT", label: "Literature" },
-  { key: "KISWA", label: "Kiswahili" },
-  { key: "ART", label: "Fine Art" },
-  { key: "PHY", label: "Physics" },
-  { key: "CHEM", label: "Chemistry" },
-  { key: "BIO", label: "Biology" },
-  { key: "MATH", label: "Mathematics" },
-  { key: "AGRIC", label: "Agriculture" },
-  { key: "FN", label: "Food & Nutrition" },
-  { key: "TD", label: "Technical Drawing" },
-  { key: "FRENCH", label: "French" },
-  { key: "GERMAN", label: "German" },
-  { key: "ARABIC", label: "Arabic" },
-  { key: "LUGANDA", label: "Luganda" },
-  { key: "RUNY", label: "Runy-Rukiga" },
-  { key: "LUSOGA", label: "Lusoga" },
+  { key: "GEOG", label: "GEOG" },
+  { key: "LIT", label: "LIT" },
+  { key: "KISWA", label: "KISWA" },
+  { key: "ART", label: "ART" },
+  { key: "PHY", label: "PHY" },
+  { key: "CHEM", label: "CHEM" },
+  { key: "BIO", label: "BIO" },
+  { key: "MATH", label: "MATH" },
+  { key: "AGRIC", label: "AGRIC" },
+  { key: "FN", label: "FN" },
+  { key: "TD", label: "TD" },
+  { key: "FRENCH", label: "FRENCH" },
+  { key: "GERMAN", label: "GERMAN" },
+  { key: "ARABIC", label: "ARABIC" },
+  { key: "LUGANDA", label: "LUGANDA" },
+  { key: "RUNY", label: "RUNY" },
+  { key: "LUSOGA", label: "LUSOGA" },
 ];
 
 const uceSubjectColumns: FormColumn[] = [
-  { key: "ENG", label: "English Language" },
-  { key: "MATH", label: "Mathematics" },
-  { key: "BIO", label: "Biology" },
-  { key: "CHEM", label: "Chemistry" },
-  { key: "PHY", label: "Physics" },
-  { key: "HIST", label: "History & Political Education" },
-  { key: "GEOG", label: "Geography" },
+  { key: "ENG", label: "ENGLISH" },
+  { key: "MATH", label: "MATHEMATICS" },
+  { key: "BIO", label: "BIOLOGY" },
+  { key: "CHEM", label: "CHEMISTRY" },
+  { key: "PHY", label: "PHYSICS" },
+  { key: "HIST", label: "HISTORY" },
+  { key: "GEOG", label: "GEOGRAPHY" },
   { key: "CRE", label: "CRE" },
   { key: "IRE", label: "IRE" },
   { key: "CPS", label: "ICT" },
-  { key: "FRENCH", label: "French" },
-  { key: "GERMAN", label: "German" },
-  { key: "ARABIC", label: "Arabic" },
-  { key: "LUGANDA", label: "Luganda" },
-  { key: "RUNY", label: "Runy-Rukiga" },
-  { key: "LUSOGA", label: "Lusoga" },
+  { key: "FRENCH", label: "FRENCH" },
+  { key: "GERMAN", label: "GERMAN" },
+  { key: "ARABIC", label: "ARABIC" },
+  { key: "LUGANDA", label: "LUGANDA" },
+  { key: "RUNY", label: "RUNY" },
+  { key: "LUSOGA", label: "LUSOGA" },
 ];
 
 type FormRow = Record<string, string | number>;
@@ -451,7 +451,7 @@ function getStatusBadge(status: string) {
 }
 
 export function Reports({ onPageChange }: ReportsProps) {
-  const { user, schools, students, subjects } = useAuth();
+  const { user, schools, students, subjects, zones } = useAuth();
   const isAdmin = user?.role === "admin";
   const scopedSchools =
     user?.role === "school"
@@ -462,6 +462,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       ? students.filter((student) => student.schoolCode === user.schoolCode)
       : students;
   const [selectedSchool, setSelectedSchool] = useState("all");
+  const [selectedZone, setSelectedZone] = useState("all");
   const [selectedSubjectCode, setSelectedSubjectCode] = useState("all");
   const [subjectWiseLevelFilter, setSubjectWiseLevelFilter] = useState<"UCE" | "UACE">("UCE");
   const [selectedSchoolReportLevel, setSelectedSchoolReportLevel] = useState<"UCE" | "UACE">("UCE");
@@ -486,23 +487,19 @@ export function Reports({ onPageChange }: ReportsProps) {
   }, [user?.role, user?.schoolCode]);
 
   const consolidatedRows = useMemo<FormRow[]>(() => {
-    const schoolCodesForLevel = new Set(
-      scopedStudents
-        .filter((student) => student.examLevel === educationLevelFilter)
-        .map((student) => student.schoolCode),
-    );
-    const filteredSchools = scopedSchools.filter((school) => schoolCodesForLevel.has(school.code));
+    const filteredByZone = selectedZone === "all" 
+      ? scopedSchools 
+      : scopedSchools.filter(school => school.zone === selectedZone);
 
-    return filteredSchools.map((school) => {
+    // Include all schools in the zone, regardless of whether they have students for this level.
+    // This ensures a true consolidated report for all schools in the zone/centre.
+    return filteredByZone.map((school) => {
       const schoolStudents = scopedStudents.filter(
         (student) =>
           student.schoolCode === school.code &&
           student.examLevel === educationLevelFilter,
       );
-      const registeredSubjects = new Set(
-        schoolStudents.flatMap((student) => student.subjects?.map((s) => s.subjectCode) ?? [])
-      ).size;
-
+      
       const subjectColumns =
         educationLevelFilter === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
 
@@ -519,7 +516,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       }, {});
 
       const row: FormRow = {
-        refNo: school.code, // Use school code as reference
+        refNo: school.code,
         schoolName: school.name,
         district: school.district,
         zone: school.zone,
@@ -527,14 +524,14 @@ export function Reports({ onPageChange }: ReportsProps) {
         telephone: school.phone,
       };
 
-      // Add subject columns with student counts (not entry breakdowns)
+      // Add subject columns with student counts
       subjectColumns.forEach((subject) => {
         row[subject.key] = subjectCounts[subject.key] ?? 0;
       });
 
       return row;
     });
-  }, [scopedSchools, scopedStudents, educationLevelFilter]);
+  }, [scopedSchools, scopedStudents, educationLevelFilter, selectedZone]);
 
   const subjectWiseData = useMemo<SubjectWiseReportRow[]>(
     () =>
@@ -1060,12 +1057,12 @@ export function Reports({ onPageChange }: ReportsProps) {
         ...subjectsColumns.map((subject) => String(row[subject.key] ?? 0)),
       ]);
 
-      // Add Totals Row
+      // Add Totals Row - Aligned with the UI table structure
       const totalsRow = [
+        "",
+        "",
+        "",
         "TOTALS",
-        "",
-        "",
-        "",
         String(rows.reduce((sum, r) => sum + (Number(r.candidatesRegistered) || 0), 0)),
         "-",
         ...subjectsColumns.map((subj) => 
@@ -1080,22 +1077,22 @@ export function Reports({ onPageChange }: ReportsProps) {
       const totalCols = tableHeaders.length;
       
       // Allocate proportional widths
-      // Base columns: Ref(10), School(35), District(15), Zone(18), Candidates(12), Phone(15) = 105mm
-      // Remaining width for subject columns
-      const baseColsWidth = 10 + 35 + 15 + 18 + 12 + 15;
-      const subjectColsWidth = Math.max(usableWidth - baseColsWidth, 50);
-      const numSubjectCols = totalCols - 6;
-      const subjectColWidth = numSubjectCols > 0 ? subjectColsWidth / numSubjectCols : 10;
-
+      // Base columns: REF(12), School(45), District(20), Zone(25), Candidates(15), Phone(20)
       const columnStylesObj: Record<number, any> = {};
-      columnStylesObj[0] = { cellWidth: 10, halign: "center", fontSize: 6 };   // Ref
-      columnStylesObj[1] = { cellWidth: 35, halign: "left", fontSize: 6 };    // School Name
-      columnStylesObj[2] = { cellWidth: 15, halign: "center", fontSize: 6 };  // District
-      columnStylesObj[3] = { cellWidth: 18, halign: "center", fontSize: 6 };  // Zone
-      columnStylesObj[4] = { cellWidth: 12, halign: "center", fontSize: 6 };  // Candidates Registered
-      columnStylesObj[5] = { cellWidth: 15, halign: "center", fontSize: 6 };  // Telephone
+      columnStylesObj[0] = { cellWidth: 12, halign: "center", fontSize: 6.5 };   // REF
+      columnStylesObj[1] = { cellWidth: 45, halign: "left", fontSize: 6.5 };     // NAME OF SCHOOL
+      columnStylesObj[2] = { cellWidth: 20, halign: "center", fontSize: 6.5 };   // DISTRICT
+      columnStylesObj[3] = { cellWidth: 25, halign: "center", fontSize: 6.5 };   // ZONE / CENTRE
+      columnStylesObj[4] = { cellWidth: 15, halign: "center", fontSize: 6.5 };   // CANDIDATES REGISTERED
+      columnStylesObj[5] = { cellWidth: 20, halign: "center", fontSize: 6.5 };   // TELEPHONE
+      
+      const baseWidthUsed = 12 + 45 + 20 + 25 + 15 + 20;
+      const remainingWidth = usableWidth - baseWidthUsed;
+      const numSubjectCols = totalCols - 6;
+      const subjectColWidth = numSubjectCols > 0 ? remainingWidth / numSubjectCols : 10;
+
       for (let i = 6; i < totalCols; i++) {
-        columnStylesObj[i] = { cellWidth: subjectColWidth, halign: "center", fontSize: 5.5 };
+        columnStylesObj[i] = { cellWidth: subjectColWidth, halign: "center", fontSize: 6 };
       }
 
       autoTable(pdf, {
@@ -1109,18 +1106,18 @@ export function Reports({ onPageChange }: ReportsProps) {
           textColor: [0, 0, 0],        // BLACK text
           lineWidth: 0.3,
           lineColor: [0, 0, 0],        // BLACK borders only
-          fontSize: 5.5,
+          fontSize: 6,
           fontStyle: "bold",
           halign: "center",
           valign: "middle",
-          padding: 0.5,
+          padding: 0.8,
         },
         bodyStyles: {
           lineWidth: 0.3,
           lineColor: [0, 0, 0],        // BLACK borders only
-          fontSize: 5.5,
+          fontSize: 6,
           textColor: [0, 0, 0],        // BLACK text
-          padding: 0.5,
+          padding: 0.8,
           fillColor: [255, 255, 255], // WHITE background - no styling
           halign: "center",
         },
@@ -1133,7 +1130,9 @@ export function Reports({ onPageChange }: ReportsProps) {
           // Style totals row
           if (data.row.index === tableData.length - 1) {
             data.cell.styles.fontStyle = "bold";
-            data.cell.styles.fillColor = [245, 245, 245];
+            if (data.column.index === 3) {
+              data.cell.styles.halign = "right";
+            }
           }
         }
       });
@@ -1794,6 +1793,21 @@ export function Reports({ onPageChange }: ReportsProps) {
         ...subjectsColumns.map((subject) => subject.label),
       ];
       const bodyRows = buildTemplateTable(rows, subjectsColumns);
+
+      // Add Totals row to Excel
+      const totalsRow = [
+        "TOTALS",
+        "",
+        "",
+        "",
+        rows.reduce((sum, r) => sum + (Number(r.candidatesRegistered) || 0), 0),
+        "-",
+        ...subjectsColumns.map((subj) => 
+          rows.reduce((sum, r) => sum + (Number(r[subj.key]) || 0), 0)
+        )
+      ];
+      bodyRows.push(totalsRow as any);
+
       const worksheet = XLSXUtils.aoa_to_sheet([
         [`WAKISSHA JOINT MOCK ${level} SUMMARY 2026`],
         headerRow,
@@ -1965,24 +1979,24 @@ export function Reports({ onPageChange }: ReportsProps) {
     setExportingKey(key);
 
     try {
-      if (reportType === "UACE Consolidated") {
-        // consolidatedRows is ALREADY filtered by educationLevelFilter
+      if (reportType === "Consolidated Report") {
+        // consolidatedRows is ALREADY filtered by educationLevelFilter and Zone
         // Use it directly - do NOT filter again (causes missing schools)
         if (format === "pdf") {
           const levelToExport: "UACE" | "UCE" =
             educationLevelFilter === "UCE" ? "UCE" : "UACE";
           if (levelToExport === "UACE") {
-            generateUACEFormPDF(consolidatedRows, "UACE-summary-form");
+            generateUACEFormPDF(consolidatedRows, "UACE_Consolidated_Report");
           } else {
-            generateUCEFormPDF(consolidatedRows, "UCE-summary-form");
+            generateUCEFormPDF(consolidatedRows, "UCE_Consolidated_Report");
           }
         } else {
           const levelToExport: "UACE" | "UCE" =
             educationLevelFilter === "UCE" ? "UCE" : "UACE";
           if (levelToExport === "UACE") {
-            generateUACEFormExcel(consolidatedRows, "UACE-summary-form");
+            generateUACEFormExcel(consolidatedRows, "UACE_Consolidated_Report");
           } else {
-            generateUCEFormExcel(consolidatedRows, "UCE-summary-form");
+            generateUCEFormExcel(consolidatedRows, "UCE_Consolidated_Report");
           }
         }
       } else if (reportType === "Subject-Wise") {
@@ -2039,7 +2053,7 @@ export function Reports({ onPageChange }: ReportsProps) {
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 anim-fade-up">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">
             Reporting Centre
           </p>
           <h1 className="text-3xl font-bold text-shimmer">Reports</h1>
@@ -2056,131 +2070,176 @@ export function Reports({ onPageChange }: ReportsProps) {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         {summaryCards.map((card) => (
-          <Card key={card.label} className={`border-l-4 ${card.className}`}>
-            <CardContent className="pt-6">
-              <p className="text-sm font-medium text-slate-500">{card.label}</p>
-              <p className={`mt-3 text-3xl font-bold ${card.valueClass}`}>
-                {card.value}
-              </p>
+          <Card key={card.label} className="group overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300">
+            <CardContent className="p-0">
+              <div className={`h-1.5 w-full ${card.className.replace('border-l-4', 'bg').replace('border-l-', 'bg-')}`}></div>
+              <div className="p-6">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">{card.label}</p>
+                <div className="flex items-baseline gap-2">
+                  <p className={`text-4xl font-black ${card.valueClass}`}>
+                    {card.value}
+                  </p>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">System Data</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Tabs defaultValue={isAdmin ? "consolidated" : "school-wise"} className="space-y-3">
-        <TabsList className={`grid w-full ${isAdmin ? "grid-cols-3" : "grid-cols-1"}`}>
-          {isAdmin && <TabsTrigger value="consolidated">Consolidated</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="subject-wise">Subject-Wise</TabsTrigger>}
-          <TabsTrigger value="school-wise">{isAdmin ? "Single School Report" : "My School Report"}</TabsTrigger>
+      <Tabs defaultValue={isAdmin ? "consolidated" : "school-wise"} className="space-y-6 mt-2">
+        <TabsList className={`inline-flex h-12 items-center justify-center rounded-2xl bg-slate-100 p-1.5 text-slate-500 w-full ${isAdmin ? "lg:w-auto" : "w-full"}`}>
+          {isAdmin && (
+            <TabsTrigger 
+              value="consolidated" 
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-6 py-2 text-sm font-bold ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm"
+            >
+              Consolidated
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger 
+              value="subject-wise"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-6 py-2 text-sm font-bold ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm"
+            >
+              Subject-Wise
+            </TabsTrigger>
+          )}
+          <TabsTrigger 
+            value="school-wise"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-6 py-2 text-sm font-bold ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm"
+          >
+            {isAdmin ? "Single School" : "My School Report"}
+          </TabsTrigger>
         </TabsList>
 
         {isAdmin && (
         <TabsContent value="consolidated">
-          <Card>
-            <CardHeader className="border-b border-slate-200">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle className="text-slate-900">
-                    Official Summary Form ({educationLevelFilter === "UCE" ? "UCE" : "UACE"})
-                  </CardTitle>
-                  <CardDescription className="text-slate-500">
-                    Client template-locked export with fixed columns and fee section.
+          <Card className="border-none shadow-none bg-transparent">
+            <CardHeader className="px-0 pb-6">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="rounded-md border-orange-200 bg-orange-50 text-orange-700 font-semibold px-2 py-0.5">
+                      Official Export
+                    </Badge>
+                    <CardTitle className="text-xl font-bold text-slate-900">
+                      Summary Form ({educationLevelFilter})
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-slate-500 max-w-md leading-relaxed">
+                    Client template-locked consolidated report with fixed subject columns and totals.
                   </CardDescription>
                 </div>
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                  <Select value={educationLevelFilter} onValueChange={(value: any) => setEducationLevelFilter(value)}>
-                    <SelectTrigger className="w-full lg:w-[180px]">
-                      <SelectValue placeholder="Filter by level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UCE">UCE (O Level)</SelectItem>
-                      <SelectItem value="UACE">UACE (A Level)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="flex gap-2">
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                    <Select value={selectedZone} onValueChange={setSelectedZone}>
+                      <SelectTrigger className="h-9 w-full sm:w-[150px] border-none bg-white shadow-sm rounded-lg focus:ring-1 focus:ring-orange-500">
+                        <SelectValue placeholder="Zone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Zones</SelectItem>
+                        {zones.map((zone) => (
+                          <SelectItem key={zone.id} value={zone.name}>
+                            {zone.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={educationLevelFilter} onValueChange={(value: any) => setEducationLevelFilter(value)}>
+                      <SelectTrigger className="h-9 w-full sm:w-[140px] border-none bg-white shadow-sm rounded-lg focus:ring-1 focus:ring-orange-500">
+                        <SelectValue placeholder="Level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UCE">UCE (O Level)</SelectItem>
+                        <SelectItem value="UACE">UACE (A Level)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
+                      variant="default"
                       size="sm"
-                      onClick={() => handleExport("pdf", "School Students List")}
-                      disabled={isExporting("pdf", "School Students List")}
+                      className="h-9 bg-slate-900 hover:bg-slate-800 text-white rounded-lg px-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      onClick={() => handleExport("pdf", "Consolidated Report")}
+                      disabled={isExporting("pdf", "Consolidated Report")}
                     >
-                      {isExporting("pdf", "School Students List") ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
+                      {isExporting("pdf", "Consolidated Report") ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
-                        <>
-                          <FileText className="h-4 w-4" />
-                          Students List (PDF)
-                        </>
+                        <FileText className="h-4 w-4 mr-2" />
                       )}
+                      PDF Report
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleExport("excel", "School Students List")}
-                      disabled={isExporting("excel", "School Students List")}
+                      className="h-9 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-lg px-4 transition-all"
+                      onClick={() => handleExport("excel", "Consolidated Report")}
+                      disabled={isExporting("excel", "Consolidated Report")}
                     >
-                      {isExporting("excel", "School Students List") ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
+                      {isExporting("excel", "Consolidated Report") ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
-                        <>
-                          <FileSpreadsheet className="h-4 w-4" />
-                          Students List (Excel)
-                        </>
+                        <FileSpreadsheet className="h-4 w-4 mr-2" />
                       )}
+                      Excel
                     </Button>
                   </div>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-6">
-              <div className="w-full max-w-full overflow-x-auto bg-white shadow-sm border border-slate-200 rounded-2xl">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {[...formBaseColumns, ...(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns)].map((header) => (
-                        <TableHead key={header.key} className="whitespace-nowrap">
-                          {header.label}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {consolidatedRows.map((row, idx) => (
-                      <TableRow key={`${row.schoolName}-${idx}`}>
-                        <TableCell>{row.refNo}</TableCell>
-                        <TableCell className="font-semibold text-slate-900">{row.schoolName}</TableCell>
-                        <TableCell>{row.district}</TableCell>
-                        <TableCell>{row.zone}</TableCell>
-                        <TableCell>{row.candidatesRegistered}</TableCell>
-                        <TableCell>{row.telephone}</TableCell>
-                        {(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns).map((subject) => (
-                          <TableCell key={`${subject.key}-${idx}`}>{row[subject.key] ?? 0}</TableCell>
+            <CardContent className="px-0">
+              <div className="w-full max-w-full overflow-hidden bg-white shadow-sm border border-slate-200 rounded-2xl">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-slate-50/50">
+                      <TableRow className="hover:bg-transparent">
+                        {[...formBaseColumns, ...(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns)].map((header) => (
+                          <TableHead key={header.key} className="whitespace-nowrap font-bold text-slate-700 h-11 text-xs uppercase tracking-wider">
+                            {header.label}
+                          </TableHead>
                         ))}
                       </TableRow>
-                    ))}
-                    {/* Totals Row */}
-                    <TableRow className="bg-slate-50 font-bold border-t-2 border-slate-200">
-                      <TableCell colSpan={4} className="text-right">TOTALS</TableCell>
-                      <TableCell>
-                        {consolidatedRows.reduce((sum, row) => sum + (Number(row.candidatesRegistered) || 0), 0)}
-                      </TableCell>
-                      <TableCell>-</TableCell>
-                      {(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns).map((subject) => (
-                        <TableCell key={`total-${subject.key}`}>
-                          {consolidatedRows.reduce((sum, row) => sum + (Number(row[subject.key]) || 0), 0)}
-                        </TableCell>
+                    </TableHeader>
+                    <TableBody>
+                      {consolidatedRows.map((row, idx) => (
+                        <TableRow key={`${row.schoolName}-${idx}`} className="group hover:bg-slate-50/50 transition-colors">
+                          <TableCell className="font-medium text-slate-500">{row.refNo}</TableCell>
+                          <TableCell className="font-bold text-slate-900">{row.schoolName}</TableCell>
+                          <TableCell className="text-slate-600">{row.district}</TableCell>
+                          <TableCell className="text-slate-600">{row.zone}</TableCell>
+                          <TableCell className="text-center font-semibold text-slate-900">{row.candidatesRegistered}</TableCell>
+                          <TableCell className="text-slate-600">{row.telephone}</TableCell>
+                          {(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns).map((subject) => (
+                            <TableCell key={`${subject.key}-${idx}`} className="text-center font-medium text-slate-600">
+                              {row[subject.key] ?? 0}
+                            </TableCell>
+                          ))}
+                        </TableRow>
                       ))}
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                      {/* Totals Row */}
+                      <TableRow className="bg-slate-50 hover:bg-slate-100 border-t-2 border-slate-200 text-slate-900">
+                        <TableCell colSpan={4} className="text-right font-bold uppercase tracking-widest h-12">
+                          GRAND TOTALS
+                        </TableCell>
+                        <TableCell className="text-center font-black text-lg">
+                          {consolidatedRows.reduce((sum, row) => sum + (Number(row.candidatesRegistered) || 0), 0)}
+                        </TableCell>
+                        <TableCell className="text-center">-</TableCell>
+                        {(educationLevelFilter === "UCE" ? uceSubjectColumns : uaceSubjectColumns).map((subject) => (
+                          <TableCell key={`total-${subject.key}`} className="text-center font-bold">
+                            {consolidatedRows.reduce((sum, row) => sum + (Number(row[subject.key]) || 0), 0)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -2188,56 +2247,70 @@ export function Reports({ onPageChange }: ReportsProps) {
         )}
 
         <TabsContent value="subject-wise">
-          <Card>
-            <CardHeader className="border-b border-slate-200">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle className="text-slate-900">Subject-Wise Report</CardTitle>
-                  <CardDescription className="text-slate-500">
-                    Review system-wide student totals per subject without
-                    mixing UCE and UACE records.
+          <Card className="border-none shadow-none bg-transparent">
+            <CardHeader className="px-0 pb-6">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="rounded-md border-indigo-200 bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5">
+                      Analytics
+                    </Badge>
+                    <CardTitle className="text-xl font-bold text-slate-900">Subject-Wise Breakdown</CardTitle>
+                  </div>
+                  <CardDescription className="text-slate-500 max-w-md leading-relaxed">
+                    System-wide student totals per subject. Review trends and entry volumes across all schools.
                   </CardDescription>
                 </div>
-                <div className="flex gap-2">
+                
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                    <Select value={subjectWiseLevelFilter} onValueChange={(value: "UCE" | "UACE") => setSubjectWiseLevelFilter(value)}>
+                      <SelectTrigger className="h-9 w-full sm:w-[140px] border-none bg-white shadow-sm rounded-lg focus:ring-1 focus:ring-indigo-500">
+                        <SelectValue placeholder="Level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UCE">UCE (O Level)</SelectItem>
+                        <SelectItem value="UACE">UACE (A Level)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
                   <Button
-                    variant="outline"
+                    variant="default"
                     size="sm"
-                    onClick={() => handleExport("pdf", "School Students List")}
-                    disabled={isExporting("pdf", "School Students List")}
+                    className="h-9 bg-slate-900 hover:bg-slate-800 text-white rounded-lg px-4 transition-all"
+                    onClick={() => handleExport("pdf", "Subject-Wise")}
+                    disabled={isExporting("pdf", "Subject-Wise")}
                   >
-                    {isExporting("pdf", "School Students List") ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
+                    {isExporting("pdf", "Subject-Wise") ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (
-                      <>
-                        <FileText className="h-4 w-4" />
-                        Students List (PDF)
-                      </>
+                      <FileText className="h-4 w-4 mr-2" />
                     )}
+                    Export PDF
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-6 space-y-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <Select value={subjectWiseLevelFilter} onValueChange={(value: "UCE" | "UACE") => setSubjectWiseLevelFilter(value)}>
-                    <SelectTrigger className="w-full sm:w-[160px]">
-                      <SelectValue placeholder="Select level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UCE">UCE (O Level)</SelectItem>
-                      <SelectItem value="UACE">UACE (A Level)</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+            <CardContent className="px-0 space-y-6">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                      <School className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900">Subject Distribution</h4>
+                      <p className="text-sm text-slate-500">Filter and view specific subject enrollments</p>
+                    </div>
+                  </div>
                   <Select value={selectedSubjectCode} onValueChange={setSelectedSubjectCode}>
-                    <SelectTrigger className="w-full lg:w-[320px]">
-                      <SelectValue placeholder="Select subject" />
+                    <SelectTrigger className="w-full sm:w-[320px] bg-slate-50 border-slate-200 rounded-xl h-10">
+                      <SelectValue placeholder="Select subject to filter students" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Subjects</SelectItem>
+                      <SelectItem value="all">All Subjects View</SelectItem>
                       {subjectWiseData.map((subject) => (
                         <SelectItem key={subject.key} value={subject.key}>
                           {subject.code} - {subject.subject}
@@ -2246,91 +2319,103 @@ export function Reports({ onPageChange }: ReportsProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="text-sm text-slate-500">
-                  Students in selected subject:{" "}
-                  <span className="font-semibold text-slate-900">{subjectStudentsList.length}</span>
-                </div>
-              </div>
 
-              <div>
-                <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead className="text-right">Total Schools</TableHead>
-                    <TableHead className="text-right">Total Students (Candidates)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {subjectWiseData.map((subject) => (
-                    <TableRow key={subject.key}>
-                      <TableCell>
-                        <Badge variant="outline">{subject.code}</Badge>
-                      </TableCell>
-                      <TableCell className="font-semibold text-slate-900">
-                        {subject.subject}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{subject.level}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-slate-900">
-                        {subject.totalSchools}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-slate-900">
-                        {subject.totalStudents}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {/* Totals Row */}
-                  <TableRow className="bg-slate-50 font-bold border-t-2 border-slate-200">
-                    <TableCell colSpan={3} className="text-right uppercase">System-Wide Totals</TableCell>
-                    <TableCell className="text-right">
-                      {subjectWiseData.reduce((sum, s) => sum + s.totalSchools, 0)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {subjectWiseData.reduce((sum, s) => sum + s.totalStudents, 0)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-              </div>
-
-              <Card className="border border-slate-200 shadow-none hover:shadow-none hover:translate-y-0">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Students List (Selected Subject)</CardTitle>
-                  <CardDescription>
-                    {selectedSubjectCode === "all"
-                      ? "Showing all students in your current scope."
-                      : "Showing students doing the selected subject."}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0">
+                <div className="overflow-hidden rounded-xl border border-slate-200">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-slate-50/50">
                       <TableRow>
-                        <TableHead>Reg Number</TableHead>
-                        <TableHead>Student Name</TableHead>
-                        <TableHead>School</TableHead>
-                        <TableHead>Subject</TableHead>
+                        <TableHead className="w-[100px] font-bold">CODE</TableHead>
+                        <TableHead className="font-bold">SUBJECT NAME</TableHead>
+                        <TableHead className="w-[100px] font-bold">LEVEL</TableHead>
+                        <TableHead className="text-right font-bold">SCHOOLS</TableHead>
+                        <TableHead className="text-right font-bold">CANDIDATES</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {subjectStudentsList.map((student) => (
-                        <TableRow key={student.id}>
-                          <TableCell className="font-mono text-xs">{student.registrationNumber}</TableCell>
-                          <TableCell className="font-semibold text-slate-900">{student.studentName}</TableCell>
-                          <TableCell>{student.schoolName}</TableCell>
+                      {subjectWiseData.map((subject) => (
+                        <TableRow key={subject.key} className="hover:bg-slate-50/30 transition-colors">
                           <TableCell>
-                            {selectedSubjectCode === "all"
-                              ? "All"
-                              : subjectWiseData.find((subject) => subject.key === selectedSubjectCode)?.code ?? "Selected"}
+                            <Badge variant="outline" className="font-mono bg-white border-slate-200 text-slate-600">
+                              {subject.code}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-bold text-slate-900 uppercase tracking-tight">
+                            {subject.subject}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className="bg-slate-100 text-slate-600 border-none hover:bg-slate-100">
+                              {subject.level}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-slate-700">
+                            {subject.totalSchools}
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-indigo-600">
+                            {subject.totalStudents}
                           </TableCell>
                         </TableRow>
                       ))}
+                      <TableRow className="bg-slate-50 hover:bg-slate-100 font-bold border-t-2 border-slate-200 text-slate-900">
+                        <TableCell colSpan={3} className="text-right uppercase tracking-widest h-12">
+                          SYSTEM TOTALS
+                        </TableCell>
+                        <TableCell className="text-right text-lg">
+                          {subjectWiseData.reduce((sum, s) => sum + s.totalSchools, 0)}
+                        </TableCell>
+                        <TableCell className="text-right text-lg text-indigo-600">
+                          {subjectWiseData.reduce((sum, s) => sum + s.totalStudents, 0)}
+                        </TableCell>
+                      </TableRow>
                     </TableBody>
                   </Table>
+                </div>
+              </div>
+
+              <Card className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <CardTitle className="text-lg font-bold text-slate-900">Candidate Directory</CardTitle>
+                      <CardDescription>
+                        {selectedSubjectCode === "all"
+                          ? "Master list of all students across all subjects"
+                          : `Students enrolled in ${subjectWiseData.find(s => s.key === selectedSubjectCode)?.subject}`}
+                      </CardDescription>
+                    </div>
+                    <Badge className="bg-indigo-600 text-white border-none px-3 py-1">
+                      {subjectStudentsList.length} Total
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="max-h-[400px] overflow-y-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                        <TableRow>
+                          <TableHead className="bg-white">REG NUMBER</TableHead>
+                          <TableHead className="bg-white">CANDIDATE NAME</TableHead>
+                          <TableHead className="bg-white">SCHOOL NAME</TableHead>
+                          <TableHead className="bg-white text-right">SUBJECT</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {subjectStudentsList.map((student) => (
+                          <TableRow key={student.id} className="hover:bg-slate-50/50 transition-colors">
+                            <TableCell className="font-mono text-xs text-slate-500">{student.registrationNumber}</TableCell>
+                            <TableCell className="font-bold text-slate-900">{student.studentName}</TableCell>
+                            <TableCell className="text-slate-600">{student.schoolName}</TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="outline" className="font-mono text-[10px] bg-slate-50 border-slate-200">
+                                {selectedSubjectCode === "all"
+                                  ? "MULTI"
+                                  : subjectWiseData.find((subject) => subject.key === selectedSubjectCode)?.code ?? "SEL"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </CardContent>
@@ -2338,187 +2423,224 @@ export function Reports({ onPageChange }: ReportsProps) {
         </TabsContent>
 
         <TabsContent value="school-wise" className="mt-0">
-          <Card>
-            <CardHeader className="border-b border-slate-200 py-4">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle className="text-base font-semibold text-slate-900">School Report</CardTitle>
+          <Card className="border-none shadow-none bg-transparent">
+            <CardHeader className="px-0 pb-6">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="rounded-md border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5">
+                      School Records
+                    </Badge>
+                    <CardTitle className="text-xl font-bold text-slate-900">
+                      {isAdmin ? "Individual School Reports" : "My School Registration"}
+                    </CardTitle>
+                  </div>
+                  <CardDescription className="text-slate-500 max-w-md leading-relaxed">
+                    Access detailed subject breakdowns, candidate lists, and official entry summaries for a specific institution.
+                  </CardDescription>
                 </div>
-                {isAdmin ? (
-                  <div className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 lg:w-auto lg:flex-row lg:items-center">
-                    <Select value={selectedSchool} onValueChange={setSelectedSchool}>
-                      <SelectTrigger className="w-full border-white bg-white lg:w-[300px]">
-                        <SelectValue placeholder="Select school" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Choose a school</SelectItem>
-                        {scopedSchools.map((school) => (
-                          <SelectItem key={school.code} value={school.code}>
-                            {school.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={selectedSchoolReportLevel}
-                      onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
-                    >
-                      <SelectTrigger className="w-full border-white bg-white lg:w-[160px]">
-                        <SelectValue placeholder="Level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(selectedSchoolAvailableLevels.length > 0
-                          ? selectedSchoolAvailableLevels
-                          : ["UCE", "UACE"]
-                        ).map((level) => (
-                          <SelectItem key={level} value={level}>
-                            {level} Form
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 lg:w-auto lg:flex-row lg:items-center">
-                    <div className="w-full rounded-xl border border-white bg-white px-4 py-2.5 text-sm text-slate-500 lg:w-[300px]">
-                      School
-                      <span className="mx-2 text-slate-300">|</span>
-                      <span className="font-semibold text-slate-900">
-                        {scopedSchools[0]?.name || user?.schoolCode}
-                      </span>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  {isAdmin ? (
+                    <div className="flex flex-col gap-2 p-1.5 rounded-xl border border-slate-100 bg-slate-50 sm:flex-row sm:items-center">
+                      <Select value={selectedSchool} onValueChange={setSelectedSchool}>
+                        <SelectTrigger className="h-9 w-full sm:w-[260px] border-none bg-white shadow-sm rounded-lg">
+                          <SelectValue placeholder="Select a school" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Search schools...</SelectItem>
+                          {scopedSchools.map((school) => (
+                            <SelectItem key={school.code} value={school.code}>
+                              {school.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={selectedSchoolReportLevel}
+                        onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
+                      >
+                        <SelectTrigger className="h-9 w-full sm:w-[130px] border-none bg-white shadow-sm rounded-lg">
+                          <SelectValue placeholder="Level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(selectedSchoolAvailableLevels.length > 0
+                            ? selectedSchoolAvailableLevels
+                            : ["UCE", "UACE"]
+                          ).map((level) => (
+                            <SelectItem key={level} value={level}>
+                              {level}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Select
-                      value={selectedSchoolReportLevel}
-                      onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
-                    >
-                      <SelectTrigger className="w-full border-white bg-white lg:w-[160px]">
-                        <SelectValue placeholder="Level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(selectedSchoolAvailableLevels.length > 0
-                          ? selectedSchoolAvailableLevels
-                          : ["UCE", "UACE"]
-                        ).map((level) => (
-                          <SelectItem key={level} value={level}>
-                            {level} Form
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex items-center gap-3 p-1.5 rounded-xl border border-slate-100 bg-slate-50">
+                      <div className="px-3 py-1.5 text-sm font-bold text-slate-900 bg-white rounded-lg shadow-sm border border-slate-100">
+                        {scopedSchools[0]?.name || user?.schoolCode}
+                      </div>
+                      <Select
+                        value={selectedSchoolReportLevel}
+                        onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
+                      >
+                        <SelectTrigger className="h-9 w-28 border-none bg-white shadow-sm rounded-lg">
+                          <SelectValue placeholder="Level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(selectedSchoolAvailableLevels.length > 0
+                            ? selectedSchoolAvailableLevels
+                            : ["UCE", "UACE"]
+                          ).map((level) => (
+                            <SelectItem key={level} value={level}>
+                              {level}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-4">
+
+            <CardContent className="px-0">
               {!selectedSchoolData || !selectedSchoolProfile ? (
-                <div className="bg-white shadow-sm border border-slate-200 rounded-2xl py-16 text-center text-slate-500">
-                  <School className="mx-auto mb-3 h-12 w-12 opacity-50" />
-                  <p>Select a school to view the detailed report.</p>
+                <div className="bg-white p-20 rounded-2xl border border-slate-200 border-dashed text-center">
+                  <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <School className="h-8 w-8 text-slate-300" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">No School Selected</h3>
+                  <p className="text-slate-500 max-w-xs mx-auto">
+                    Please select an institution from the dropdown above to view its detailed reporting dashboard.
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="min-w-0 space-y-0.5">
-                        <h3 className="text-xl font-bold text-slate-900">
-                          {selectedSchoolData.name}
-                        </h3>
-                        <p className="text-sm text-slate-600">
-                          {selectedSchoolData.code} / {selectedSchoolData.district} / {selectedSchoolData.zone}
-                        </p>
+                <div className="space-y-6">
+                  {/* School Profile Card */}
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="p-6 sm:p-8 bg-slate-900 text-white">
+                      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-2">
+                          <Badge className="bg-emerald-500 text-white border-none px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                            Institution Profile
+                          </Badge>
+                          <h3 className="text-3xl font-black tracking-tight">{selectedSchoolData.name}</h3>
+                          <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-slate-400 text-sm">
+                            <span className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="border-slate-700 text-slate-300 font-mono">
+                                {selectedSchoolData.code}
+                              </Badge>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              {selectedSchoolData.district}
+                            </span>
+                            <span className="h-1 w-1 bg-slate-700 rounded-full hidden sm:block"></span>
+                            <span className="flex items-center gap-1.5">
+                              {selectedSchoolData.zone}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-4 sm:items-end">
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Status</p>
+                            {getStatusBadge(selectedSchoolData.status)}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Academic Year</p>
+                            <p className="text-xl font-bold">{selectedSchoolData.academicYear || "2026"}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-3 lg:max-w-[520px] lg:flex-1 lg:justify-end">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                            Academic Year
-                          </p>
-                          <p className="mt-1 font-semibold text-slate-900">
-                            {selectedSchoolData.academicYear || "2026"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                            Payment Status
-                          </p>
-                          <div className="mt-1">{getStatusBadge(selectedSchoolData.status)}</div>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                            Last Updated
-                          </p>
-                          <p className="mt-1 font-semibold text-slate-900">
-                            {selectedSchoolProfile.lastUpdated}
-                          </p>
-                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                      <div className="p-6 hover:bg-slate-50/50 transition-colors">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Total Candidates</p>
+                        <p className="text-4xl font-black text-slate-900">{selectedSchoolProfile.totalStudents}</p>
+                        <p className="text-xs text-slate-400 mt-1">Registered for {selectedSchoolReportLevel}</p>
+                      </div>
+                      <div className="p-6 hover:bg-slate-50/50 transition-colors">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Subjects Offered</p>
+                        <p className="text-4xl font-black text-slate-900">{selectedSchoolProfile.subjectsRegistered}</p>
+                        <p className="text-xs text-slate-400 mt-1">Unique course codes</p>
+                      </div>
+                      <div className="p-6 hover:bg-slate-50/50 transition-colors">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Last Sync</p>
+                        <p className="text-2xl font-bold text-slate-900 mt-2">{selectedSchoolProfile.lastUpdated}</p>
+                        <p className="text-xs text-slate-400 mt-1">Data current as of today</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Card className="border-l-4 border-l-red-600">
-                      <CardContent className="pt-6">
-                        <p className="text-sm text-slate-500">Total Students</p>
-                        <p className="mt-2 text-3xl font-bold text-slate-900">
-                          {selectedSchoolProfile.totalStudents}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card className="border-l-4 border-l-amber-500">
-                      <CardContent className="pt-6">
-                        <p className="text-sm text-slate-500">
-                          Subjects Registered
-                        </p>
-                        <p className="mt-2 text-3xl font-bold text-slate-900">
-                          {selectedSchoolProfile.subjectsRegistered}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                  {/* Export Controls */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <Button
                       variant="outline"
-                      className="w-full justify-center h-11 rounded-xl border-slate-200"
+                      className="h-14 rounded-2xl border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 group transition-all"
                       onClick={() => handleExport("pdf", "School Students List")}
                       disabled={isExporting("pdf", "School Students List")}
                     >
-                      {isExporting("pdf", "School Students List") ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <FileText className="h-4 w-4 mr-2" />
-                      )}
-                      Students List (PDF)
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center group-hover:bg-white transition-colors">
+                          <FileText className="h-5 w-5 text-slate-600" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Candidates</p>
+                          <p className="font-bold text-slate-900">PDF List</p>
+                        </div>
+                      </div>
                     </Button>
+
                     <Button
                       variant="outline"
-                      className="w-full justify-center h-11 rounded-xl border-slate-200"
+                      className="h-14 rounded-2xl border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 group transition-all"
                       onClick={() => handleExport("excel", "School Students List")}
                       disabled={isExporting("excel", "School Students List")}
                     >
-                      {isExporting("excel", "School Students List") ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <FileSpreadsheet className="h-4 w-4 mr-2" />
-                      )}
-                      Students List (Excel)
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center group-hover:bg-white transition-colors">
+                          <FileSpreadsheet className="h-5 w-5 text-slate-600" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Candidates</p>
+                          <p className="font-bold text-slate-900">Excel Data</p>
+                        </div>
+                      </div>
                     </Button>
+
                     <Button
                       variant="default"
-                      className="w-full justify-center h-11 rounded-xl bg-red-600 hover:bg-red-700 text-white"
+                      className="h-14 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-200 border-none group transition-all"
                       onClick={() => handleExport("pdf", "Summary of Entries (UACE)")}
                       disabled={isExporting("pdf", "Summary of Entries (UACE)")}
                     >
-                      <FileText className="h-4 w-4 mr-2" />
-                      UACE Summary of Entries (PDF)
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center">
+                          <Download className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Official</p>
+                          <p className="font-bold text-white">UACE Summary</p>
+                        </div>
+                      </div>
                     </Button>
+
                     <Button
                       variant="default"
-                      className="w-full justify-center h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+                      className="h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 border-none group transition-all"
                       onClick={() => handleExport("pdf", "Summary of Entries (UCE)")}
                       disabled={isExporting("pdf", "Summary of Entries (UCE)")}
                     >
-                      <FileText className="h-4 w-4 mr-2" />
-                      UCE Summary of Entries (Appendix 1)
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center">
+                          <Download className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Official</p>
+                          <p className="font-bold text-white">UCE Appendix</p>
+                        </div>
+                      </div>
                     </Button>
                   </div>
                 </div>

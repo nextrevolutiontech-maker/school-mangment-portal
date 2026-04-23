@@ -40,7 +40,7 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
       change: `${schools.filter((school) => school.status === "active").length} active schools`,
       icon: School,
       borderClass: "border-l-red-600",
-      iconClass: "bg-red-600/10 text-red-600",
+      iconClass: "bg-orange-600/10 text-orange-600",
     },
     {
       title: "Total Students",

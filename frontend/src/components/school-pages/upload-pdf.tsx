@@ -281,7 +281,7 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
     <div className="flex flex-col w-full gap-6">
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-400">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-400">
             Signed Form Workflow
           </p>
           <h1 className="text-3xl font-bold text-slate-900">Upload Signed PDF</h1>
@@ -354,7 +354,7 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
 
             <div className="flex flex-col gap-4 rounded-2xl bg-white shadow-sm border border-slate-200 p-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-600/15 text-red-400">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-600/15 text-orange-400">
                   <FileText className="h-6 w-6" />
                 </div>
                 <div>
@@ -429,7 +429,7 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
                   <div className="flex items-center gap-2 text-slate-900">
-                    <MailCheck className="h-4 w-4 text-red-400" />
+                    <MailCheck className="h-4 w-4 text-orange-400" />
                     Confirmation email workflow simulated
                   </div>
                   <p className="mt-2 text-slate-500">
@@ -454,7 +454,7 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
                       htmlFor="pdf-upload"
                       className="flex cursor-pointer flex-col items-center space-y-3"
                     >
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-600/12 text-red-400">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-600/12 text-orange-400">
                         <Upload className="h-7 w-7" />
                       </div>
                       <div>
@@ -472,9 +472,9 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
                 </div>
 
                 {selectedFile && !isUploading && (
-                  <div className="flex flex-col gap-4 rounded-2xl border border-red-200 bg-red-50 p-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-col gap-4 rounded-2xl border border-orange-200 bg-orange-50 p-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-red-400" />
+                      <FileText className="h-5 w-5 text-orange-400" />
                       <div>
                         <p className="font-semibold text-slate-900">
                           {selectedFile.name}

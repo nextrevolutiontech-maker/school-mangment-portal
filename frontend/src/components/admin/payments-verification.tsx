@@ -144,7 +144,7 @@ export function PaymentsVerification({
     <div className="flex flex-col w-full gap-6">
       <div className="w-full flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">
             Finance Control
           </p>
           <div>
@@ -294,7 +294,7 @@ export function PaymentsVerification({
 
           <div className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600/15 text-red-400">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-600/15 text-orange-400">
                 {isProcessing ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (

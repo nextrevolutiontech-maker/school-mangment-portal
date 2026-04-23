@@ -290,7 +290,7 @@ function SchedulePanel({
             <Card key={date}>
               <CardHeader className="border-b border-slate-200">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600/15 text-red-400">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-600/15 text-orange-400">
                     <Calendar className="h-5 w-5" />
                   </div>
                   <div>
@@ -422,7 +422,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">
             Examination Schedule
           </p>
           <h1 className="text-3xl font-bold text-slate-900">

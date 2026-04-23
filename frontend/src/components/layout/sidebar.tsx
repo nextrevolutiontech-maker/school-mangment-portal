@@ -213,7 +213,7 @@ export function Sidebar({
             variant="ghost"
             className={`w-full ${
               isCollapsed ? "justify-center px-0" : "justify-start px-3"
-            } text-red-500 hover:bg-red-50 hover:text-red-600`}
+            } text-orange-500 hover:bg-orange-50 hover:text-orange-600`}
             onClick={logout}
           >
             <LogOut className={`${isCollapsed ? "" : "mr-3"} h-4 w-4`} />

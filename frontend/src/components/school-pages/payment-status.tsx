@@ -198,7 +198,7 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
   return (
     <div className="flex flex-col w-full gap-6">
       <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-500">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">
           Finance & Activation
         </p>
         <h1 className="text-3xl font-bold text-slate-900">Payment Status</h1>
@@ -255,10 +255,10 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+            <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.16em] text-red-600">
+                  <p className="text-sm uppercase tracking-[0.16em] text-orange-600 font-semibold">
                     Total Amount
                   </p>
                   <p className="mt-2 text-sm text-slate-500">
@@ -312,7 +312,7 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                 className="rounded-2xl bg-white shadow-sm border border-slate-200 p-4 shadow-sm"
               >
                 <div className="mb-3 flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600/10 text-sm font-semibold text-red-600">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-600/10 text-sm font-semibold text-orange-600">
                     {index + 1}
                   </div>
                   <div>
@@ -337,7 +337,7 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                     Contact finance support at{" "}
                     <a
                       href="mailto:payments@wakissha.ug"
-                      className="text-red-600 hover:underline"
+                      className="text-orange-600 hover:underline"
                     >
                       payments@wakissha.ug
                     </a>{" "}
