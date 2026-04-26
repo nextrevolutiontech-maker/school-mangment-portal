@@ -1,0 +1,180 @@
+export interface WPFRow {
+  date: string;
+  code: string;
+  paper: number;
+  subjectName: string;
+  description?: string;
+}
+
+export interface WPFSection {
+  id: string;
+  title: string;
+  rows: WPFRow[];
+}
+
+export const UACE_WPF_SECTIONS: WPFSection[] = [
+  {
+    id: "A-C",
+    title: "A - C Subject/Paper",
+    rows: [
+      { date: "Tue 28/07/2026", code: "P615", paper: 2, subjectName: "Art: Making" },
+      { date: "Wed 29/07/2026", code: "P515", paper: 2, subjectName: "Agric. Princ & Practices" },
+      { date: "Thur 30/07/2026", code: "P250", paper: 1, subjectName: "Geography" },
+      { date: "Fri 31/07/2026", code: "P510", paper: 2, subjectName: "Physics" },
+      { date: "Mon 03/08/2026", code: "P525", paper: 2, subjectName: "Chemistry" },
+      { date: "Tue 04/08/2026", code: "P530", paper: 2, subjectName: "Biology" },
+      { date: "Wed 05/08/2026", code: "P640", paper: 2, subjectName: "Foods and Nutrition Practical" },
+    ],
+  },
+  {
+    id: "A-1",
+    title: "A - 1 Subject/Paper",
+    rows: [
+      { date: "Mon 27/07/2026", code: "P515", paper: 1, subjectName: "Agric. Princ. & Practical" },
+      { date: "Mon 27/07/2026", code: "P340", paper: 1, subjectName: "German Essay" },
+      { date: "Tue 28/07/2026", code: "P320", paper: 1, subjectName: "Kiswahili" },
+      { date: "Tue 28/07/2026", code: "P330", paper: 2, subjectName: "French" },
+      { date: "Tue 28/07/2026", code: "P330", paper: 1, subjectName: "French" },
+      { date: "Tue 28/07/2026", code: "P340", paper: 2, subjectName: "German" },
+      { date: "Tue 28/07/2026", code: "P615", paper: 2, subjectName: "Art making" },
+      { date: "Wed 29/07/2026", code: "P230", paper: 1, subjectName: "Entrepreneurship Skills" },
+      { date: "Wed 29/07/2026", code: "P640", paper: 1, subjectName: "Food & Nutrition" },
+      { date: "Wed 29/07/2026", code: "P230", paper: 2, subjectName: "Entrepreneurship Skills" },
+      { date: "Thur 30/07/2026", code: "P510", paper: 1, subjectName: "Physics" },
+      { date: "Fri 31/07/2026", code: "P310", paper: 1, subjectName: "Literature in English" },
+      { date: "Fri 31/07/2026", code: "P525", paper: 1, subjectName: "Chemistry (Theory)" },
+      { date: "Fri 31/07/2026", code: "P310", paper: 2, subjectName: "Literature in English" },
+    ],
+  },
+  {
+    id: "A-2",
+    title: "A - 2 Subject/Paper",
+    rows: [
+      { date: "Mon 03/08/2026", code: "P210", paper: 2, subjectName: "World Affairs History" },
+      { date: "Mon 03/08/2026", code: "P425", paper: 1, subjectName: "Math" },
+      { date: "Mon 03/08/2026", code: "P425", paper: 2, subjectName: "Math" },
+      { date: "Mon 03/08/2026", code: "P210", paper: 1, subjectName: "History" },
+      { date: "Tue 04/08/2026", code: "P360", paper: 1, subjectName: "Luganda" },
+      { date: "Tue 04/08/2026", code: "P366", paper: 1, subjectName: "Lusoga" },
+      { date: "Tue 04/08/2026", code: "P370", paper: 1, subjectName: "Arabic" },
+      { date: "Tue 04/08/2026", code: "P364", paper: 1, subjectName: "Runyankole/Rukiga" },
+      { date: "Tue 04/08/2026", code: "P320", paper: 2, subjectName: "Kiswahili" },
+      { date: "Tue 04/08/2026", code: "P720", paper: 2, subjectName: "Geo & Build drawing" },
+      { date: "Tue 04/08/2026", code: "P615", paper: 1, subjectName: "Art: Analysis" },
+      { date: "Tue 04/08/2026", code: "P515", paper: 2, subjectName: "Agric. Princ & Practices (practical)" },
+      { date: "Wed 05/08/2026", code: "P360", paper: 2, subjectName: "Luganda" },
+      { date: "Wed 05/08/2026", code: "P366", paper: 2, subjectName: "Lusoga" },
+      { date: "Wed 05/08/2026", code: "P370", paper: 2, subjectName: "Arabic" },
+      { date: "Wed 05/08/2026", code: "P364", paper: 2, subjectName: "Runyankole/Rukiga" },
+      { date: "Thur 06/08/2026", code: "P250", paper: 1, subjectName: "Geography" },
+      { date: "Thur 06/08/2026", code: "P250", paper: 2, subjectName: "Geography" },
+      { date: "Thur 06/08/2026", code: "P510", paper: 2, subjectName: "Physics (Practical)" },
+      { date: "Fri 07/08/2026", code: "S101", paper: 1, subjectName: "General paper" },
+      { date: "Fri 07/08/2026", code: "P720", paper: 3, subjectName: "Geo & Build drawing" },
+    ],
+  },
+  {
+    id: "A-3",
+    title: "A - 3 Subject/Paper",
+    rows: [
+      { date: "Mon 10/08/2026", code: "P525", paper: 2, subjectName: "Chemistry (Practical)" },
+      { date: "Mon 10/08/2026", code: "P720", paper: 1, subjectName: "Geometrical & build drawing" },
+      { date: "Tue 11/08/2026", code: "P220", paper: 1, subjectName: "Economics" },
+      { date: "Tue 11/08/2026", code: "P530", paper: 2, subjectName: "Biology (Practical)" },
+      { date: "Tue 11/08/2026", code: "P235", paper: 2, subjectName: "IRE" },
+      { date: "Tue 11/08/2026", code: "P245", paper: 2, subjectName: "CRE" },
+      { date: "Wed 12/08/2026", code: "P235", paper: 1, subjectName: "IRE" },
+      { date: "Wed 12/08/2026", code: "P245", paper: 1, subjectName: "CRE" },
+      { date: "Wed 12/08/2026", code: "P530", paper: 1, subjectName: "Biology (Theory)" },
+      { date: "Wed 12/08/2026", code: "S850", paper: 1, subjectName: "Sub ICT (Theory)" },
+      { date: "Thur 13/08/2026", code: "S850", paper: 2, subjectName: "Sub ICT (Practical)" },
+      { date: "Thur 13/08/2026", code: "P220", paper: 2, subjectName: "Economics" },
+      { date: "Fri 14/08/2026", code: "S475", paper: 1, subjectName: "Sub Math" },
+      { date: "Fri 14/08/2026", code: "S850", paper: 3, subjectName: "Sub ICT (Alternative Practical)" },
+    ],
+  },
+];
+
+export const UCE_WPF_SECTIONS: WPFSection[] = [
+  {
+    id: "O-C",
+    title: "O - C Subject/Paper",
+    rows: [
+      { date: "Tue 28/07/2026", code: "273", paper: 1, subjectName: "Geography" },
+      { date: "Wed 29/07/2026", code: "553", paper: 2, subjectName: "Biology (Practical)" },
+      { date: "Fri 31/07/2026", code: "527", paper: 2, subjectName: "Agric. Principles & Practices (Practical)" },
+      { date: "Mon 03/08/2026", code: "535", paper: 2, subjectName: "Physics (Practical)" },
+      { date: "Fri 07/08/2026", code: "545", paper: 2, subjectName: "Chemistry (Practical)" },
+      { date: "Mon 10/08/2026", code: "535", paper: 3, subjectName: "Physics (Alternative practical)" },
+      { date: "Tue 11/08/2026", code: "553", paper: 3, subjectName: "Biology (Alternative practical)" },
+      { date: "Wed 12/08/2026", code: "545", paper: 3, subjectName: "Chemistry (Alternative practical)" },
+      { date: "Wed 12/08/2026", code: "662", paper: 2, subjectName: "Nutrition & Food technology (Practical)" },
+      { date: "Wed 12/08/2026", code: "745", paper: 2, subjectName: "Tech. & Design (Drawing)" },
+      { date: "Wed 12/08/2026", code: "309/314/337", paper: 2, subjectName: "Foreign Language Orals" },
+    ],
+  },
+  {
+    id: "O-1",
+    title: "O - 1 Subject/Paper",
+    rows: [
+      { date: "Mon 27/07/2026", code: "456", paper: 1, subjectName: "Maths" },
+      { date: "Tue 28/07/2026", code: "612", paper: 1, subjectName: "Art & Design (Theory)" },
+      { date: "Tue 28/07/2026", code: "273", paper: 1, subjectName: "Geography" },
+      { date: "Tue 28/07/2026", code: "840", paper: 2, subjectName: "ICT (Practical)" },
+      { date: "Wed 29/07/2026", code: "553", paper: 2, subjectName: "Biology (practical)" },
+      { date: "Wed 29/07/2026", code: "208", paper: 1, subjectName: "Literature" },
+      { date: "Wed 29/07/2026", code: "336", paper: 1, subjectName: "Kiswahili" },
+      { date: "Thur 30/07/2026", code: "241", paper: 1, subjectName: "History & Pol. Education" },
+      { date: "Thur 30/07/2026", code: "840", paper: 1, subjectName: "ICT (Theory)" },
+      { date: "Fri 31/07/2026", code: "527", paper: 2, subjectName: "Agric. Princ. & Practices (Practical)" },
+      { date: "Fri 31/07/2026", code: "112", paper: 1, subjectName: "Eng Language" },
+    ],
+  },
+  {
+    id: "O-2",
+    title: "O - 2 Subject/Paper",
+    rows: [
+      { date: "Mon 03/08/2026", code: "535", paper: 2, subjectName: "Physics (Practical)" },
+      { date: "Mon 03/08/2026", code: "527", paper: 1, subjectName: "Agric. Princ. & Practices (Theory)" },
+      { date: "Tue 04/08/2026", code: "545", paper: 1, subjectName: "Chemistry (Theory)" },
+      { date: "Tue 04/08/2026", code: "555", paper: 1, subjectName: "Physical Education (Theory)" },
+      { date: "Wed 05/08/2026", code: "535", paper: 1, subjectName: "Physics (Theory)" },
+      { date: "Wed 05/08/2026", code: "336", paper: 2, subjectName: "Kiswahili" },
+      { date: "Thur 06/08/2026", code: "553", paper: 1, subjectName: "Biology (Theory)" },
+      { date: "Thur 06/08/2026", code: "223", paper: 1, subjectName: "C.R.E" },
+      { date: "Thur 06/08/2026", code: "225", paper: 1, subjectName: "I.R.E" },
+      { date: "Fri 07/08/2026", code: "545", paper: 2, subjectName: "Chemistry (Practical)" },
+      { date: "Fri 07/08/2026", code: "845", paper: 1, subjectName: "Entrepreneurship Educ." },
+    ],
+  },
+  {
+    id: "O-3",
+    title: "O - 3 Subject/Paper",
+    rows: [
+      { date: "Mon 10/08/2026", code: "612", paper: 2, subjectName: "Art & design (Making)" },
+      { date: "Mon 10/08/2026", code: "535", paper: 3, subjectName: "Physics (Alternative practical)" },
+      { date: "Tue 11/08/2026", code: "553", paper: 3, subjectName: "Biology (Alternative practical)" },
+      { date: "Tue 11/08/2026", code: "745", paper: 1, subjectName: "Tech. & Design (Theory)" },
+      { date: "Wed 12/08/2026", code: "545", paper: 3, subjectName: "Chemistry (Alternative practical)" },
+      { date: "Wed 12/08/2026", code: "662", paper: 1, subjectName: "Nutrition & Food technology (Theory)" },
+      { date: "Wed 12/08/2026", code: "745", paper: 2, subjectName: "Tech. & Design (Drawing)" },
+      { date: "Thur 13/08/2026", code: "335", paper: 1, subjectName: "Luganda" },
+      { date: "Thur 13/08/2026", code: "345", paper: 1, subjectName: "Runyankole/Rukiga" },
+      { date: "Thur 13/08/2026", code: "385", paper: 1, subjectName: "Runyoro/Rutooro" },
+      { date: "Thur 13/08/2026", code: "315", paper: 1, subjectName: "Leb Lango" },
+      { date: "Thur 13/08/2026", code: "355", paper: 1, subjectName: "Lusoga" },
+      { date: "Thur 13/08/2026", code: "365", paper: 1, subjectName: "Ateso" },
+      { date: "Thur 13/08/2026", code: "335", paper: 2, subjectName: "Luganda" },
+      { date: "Thur 13/08/2026", code: "345", paper: 2, subjectName: "Runyankole/Rukiga" },
+      { date: "Thur 13/08/2026", code: "385", paper: 2, subjectName: "Runyoro/Rutooro" },
+      { date: "Thur 13/08/2026", code: "315", paper: 2, subjectName: "Leb Lango" },
+      { date: "Thur 13/08/2026", code: "355", paper: 2, subjectName: "Lusoga" },
+      { date: "Thur 13/08/2026", code: "365", paper: 2, subjectName: "Ateso" },
+      { date: "Fri 14/08/2026", code: "301", paper: 1, subjectName: "Latin" },
+      { date: "Fri 14/08/2026", code: "309", paper: 1, subjectName: "German" },
+      { date: "Fri 14/08/2026", code: "314", paper: 1, subjectName: "French" },
+      { date: "Fri 14/08/2026", code: "337", paper: 1, subjectName: "Arabic" },
+      { date: "Fri 14/08/2026", code: "396", paper: 1, subjectName: "Chinese" },
+    ],
+  },
+];

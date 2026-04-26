@@ -9,6 +9,7 @@ import { SchoolsManagement } from "./components/schools/schools-management";
 import { StudentsEntries } from "./components/students/students-entries";
 import { PaymentsVerification } from "./components/admin/payments-verification";
 import { PaymentStatus } from "./components/school-pages/payment-status";
+import { MakePayments } from "./components/school-pages/make-payments";
 import { UploadPDF } from "./components/school-pages/upload-pdf";
 import { Timetable } from "./components/shared/timetable";
 import { Reports } from "./components/shared/reports";
@@ -93,6 +94,8 @@ function AppContent() {
         return <StudentsEntries onPageChange={handlePageChange} autoOpenAddDialog={false} />;
       case "payment-status":
         return <PaymentStatus onPageChange={handlePageChange} />;
+      case "make-payments":
+        return <MakePayments onPageChange={handlePageChange} />;
       case "upload-pdf":
         return <UploadPDF onPageChange={handlePageChange} />;
       case "timetable":

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BookOpen, PencilLine, PlusCircle, ShieldCheck } from "lucide-react";
+import { BookOpen, PencilLine, PlusCircle, ShieldCheck, Trash2, Layers } from "lucide-react";
 import { useAuth } from "../auth-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -15,6 +15,7 @@ import {
 } from "../ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { toast } from "sonner";
+import { SubjectPaper } from "../../types/subject";
 
 interface SubjectsManagementProps {
   onPageChange: (page: string) => void;
@@ -42,7 +43,59 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
     standardCode: "",
     educationLevel: "UCE" as "UCE" | "UACE",
     optional: "yes" as "yes" | "no",
+    papers: [] as SubjectPaper[],
+    minPapers: "" as string | number,
+    maxPapers: "" as string | number,
   });
+
+  const [paperName, setPaperName] = useState("");
+  const [paperType, setPaperType] = useState<"compulsory" | "optional">("compulsory");
+
+  const addPaper = () => {
+    if (!paperName.trim()) {
+      toast.error("Please enter a paper name");
+      return;
+    }
+    
+    const paper: SubjectPaper = {
+      id: `paper-${Date.now()}`,
+      name: paperName.trim(),
+      isCompulsory: paperType === "compulsory"
+    };
+
+    const updatedPapers = [...newSubject.papers, paper];
+    
+    // Auto-rule: If only 1 paper, it must be compulsory
+    if (updatedPapers.length === 1) {
+      updatedPapers[0].isCompulsory = true;
+    }
+
+    setNewSubject({ ...newSubject, papers: updatedPapers });
+    setPaperName("");
+  };
+
+  const removePaper = (id: string) => {
+    const updatedPapers = newSubject.papers.filter(p => p.id !== id);
+    
+    // Re-apply rule: If only 1 paper remains, it must be compulsory
+    if (updatedPapers.length === 1) {
+      updatedPapers[0].isCompulsory = true;
+    }
+    
+    setNewSubject({ ...newSubject, papers: updatedPapers });
+  };
+
+  const togglePaperCompulsory = (id: string) => {
+    // If only 1 paper, it must stay compulsory
+    if (newSubject.papers.length === 1) return;
+
+    setNewSubject({
+      ...newSubject,
+      papers: newSubject.papers.map(p => 
+        p.id === id ? { ...p, isCompulsory: !p.isCompulsory } : p
+      )
+    });
+  };
 
   const stats = useMemo(
     () => [
@@ -115,6 +168,9 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
         standardCode: newSubject.standardCode,
         educationLevel: newSubject.educationLevel,
         optional: newSubject.optional === "yes",
+        papers: newSubject.papers,
+        minPapers: newSubject.minPapers ? Number(newSubject.minPapers) : undefined,
+        maxPapers: newSubject.maxPapers ? Number(newSubject.maxPapers) : undefined,
       });
     } else {
       addSubject({
@@ -123,6 +179,9 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
         standardCode: newSubject.standardCode,
         educationLevel: newSubject.educationLevel,
         optional: newSubject.optional === "yes",
+        papers: newSubject.papers,
+        minPapers: newSubject.minPapers ? Number(newSubject.minPapers) : undefined,
+        maxPapers: newSubject.maxPapers ? Number(newSubject.maxPapers) : undefined,
       });
     }
 
@@ -132,6 +191,9 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
       standardCode: "",
       educationLevel: "UCE",
       optional: "yes",
+      papers: [],
+      minPapers: "",
+      maxPapers: "",
     });
     setEditingSubjectId(null);
 
@@ -242,8 +304,110 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-2 xl:col-span-4 flex justify-end">
-            <Button onClick={handleSubmitSubject}>
+
+          {/* Subject Papers Section */}
+          <div className="md:col-span-2 xl:col-span-5 space-y-4 pt-4 border-t border-slate-100 mt-2">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold">
+              <Layers className="h-4 w-4 text-blue-500" />
+              <h3>Subject Papers Configuration</h3>
+            </div>
+
+            {newSubject.papers.length > 1 && (
+              <div className="grid gap-4 md:grid-cols-2 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                <div className="space-y-2">
+                  <Label htmlFor="minPapers">Min Papers Selection</Label>
+                  <Input
+                    id="minPapers"
+                    type="number"
+                    placeholder="e.g. 2"
+                    value={newSubject.minPapers}
+                    onChange={(e) => setNewSubject({ ...newSubject, minPapers: e.target.value })}
+                  />
+                  <p className="text-[10px] text-slate-500 italic">Minimum number of papers a student must select for this subject.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxPapers">Max Papers Selection</Label>
+                  <Input
+                    id="maxPapers"
+                    type="number"
+                    placeholder="e.g. 3"
+                    value={newSubject.maxPapers}
+                    onChange={(e) => setNewSubject({ ...newSubject, maxPapers: e.target.value })}
+                  />
+                  <p className="text-[10px] text-slate-500 italic">Maximum number of papers a student can select for this subject.</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="grid gap-4 md:grid-cols-4 items-end bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="paperName">Paper Name</Label>
+                <Input
+                  id="paperName"
+                  placeholder="e.g. Paper 1"
+                  value={paperName}
+                  onChange={(e) => setPaperName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Paper Type</Label>
+                <Select
+                  value={paperType}
+                  onValueChange={(value: "compulsory" | "optional") => setPaperType(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compulsory">Compulsory</SelectItem>
+                    <SelectItem value="optional">Optional</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="button" variant="secondary" onClick={addPaper}>
+                <PlusCircle className="h-4 w-4" />
+                Add Paper
+              </Button>
+            </div>
+
+            {newSubject.papers.length > 0 && (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {newSubject.papers.map((paper) => (
+                  <div 
+                    key={paper.id} 
+                    className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm group hover:border-blue-200 transition-colors"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-bold text-slate-900">{paper.name}</span>
+                      <Badge 
+                        variant={paper.isCompulsory ? "success" : "secondary"}
+                        className="w-fit text-[10px] py-0 px-1.5 cursor-pointer"
+                        onClick={() => togglePaperCompulsory(paper.id)}
+                      >
+                        {paper.isCompulsory ? "Compulsory" : "Optional"}
+                      </Badge>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removePaper(paper.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {newSubject.papers.length === 0 && (
+              <p className="text-xs text-slate-500 italic">No papers defined. Add papers above to configure selection rules.</p>
+            )}
+          </div>
+
+          <div className="md:col-span-2 xl:col-span-5 flex justify-end pt-4">
+            <Button onClick={handleSubmitSubject} className="w-full sm:w-auto">
               <PlusCircle className="h-4 w-4" />
               {editingSubjectId ? "Save Subject Changes" : "Add Standard Subject"}
             </Button>
@@ -320,6 +484,9 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                             standardCode: subject.standardCode,
                             educationLevel: subject.educationLevel,
                             optional: subject.optional ? "yes" : "no",
+                            papers: subject.papers,
+                            minPapers: subject.minPapers ?? "",
+                            maxPapers: subject.maxPapers ?? "",
                           });
                         }}
                       >

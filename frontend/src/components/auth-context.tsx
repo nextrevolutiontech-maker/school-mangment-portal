@@ -61,6 +61,26 @@ export interface SchoolRecord {
   schoolLogo?: string;
   contactPerson?: string;
   contactDesignation?: string;
+  registrationFinalized?: boolean;
+  markingGuide?: "Arts" | "Sciences" | "Both" | "None";
+}
+
+export interface Invoice {
+  id: string;
+  serialNumber: string;
+  schoolCode: string;
+  date: string;
+  items: {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    formula?: string;
+  }[];
+  totalAmount: number;
+  status: "pending" | "paid";
+  type: "original" | "additional";
+  paymentProof?: string;
 }
 
 export interface StudentSubjectEntry {
@@ -68,7 +88,7 @@ export interface StudentSubjectEntry {
   subjectCode: string; // Short code such as ENG, MATH, GP
   subjectStandardCode?: string;
   subjectName: string;
-  paper: "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4";
+  paper: string; // Dynamic paper name (e.g., "Paper 1", "Theory", "Practical")
   entry1: boolean;
   entry2: boolean;
   entry3: boolean;
@@ -85,9 +105,67 @@ export interface StudentRecord {
   schoolName: string;
   academicYear: string;
   stream?: string; // Internal use only
+  bookletsCount?: number;
+  isAdditional?: boolean;
   subjects: StudentSubjectEntry[];
   totalEntries: number; // Sum of all checked entries
   registrationDate: string;
+  isInvoiced?: boolean;
+}
+
+// Helper functions for student registration validation
+export function mapSubjectCode(subjectCode: string) {
+  const normalized = subjectCode.toUpperCase();
+  const aliases: Record<string, string> = {
+    ENG: "ENG",
+    MTH: "MATH",
+    CPS: "CPS",
+    ETP: "ENT",
+    ECN: "ECON",
+    GEO: "GEOG",
+    HIS: "HIST",
+    CHM: "CHEM",
+    BIO: "BIO",
+    PHY: "PHY",
+    GP: "GP",
+    LIT: "LIT",
+    CRE: "CRE",
+    IRE: "IRE",
+    ECO: "ECON",
+    ENT: "ENT",
+    MATH: "MATH",
+    CHEM: "CHEM",
+    PHYS: "PHY",
+  };
+  
+  // Custom mapping for subsidiaries
+  if (normalized.includes("GP") || normalized.includes("101")) return "GP";
+  if (normalized.includes("SUB MATH") || normalized.includes("475")) return "SUB_MATHS";
+  if (normalized.includes("SUB ICT") || normalized.includes("610")) return "SUB_ICT";
+  
+  return aliases[normalized] ?? normalized;
+}
+
+export function isStudentFullyRegistered(student: Pick<StudentRecord, 'subjects' | 'examLevel'>, subjects: Subject[]) {
+  if (!student.subjects || student.subjects.length === 0) return false;
+  
+  const uniqueSubjectCodes = Array.from(new Set(student.subjects.map(s => mapSubjectCode(s.subjectCode))));
+  const subjectCount = uniqueSubjectCodes.length;
+
+  if (student.examLevel === "UCE") {
+    // UCE: All compulsory subjects + total between 8-9
+    const uceCompulsoryCodes = subjects
+      .filter(s => s.educationLevel === "UCE" && !s.optional)
+      .map(s => mapSubjectCode(s.code));
+    
+    const hasAllCompulsory = uceCompulsoryCodes.every(code => uniqueSubjectCodes.includes(code));
+    return hasAllCompulsory && subjectCount >= 8 && subjectCount <= 9;
+  } else {
+    // UACE: Must have GP (101) + at least one Subsidiary (Maths/ICT)
+    const hasGP = uniqueSubjectCodes.includes("GP");
+    const hasSub = uniqueSubjectCodes.includes("SUB_MATHS") || uniqueSubjectCodes.includes("SUB_ICT");
+    return hasGP && hasSub;
+  }
 }
 
 interface NewSchoolInput {
@@ -108,6 +186,7 @@ interface AuthContextType {
   students: StudentRecord[];
   zones: Zone[];
   subjects: Subject[];
+  invoices: Invoice[];
   login: (identifier: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -118,13 +197,18 @@ interface AuthContextType {
     status: SchoolStatus,
     activationCode?: string,
   ) => void;
+  finalizeRegistration: (schoolCode: string, markingGuide: "Arts" | "Sciences" | "Both", bookletsCount: number) => void;
+  addInvoice: (invoice: Omit<Invoice, "id">, studentIds?: string[]) => void;
+  uploadPaymentProof: (invoiceId: string, proofUrl: string) => void;
   addStudentEntry: (entry: {
     schoolCode: string;
     studentName: string;
     classLevel: "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6";
     stream?: string;
+    bookletsCount?: number;
     subjects: StudentSubjectEntry[];
     totalEntries: number;
+    isAdditional?: boolean;
   }) => void;
   updateStudentEntry: (
     studentId: string,
@@ -132,6 +216,7 @@ interface AuthContextType {
       studentName: string;
       classLevel: "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6";
       stream?: string;
+      bookletsCount?: number;
       subjects: StudentSubjectEntry[];
       totalEntries: number;
     },
@@ -143,6 +228,9 @@ interface AuthContextType {
     standardCode: string;
     educationLevel: "UCE" | "UACE";
     optional: boolean;
+    papers: SubjectPaper[];
+    minPapers?: number;
+    maxPapers?: number;
   }) => void;
   updateSubject: (
     subjectId: string,
@@ -152,6 +240,9 @@ interface AuthContextType {
       standardCode: string;
       educationLevel: "UCE" | "UACE";
       optional: boolean;
+      papers: SubjectPaper[];
+      minPapers?: number;
+      maxPapers?: number;
     },
   ) => void;
 }
@@ -281,58 +372,65 @@ const initialZones: Zone[] = [
 
 const initialSubjects: Subject[] = [
   // UCE Subjects
-  { id: "subj-1", name: "English Language", code: "ENG", standardCode: "112", educationLevel: "UCE", optional: false },
-  { id: "subj-2", name: "Literature in English", code: "LIT", standardCode: "208", educationLevel: "UCE", optional: true },
-  { id: "subj-3-uceEP", name: "Kiswahili", code: "KISWA", standardCode: "336", educationLevel: "UCE", optional: true },
-  { id: "subj-4-uce", name: "Christian Religious Education", code: "CRE", standardCode: "223", educationLevel: "UCE", optional: true },
-  { id: "subj-5-uce", name: "Islamic Religious Education", code: "IRE", standardCode: "225", educationLevel: "UCE", optional: true },
-  { id: "subj-6", name: "History & Political Education", code: "HIST", standardCode: "241", educationLevel: "UCE", optional: true },
-  { id: "subj-7-uce", name: "Geography", code: "GEOG", standardCode: "273", educationLevel: "UCE", optional: true },
-  { id: "subj-8-uce", name: "French", code: "FRENCH", standardCode: "314", educationLevel: "UCE", optional: true },
-  { id: "subj-9-uce", name: "German", code: "GERMAN", standardCode: "309", educationLevel: "UCE", optional: true },
-  { id: "subj-10-uce", name: "Arabic", code: "ARABIC", standardCode: "337", educationLevel: "UCE", optional: true },
-  { id: "subj-11-uce", name: "Luganda", code: "LUGANDA", standardCode: "335", educationLevel: "UCE", optional: true },
-  { id: "subj-12-uce", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "345", educationLevel: "UCE", optional: true },
-  { id: "subj-13-uce", name: "Lusoga", code: "LUSOGA", standardCode: "355", educationLevel: "UCE", optional: true },
-  { id: "subj-14-uce", name: "Mathematics", code: "MATH", standardCode: "456", educationLevel: "UCE", optional: true },
-  { id: "subj-15-uce", name: "Agriculture", code: "AGRIC", standardCode: "527", educationLevel: "UCE", optional: true },
-  { id: "subj-16-uce", name: "Physics", code: "PHY", standardCode: "535", educationLevel: "UCE", optional: true },
-  { id: "subj-17-uce", name: "Chemistry", code: "CHEM", standardCode: "545", educationLevel: "UCE", optional: true },
-  { id: "subj-18-uce", name: "Biology", code: "BIO", standardCode: "553", educationLevel: "UCE", optional: true },
-  { id: "subj-19-uce", name: "Art & Design", code: "ART", standardCode: "612", educationLevel: "UCE", optional: true },
-  { id: "subj-20", name: "Nutrition & Food Technology", code: "FN", standardCode: "662", educationLevel: "UCE", optional: true },
-  { id: "subj-21-uce", name: "Technical & Design", code: "TD", standardCode: "745", educationLevel: "UCE", optional: true },
-  { id: "subj-22", name: "ICT", code: "CPS", standardCode: "840", educationLevel: "UCE", optional: true },
-  { id: "subj-23-uce", name: "Entrepreneurship", code: "ENT", standardCode: "845", educationLevel: "UCE", optional: true },
-  { id: "subj-ateso-uce", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UCE", optional: true },
-  { id: "subj-chinese-uce", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UCE", optional: true },
+  { id: "subj-1", name: "English Language", code: "ENG", standardCode: "112", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-2", name: "Literature in English", code: "LIT", standardCode: "208", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-3", name: "Kiswahili", code: "KISWA", standardCode: "336", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-4", name: "Christian Religious Education", code: "CRE", standardCode: "223", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-5", name: "Islamic Religious Education", code: "IRE", standardCode: "225", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-6", name: "History & Political Education", code: "HIST", standardCode: "241", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-7", name: "Geography", code: "GEOG", standardCode: "273", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-8", name: "French", code: "FRENCH", standardCode: "314", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-9", name: "German", code: "GERMAN", standardCode: "309", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-10", name: "Arabic", code: "ARABIC", standardCode: "337", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-11", name: "Luganda", code: "LUGANDA", standardCode: "335", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-12", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "345", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-13", name: "Lusoga", code: "LUSOGA", standardCode: "355", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-14", name: "Mathematics", code: "MATH", standardCode: "456", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-15", name: "Agriculture", code: "AGRIC", standardCode: "527", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-16", name: "Physics", code: "PHY", standardCode: "535", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-17", name: "Chemistry", code: "CHEM", standardCode: "545", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-18", name: "Biology", code: "BIO", standardCode: "553", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-19", name: "Art & Design", code: "ART", standardCode: "612", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-20", name: "Nutrition & Food Technology", code: "FN", standardCode: "662", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-21", name: "Technical & Design", code: "TD", standardCode: "745", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-22", name: "ICT", code: "CPS", standardCode: "840", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-23", name: "Entrepreneurship", code: "ENT", standardCode: "845", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-ateso-uce", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-chinese-uce", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-commerce-uce", name: "Commerce", code: "COM", standardCode: "800", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-accounts-uce", name: "Principles of Accounts", code: "ACC", standardCode: "810", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-music-uce", name: "Music", code: "MUSIC", standardCode: "610", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-pe-uce", name: "Physical Education", code: "PE", standardCode: "860", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
   // UACE Subjects
-  { id: "subj-24", name: "General Paper", code: "GP", standardCode: "101", educationLevel: "UACE", optional: false },
-  { id: "subj-25", name: "Subsidiary Mathematics", code: "SUB_MATHS", standardCode: "475", educationLevel: "UACE", optional: true },
-  { id: "subj-26", name: "Subsidiary ICT", code: "SUB_ICT", standardCode: "610", educationLevel: "UACE", optional: true },
-  { id: "subj-3-uace", name: "Kiswahili", code: "KISWA", standardCode: "340", educationLevel: "UACE", optional: true },
-  { id: "subj-4-uace", name: "Christian Religious Education", code: "CRE", standardCode: "221", educationLevel: "UACE", optional: true },
-  { id: "subj-5-uace", name: "Islamic Religious Education", code: "IRE", standardCode: "224", educationLevel: "UACE", optional: true },
-  { id: "subj-7-uace", name: "Geography", code: "GEOG", standardCode: "230", educationLevel: "UACE", optional: true },
-  { id: "subj-8-uace", name: "French", code: "FRENCH", standardCode: "351", educationLevel: "UACE", optional: true },
-  { id: "subj-9-uace", name: "German", code: "GERMAN", standardCode: "358", educationLevel: "UACE", optional: true },
-  { id: "subj-10-uace", name: "Arabic", code: "ARABIC", standardCode: "361", educationLevel: "UACE", optional: true },
-  { id: "subj-11-uace", name: "Luganda", code: "LUGANDA", standardCode: "380", educationLevel: "UACE", optional: true },
-  { id: "subj-12-uace", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "383", educationLevel: "UACE", optional: true },
-  { id: "subj-13-uace", name: "Lusoga", code: "LUSOGA", standardCode: "386", educationLevel: "UACE", optional: true },
-  { id: "subj-14-uace", name: "Mathematics", code: "MATH", standardCode: "475", educationLevel: "UACE", optional: false },
-  { id: "subj-15-uace", name: "Agriculture", code: "AGRIC", standardCode: "515", educationLevel: "UACE", optional: true },
-  { id: "subj-16-uace", name: "Physics", code: "PHY", standardCode: "525", educationLevel: "UACE", optional: true },
-  { id: "subj-17-uace", name: "Chemistry", code: "CHEM", standardCode: "535", educationLevel: "UACE", optional: true },
-  { id: "subj-18-uace", name: "Biology", code: "BIO", standardCode: "545", educationLevel: "UACE", optional: true },
-  { id: "subj-19-uace", name: "Fine Art", code: "ART", standardCode: "615", educationLevel: "UACE", optional: true },
-  { id: "subj-21-uace", name: "Technical Drawing", code: "TD", standardCode: "680", educationLevel: "UACE", optional: true },
-  { id: "subj-23-uace", name: "Entrepreneurship", code: "ENT", standardCode: "268", educationLevel: "UACE", optional: true },
-  { id: "subj-econ-uace", name: "Economics", code: "ECON", standardCode: "220", educationLevel: "UACE", optional: true },
-  { id: "subj-hist-uace", name: "History", code: "HIST", standardCode: "210", educationLevel: "UACE", optional: true },
-  { id: "subj-fn-uace", name: "Food and Nutrition", code: "FN", standardCode: "640", educationLevel: "UACE", optional: true },
-  { id: "subj-chinese-uace", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UACE", optional: true },
-  { id: "subj-ateso-uace", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UACE", optional: true },
+  { id: "subj-24", name: "General Paper", code: "GP", standardCode: "101", educationLevel: "UACE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }] },
+  { id: "subj-submath-uace", name: "Subsidiary Mathematics", code: "SUB_MATHS", standardCode: "475S", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }] },
+  { id: "subj-subict-uace", name: "Subsidiary ICT", code: "SUB_ICT", standardCode: "610", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-3-uace", name: "Kiswahili", code: "KISWA", standardCode: "340", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-4-uace", name: "Christian Religious Education", code: "CRE", standardCode: "221", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-5-uace", name: "Islamic Religious Education", code: "IRE", standardCode: "224", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-7-uace", name: "Geography", code: "GEOG", standardCode: "230", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-8-uace", name: "French", code: "FRENCH", standardCode: "351", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-9-uace", name: "German", code: "GERMAN", standardCode: "358", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-10-uace", name: "Arabic", code: "ARABIC", standardCode: "361", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-11-uace", name: "Luganda", code: "LUGANDA", standardCode: "380", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-12-uace", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "383", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-13-uace", name: "Lusoga", code: "LUSOGA", standardCode: "386", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-14-uace", name: "Mathematics", code: "MATH", standardCode: "475", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-15-uace", name: "Agriculture", code: "AGRIC", standardCode: "515", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-16-uace", name: "Physics", code: "PHY", standardCode: "525", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-17-uace", name: "Chemistry", code: "CHEM", standardCode: "535", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-18-uace", name: "Biology", code: "BIO", standardCode: "545", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-19-uace", name: "Fine Art", code: "ART", standardCode: "615", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }, { id: "p4", name: "Paper 4", isCompulsory: true }] },
+  { id: "subj-21-uace", name: "Technical Drawing", code: "TD", standardCode: "680", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-23-uace", name: "Entrepreneurship", code: "ENT", standardCode: "268", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-econ-uace", name: "Economics", code: "ECON", standardCode: "220", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-hist-uace", name: "History", code: "HIST", standardCode: "210", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-lit-uace", name: "Literature in English", code: "LIT", standardCode: "208", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-fn-uace", name: "Food and Nutrition", code: "FN", standardCode: "640", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-chinese-uace", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-ateso-uace", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-music-uace", name: "Music", code: "MUSIC", standardCode: "620", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }, { id: "p4", name: "Paper 4", isCompulsory: true }] },
+
 ];
 
 const initialSchools: SchoolRecord[] = [
@@ -592,7 +690,7 @@ const initialStudents: StudentRecord[] = [
         entry4: false,
       },
       {
-        subjectId: "subj-14",
+        subjectId: "subj-14-uace",
         subjectCode: "MATH",
         subjectName: "Mathematics",
         paper: "Paper 2",
@@ -626,7 +724,7 @@ const initialStudents: StudentRecord[] = [
         entry4: false,
       },
       {
-        subjectId: "subj-16",
+        subjectId: "subj-16-uace",
         subjectCode: "PHY",
         subjectName: "Physics",
         paper: "Paper 1",
@@ -636,7 +734,7 @@ const initialStudents: StudentRecord[] = [
         entry4: false,
       },
       {
-        subjectId: "subj-17",
+        subjectId: "subj-17-uace",
         subjectCode: "CHEM",
         subjectName: "Chemistry",
         paper: "Paper 2",
@@ -670,7 +768,7 @@ const initialStudents: StudentRecord[] = [
         entry4: false,
       },
       {
-        subjectId: "subj-18",
+        subjectId: "subj-18-uace",
         subjectCode: "BIO",
         subjectName: "Biology",
         paper: "Paper 3",
@@ -822,6 +920,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [students, setStudents] = useState<StudentRecord[]>(initialStudents);
   const [zones] = useState<Zone[]>(initialZones);
   const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+
+  useEffect(() => {
+    // Load invoices from localStorage if needed, or initialize with empty
+    const savedInvoices = localStorage.getItem("wakissha_invoices");
+    if (savedInvoices) {
+      setInvoices(JSON.parse(savedInvoices));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("wakissha_invoices", JSON.stringify(invoices));
+  }, [invoices]);
 
   useEffect(() => {
     if (!user || user.role !== "school" || !user.schoolCode) return;
@@ -928,6 +1039,122 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const finalizeRegistration = (schoolCode: string, markingGuide: "Arts" | "Sciences" | "Both", bookletsCount: number) => {
+    setSchools((prev) =>
+      prev.map((school) =>
+        school.code === schoolCode
+          ? {
+              ...school,
+              registrationFinalized: true,
+              markingGuide,
+            }
+          : school,
+      ),
+    );
+
+    // Generate initial invoice
+    const school = schools.find(s => s.code === schoolCode);
+    if (!school) return;
+
+    const schoolStudents = students.filter(s => s.schoolCode === schoolCode && !s.isAdditional);
+    const fullySubmittedStudents = schoolStudents.filter(student => isStudentFullyRegistered(student, subjects));
+    const fullySubmittedCount = fullySubmittedStudents.length;
+
+    const items = [
+      { 
+        description: "School Registration Fee", 
+        quantity: 1, 
+        unitPrice: 500000, 
+        total: 500000,
+        formula: "Fixed Amount"
+      },
+      { 
+        description: "Student Fee", 
+        quantity: fullySubmittedCount, 
+        unitPrice: 27000, 
+        total: fullySubmittedCount * 27000,
+        formula: `27,000 × ${fullySubmittedCount} = ${(fullySubmittedCount * 27000).toLocaleString()}`
+      },
+      { 
+        description: "Answer Booklets", 
+        quantity: bookletsCount, 
+        unitPrice: 25000, 
+        total: bookletsCount * 25000,
+        formula: `25,000 × ${bookletsCount} = ${(bookletsCount * 25000).toLocaleString()}`
+      },
+    ];
+
+    if (markingGuide === "Both") {
+      items.push({ 
+        description: "Marking Guide (Arts & Sciences)", 
+        quantity: 2, 
+        unitPrice: 25000, 
+        total: 50000,
+        formula: "25,000 × 2 = 50,000"
+      });
+    } else if (markingGuide !== "None") {
+      items.push({ 
+        description: `Marking Guide (${markingGuide})`, 
+        quantity: 1, 
+        unitPrice: 25000, 
+        total: 25000,
+        formula: "25,000 × 1 = 25,000"
+      });
+    }
+
+    const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
+
+    addInvoice({
+      serialNumber: `INV-${schoolCode}-${Date.now().toString().slice(-4)}`,
+      schoolCode,
+      date: new Date().toISOString().split("T")[0],
+      items,
+      totalAmount,
+      status: "pending",
+      type: "original"
+    });
+
+    // Mark these students as invoiced
+    const studentIds = fullySubmittedStudents.map(s => s.id);
+    setStudents(prev => prev.map(s => 
+      studentIds.includes(s.id) ? { ...s, isInvoiced: true } : s
+    ));
+  };
+
+  const addInvoice = (invoiceData: Omit<Invoice, "id">, studentIds?: string[]) => {
+    const newInvoice: Invoice = {
+      ...invoiceData,
+      id: `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+    setInvoices((prev) => [...prev, newInvoice]);
+
+    if (studentIds && studentIds.length > 0) {
+      setStudents((prev) =>
+        prev.map((s) =>
+          studentIds.includes(s.id) ? { ...s, isInvoiced: true } : s
+        )
+      );
+    }
+  };
+
+  const uploadPaymentProof = (invoiceId: string, proofUrl: string) => {
+    setInvoices((prev) =>
+      prev.map((inv) =>
+        inv.id === invoiceId ? { ...inv, paymentProof: proofUrl, status: "pending" } : inv
+      )
+    );
+    // Also update school status and school's payment proof field
+    if (user?.schoolCode) {
+      setSchools((prev) =>
+        prev.map((s) =>
+          s.code === user.schoolCode
+            ? { ...s, status: "payment_submitted", paymentProof: proofUrl }
+            : s
+        )
+      );
+    }
+  };
+
   const addStudentEntry: AuthContextType["addStudentEntry"] = (entry) => {
     setStudents((prev) => {
       const schoolStudents = prev.filter((student) => student.schoolCode === entry.schoolCode);
@@ -942,6 +1169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const examLevel: "UCE" | "UACE" =
         ["S.1", "S.2", "S.3", "S.4"].includes(entry.classLevel) ? "UCE" : "UACE";
 
+      const schoolRecord = schools.find(s => s.code === entry.schoolCode);
+      const isAdditional = schoolRecord?.registrationFinalized ?? false;
+
       const newStudent: StudentRecord = {
         id: `student-${Date.now()}`,
         registrationNumber,
@@ -949,6 +1179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         classLevel: entry.classLevel as "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6",
         examLevel,
         stream: entry.stream,
+        bookletsCount: entry.bookletsCount,
+        isAdditional,
         subjects: entry.subjects,
         totalEntries: entry.totalEntries,
         schoolCode: entry.schoolCode,
@@ -970,6 +1202,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateStudentEntry: AuthContextType["updateStudentEntry"] = (studentId, updates) => {
+    const studentToUpdate = students.find(s => s.id === studentId);
+    if (!studentToUpdate) return;
+
+    const schoolRecord = schools.find(s => s.code === studentToUpdate.schoolCode);
+    const isFinalized = schoolRecord?.registrationFinalized ?? false;
+
+    // Lock non-additional students if registration is finalized
+    if (isFinalized && !studentToUpdate.isAdditional) {
+      console.warn("Attempted to update a locked student record.");
+      return;
+    }
+
     setStudents((prev) =>
       prev.map((student) =>
         student.id === studentId
@@ -978,6 +1222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               studentName: updates.studentName,
               classLevel: updates.classLevel,
               stream: updates.stream,
+              bookletsCount: updates.bookletsCount,
               subjects: updates.subjects,
               totalEntries: updates.totalEntries,
               examLevel: ["S.1", "S.2", "S.3", "S.4"].includes(updates.classLevel)
@@ -992,6 +1237,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const deleteStudentEntry: AuthContextType["deleteStudentEntry"] = (studentId) => {
     const studentToDelete = students.find((s) => s.id === studentId);
     if (!studentToDelete) return;
+
+    const schoolRecord = schools.find(s => s.code === studentToDelete.schoolCode);
+    const isFinalized = schoolRecord?.registrationFinalized ?? false;
+
+    // Lock non-additional students if registration is finalized
+    if (isFinalized && !studentToDelete.isAdditional) {
+      console.warn("Attempted to delete a locked student record.");
+      return;
+    }
 
     setStudents((prev) => prev.filter((student) => student.id !== studentId));
 
@@ -1026,6 +1280,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           standardCode: subject.standardCode.trim(),
           educationLevel: subject.educationLevel,
           optional: subject.optional,
+          papers: subject.papers,
+          minPapers: subject.minPapers,
+          maxPapers: subject.maxPapers,
         },
       ];
     });
@@ -1045,13 +1302,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return prev.map((subject) =>
         subject.id === subjectId
           ? {
-              ...subject,
-              name: updates.name.trim(),
-              code: normalizedCode,
-              standardCode: updates.standardCode.trim(),
-              educationLevel: updates.educationLevel,
-              optional: updates.optional,
-            }
+                ...subject,
+                name: updates.name.trim(),
+                code: normalizedCode,
+                standardCode: updates.standardCode.trim(),
+                educationLevel: updates.educationLevel,
+                optional: updates.optional,
+                papers: updates.papers,
+                minPapers: updates.minPapers,
+                maxPapers: updates.maxPapers,
+              }
           : subject,
       );
     });
@@ -1065,12 +1325,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         students,
         zones,
         subjects,
+        invoices,
         login,
         logout,
         isAuthenticated: !!user,
         addSchool,
         submitSchoolDocuments,
         updateSchoolStatus,
+        finalizeRegistration,
+        addInvoice,
+        uploadPaymentProof,
         addStudentEntry,
         updateStudentEntry,
         deleteStudentEntry,

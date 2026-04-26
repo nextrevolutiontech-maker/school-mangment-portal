@@ -13,6 +13,7 @@ import { Label } from "../ui/label";
 import { Alert, AlertDescription } from "../ui/alert";
 import { useAuth } from "../auth-context";
 import wakisshaLogo from "../../assets/logo.png";
+import loginBg from "../../assets/login.jpeg";
 
 export function Login() {
   const [identifier, setIdentifier] = useState("");
@@ -43,32 +44,41 @@ export function Login() {
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-7xl flex-col justify-center gap-6">
         <Card className="overflow-hidden border-[#DCE4F2] shadow-md">
           <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="relative overflow-hidden border-b border-[#E8EDF7] bg-[#FBFCFF] p-8 lg:border-r lg:border-b-0 lg:p-12">
-              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(30,58,138,0.03),transparent_45%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.08),transparent_30%)]" />
+            <div className="relative overflow-hidden border-b border-[#E8EDF7] bg-[#142C6E] p-8 lg:border-r lg:border-b-0 lg:p-12">
+              {/* Background Image with Lighter Overlay */}
+              <div 
+                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 hover:scale-105"
+                style={{ 
+                  backgroundImage: `linear-gradient(rgba(20, 44, 110, 0.45), rgba(20, 44, 110, 0.35)), url(${loginBg})` 
+                }}
+              />
+              
               <div className="relative z-10 flex h-full flex-col justify-between gap-10">
                 <div className="space-y-6">
-                  <img
-                    src={wakisshaLogo}
-                    alt="WAKISSHA logo"
-                    className="h-12 w-auto object-contain"
-                  />
+                  <div className="inline-block">
+                    <img
+                      src={wakisshaLogo}
+                      alt="WAKISSHA logo"
+                      className="h-14 w-auto object-contain"
+                    />
+                  </div>
 
                   <div className="space-y-4">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-[#D9C38A] bg-[#FDF9ED] px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[#8B6A19]">
-                      <Sparkles className="h-3.5 w-3.5" />
+                    <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-black/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.22em] text-white backdrop-blur-sm">
+                      <Sparkles className="h-3.5 w-3.5 text-orange-400" />
                       Digital Exam Portal
                     </div>
 
                     <div className="space-y-3">
-                      <h1 className="text-4xl font-extrabold tracking-tight text-[#142C6E] lg:text-5xl">
+                      <h1 className="text-4xl font-black tracking-tight text-white drop-shadow-md lg:text-5xl">
                         WAKISSHA PORTAL
                       </h1>
-                      <p className="max-w-xl text-base text-slate-500 lg:text-lg">
+                      <p className="max-w-xl text-lg font-bold text-white drop-shadow-sm lg:text-xl">
                         Wakiso Secondary School Headteachers Association
                       </p>
                     </div>
 
-                    <p className="max-w-2xl text-sm leading-7 text-slate-500 lg:text-base">
+                    <p className="max-w-2xl text-base font-medium leading-7 text-white/90 drop-shadow-sm">
                       A premium SaaS portal for school registration, student
                       entries, payment tracking, reporting, and examination
                       readiness across member schools.
@@ -77,27 +87,27 @@ export function Login() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="bg-white shadow-sm border border-[#E1E8F5] rounded-2xl p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/10 text-blue-700">
-                      <ShieldCheck className="h-5 w-5" />
+                  <div className="bg-black/30 backdrop-blur-[2px] shadow-sm border border-white/20 rounded-2xl p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:bg-black/40">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/30 text-white">
+                      <ShieldCheck className="h-6 w-6" />
                     </div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-bold text-white">
                       Secure School Access
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                    <p className="mt-2 text-sm font-medium leading-6 text-white/80">
                       Schools and administrators sign in from one protected
                       workspace with role-based navigation.
                     </p>
                   </div>
 
-                  <div className="bg-white shadow-sm border border-[#E1E8F5] rounded-2xl p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#FDF9ED] text-[#A07514]">
-                      <Sparkles className="h-5 w-5" />
+                  <div className="bg-black/30 backdrop-blur-[2px] shadow-sm border border-white/20 rounded-2xl p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:bg-black/40">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/30 text-white">
+                      <Sparkles className="h-6 w-6" />
                     </div>
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-bold text-white">
                       Registration Visibility
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                    <p className="mt-2 text-sm font-medium leading-6 text-white/80">
                       Track entries, finance progress, uploads, reports, and
                       exam schedules in one place.
                     </p>

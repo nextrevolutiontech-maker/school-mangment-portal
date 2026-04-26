@@ -16,9 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { useAuth, type SchoolRecord, type SchoolStatus } from "../auth-context";
+import { useAuth, type SchoolRecord, type SchoolStatus, type Invoice } from "../auth-context";
 import { toast } from "sonner";
-import { CreditCard, Eye, Loader2, MailCheck, ShieldCheck, KeyRound } from "lucide-react";
+import { CreditCard, Eye, Loader2, MailCheck, ShieldCheck, KeyRound, FileText, Download, X } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -69,11 +69,12 @@ function buildActivationCode(schoolCode: string) {
 export function PaymentsVerification({
   onPageChange,
 }: PaymentsVerificationProps) {
-  const { schools, updateSchoolStatus } = useAuth();
+  const { schools, updateSchoolStatus, invoices } = useAuth();
   const [activeFilter, setActiveFilter] = useState<"all" | SchoolStatus>("all");
   const [selectedSchool, setSelectedSchool] = useState<SchoolRecord | null>(null);
   const [activationCode, setActivationCode] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
 
   const filteredSchools = useMemo(() => {
     if (activeFilter === "all") return schools;
@@ -108,9 +109,23 @@ export function PaymentsVerification({
   ];
 
   const handleViewProof = (school: SchoolRecord) => {
-    toast.message("Opening payment proof", {
-      description: `${school.paymentProof} for ${school.name}`,
-    });
+    const latestInvoiceWithProof = invoices
+      .filter(inv => inv.schoolCode === school.code && inv.paymentProof)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+    if (latestInvoiceWithProof) {
+      setPreviewInvoice(latestInvoiceWithProof);
+    } else if (school.paymentProof) {
+      // Fallback for legacy data
+      toast.info("Showing direct payment proof", {
+        description: "This school has a legacy proof file."
+      });
+      window.open(school.paymentProof, "_blank");
+    } else {
+      toast.error("No payment proof found", {
+        description: "This school hasn't uploaded any receipt yet."
+      });
+    }
   };
 
   const handleVerifyPayment = () => {
@@ -239,22 +254,23 @@ export function PaymentsVerification({
                       variant="outline"
                       size="sm"
                       onClick={() => handleViewProof(school)}
+                      className="font-bold border-blue-100 text-blue-600 hover:bg-blue-50"
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-4 w-4 mr-1" />
                       View File
                     </Button>
                   </TableCell>
                   <TableCell>{getStatusBadge(school.status)}</TableCell>
                   <TableCell>
                     {school.status === "payment_submitted" ? (
-                      <Button size="sm" onClick={() => setSelectedSchool(school)}>
-                        <ShieldCheck className="h-4 w-4" />
+                      <Button size="sm" onClick={() => setSelectedSchool(school)} className="bg-slate-900 hover:bg-slate-800 font-bold">
+                        <ShieldCheck className="h-4 w-4 mr-1" />
                         Verify Payment
                       </Button>
                     ) : school.status === "active" ? (
                       <div className="text-sm text-slate-500">
                         Activation:{" "}
-                        <span className="font-medium text-slate-900">
+                        <span className="font-black text-slate-900 bg-slate-100 px-2 py-1 rounded">
                           {school.activationCode || "Generated"}
                         </span>
                       </div>
@@ -345,6 +361,89 @@ export function PaymentsVerification({
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Proof Preview Dialog */}
+      <Dialog open={previewInvoice !== null} onOpenChange={(open) => !open && setPreviewInvoice(null)}>
+        <DialogContent className="sm:max-w-[700px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-6 bg-slate-900 text-white flex-row items-center justify-between">
+            <div>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Payment Proof Verification
+              </DialogTitle>
+              <DialogDescription className="text-slate-300">
+                Reviewing receipt for Invoice: {previewInvoice?.serialNumber}
+              </DialogDescription>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setPreviewInvoice(null)} className="text-white hover:bg-white/10">
+              <X className="h-5 w-5" />
+            </Button>
+          </DialogHeader>
+          <div className="p-6 space-y-6 bg-slate-50">
+            <div className="aspect-[4/3] w-full rounded-2xl border-2 border-slate-200 bg-white overflow-hidden flex items-center justify-center shadow-inner relative group">
+              {previewInvoice?.paymentProof?.startsWith('data:application/pdf') ? (
+                <div className="text-center space-y-4">
+                  <div className="mx-auto w-20 h-20 rounded-2xl bg-blue-100 flex items-center justify-center">
+                    <FileText className="h-10 w-10 text-blue-600" />
+                  </div>
+                  <p className="font-bold text-slate-700">PDF Receipt Document</p>
+                  <Button asChild variant="outline" className="rounded-xl font-bold">
+                    <a href={previewInvoice.paymentProof} download={`receipt-${previewInvoice.serialNumber}.pdf`}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download to View
+                    </a>
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <img 
+                    src={previewInvoice?.paymentProof} 
+                    alt="Payment Receipt" 
+                    className="max-w-full max-h-full object-contain"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button asChild variant="secondary" className="rounded-xl font-bold shadow-xl">
+                      <a href={previewInvoice?.paymentProof} target="_blank" rel="noopener noreferrer">
+                        <Eye className="h-4 w-4 mr-2" />
+                        Open Full Image
+                      </a>
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-white border border-slate-200">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Amount</p>
+                <p className="text-xl font-black text-slate-900">UGX {previewInvoice?.totalAmount.toLocaleString()}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-white border border-slate-200">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Invoice Date</p>
+                <p className="text-xl font-black text-slate-900">{previewInvoice?.date}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold" onClick={() => setPreviewInvoice(null)}>
+                Close Preview
+              </Button>
+              <Button 
+                className="flex-1 h-12 rounded-xl font-bold bg-green-600 hover:bg-green-700"
+                onClick={() => {
+                  const school = schools.find(s => s.code === previewInvoice?.schoolCode);
+                  if (school) {
+                    setSelectedSchool(school);
+                    setPreviewInvoice(null);
+                  }
+                }}
+              >
+                Proceed to Verify
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

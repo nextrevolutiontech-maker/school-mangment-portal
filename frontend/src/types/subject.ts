@@ -1,3 +1,9 @@
+export interface SubjectPaper {
+  id: string;
+  name: string; // e.g., "Paper 1"
+  isCompulsory: boolean;
+}
+
 export interface Subject {
   id: string;
   name: string;
@@ -5,7 +11,9 @@ export interface Subject {
   standardCode: string; // Official examination standard code (e.g., 112, 456)
   educationLevel: "UCE" | "UACE";
   optional: boolean;
-  papers?: number; // Number of papers for this subject (1-4)
+  papers: SubjectPaper[];
+  minPapers?: number; // Minimum papers a student must pick
+  maxPapers?: number; // Maximum papers a student can pick
 }
 
 // Standard WAKISSHA Subject Codes

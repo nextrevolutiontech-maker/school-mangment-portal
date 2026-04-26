@@ -35,7 +35,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { Badge } from "../ui/badge";
-import { Search, UserPlus, AlertCircle, Info, Edit2, Trash2, MoreVertical, Eye } from "lucide-react";
+import { Search, UserPlus, AlertCircle, Info, Edit2, Trash2, MoreVertical, Eye, BookOpen, Sparkles, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "../ui/alert";
 import { useAuth, CLASS_LEVELS, CLASS_LEVELS_ARRAY } from "../auth-context";
@@ -57,26 +57,33 @@ type PaperOption = 1 | 2 | 3 | 4;
 const PAPER_OPTIONS: PaperOption[] = [1, 2, 3, 4];
 
 export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: StudentsEntriesProps) {
-  const { user, schools, students, subjects, addStudentEntry, updateStudentEntry, deleteStudentEntry } = useAuth();
+  const { user, schools, students, subjects, addStudentEntry, updateStudentEntry, deleteStudentEntry, finalizeRegistration } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const scopedStudents = useMemo(() => {
-    return user?.role === "school"
-      ? students.filter((entry) => entry.schoolCode === user.schoolCode)
-      : students;
-  }, [students, user]);
+  const currentSchool = useMemo(() => {
+    const code = user?.role === "school" ? user.schoolCode : "all";
+    return schools.find(s => s.code === code);
+  }, [schools, user]);
 
   const scopedSchools = useMemo(() => {
-    return user?.role === "school"
-      ? schools.filter((school) => school.code === user.schoolCode)
-      : schools;
+    if (user?.role === "admin") return schools;
+    return schools.filter(s => s.code === user?.schoolCode);
   }, [schools, user]);
+
+  const scopedStudents = useMemo(() => {
+    if (user?.role === "admin") return students;
+    return students.filter(s => s.schoolCode === user?.schoolCode);
+  }, [students, user]);
+
+  const isFinalized = currentSchool?.registrationFinalized ?? false;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [schoolFilter, setSchoolFilter] = useState("all");
   const [levelFilter, setLevelFilter] = useState<"all" | "UCE" | "UACE">("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(autoOpenAddDialog);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
+  const [finalizeMarkingGuide, setFinalizeMarkingGuide] = useState<"Arts" | "Sciences" | "Both">("Arts");
 
   // View Student Modal
   const [viewingStudent, setViewingStudent] = useState<typeof students[0] | null>(null);
@@ -88,6 +95,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   const [editStudentName, setEditStudentName] = useState("");
   const [editClassLevel, setEditClassLevel] = useState<"S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6">("S.1");
   const [editStream, setEditStream] = useState("");
+  const [editBookletsCount, setEditBookletsCount] = useState<number>(0);
   const [editSelectedSubjects, setEditSelectedSubjects] = useState<{
     [subjectId: string]: {
       selectedPapers: PaperOption[];
@@ -109,7 +117,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   const [studentName, setStudentName] = useState("");
   const [registrationLevel, setRegistrationLevel] = useState<"UCE" | "UACE">("UCE");
   const [classLevel, setClassLevel] = useState<"S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6">("S.1");
-  const [stream, setStream] = useState("");
+  const [stream, setStream] = useState<"Arts" | "Sciences" | "">("");
+  const [bookletsCount, setBookletsCount] = useState<number>(0);
   const [schoolCode, setSchoolCode] = useState(user?.role === "school" ? user.schoolCode ?? "WAK26-0001" : "WAK26-0001");
   const [selectedSubjects, setSelectedSubjects] = useState<{
     [subjectId: string]: {
@@ -145,8 +154,62 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   }, [registrationLevel]);
 
   // Calculate total entries - one entry per selected paper
-  const calculateTotalEntries = () => {
-    return Object.values(selectedSubjects).reduce((sum, item) => sum + item.selectedPapers.length, 0);
+  const calculateTotalEntries = (selected: typeof selectedSubjects) => {
+    return Object.values(selected).reduce((sum, item) => sum + item.selectedPapers.length, 0);
+  };
+
+  // Live validation rules
+  const getValidationStatus = (level: "UCE" | "UACE", selected: typeof selectedSubjects) => {
+    const selectedIds = Object.keys(selected);
+    const selectedData = selectedIds.map(id => subjects.find(s => s.id === id)).filter(Boolean);
+    const rules: { label: string; met: boolean; critical: boolean }[] = [];
+
+    if (level === "UCE") {
+      const uceSubjects = subjects.filter(s => s.educationLevel === "UCE");
+      const compulsory = uceSubjects.filter(s => !s.optional);
+      const missingCompulsory = compulsory.filter(cs => !selectedIds.includes(cs.id));
+      
+      rules.push({
+        label: `Compulsory Subjects (${compulsory.length - missingCompulsory.length}/${compulsory.length})`,
+        met: missingCompulsory.length === 0,
+        critical: true
+      });
+
+      rules.push({
+        label: `Total Subjects (${selectedIds.length} - Min 8, Max 9)`,
+        met: selectedIds.length >= 8 && selectedIds.length <= 9,
+        critical: true
+      });
+    } else {
+      const hasGP = selectedData.some(s => s?.code === "GP" || s?.standardCode === "101");
+      const hasSub = selectedData.some(s => s?.code === "SUB_MATHS" || s?.standardCode === "475S" || s?.code === "SUB_ICT" || s?.standardCode === "610");
+      
+      rules.push({
+        label: "General Paper (GP) Selected",
+        met: hasGP,
+        critical: true
+      });
+
+      rules.push({
+        label: "At least one Subsidiary (Sub Math/ICT)",
+        met: hasSub,
+        critical: true
+      });
+
+      const mainSubjects = selectedData.filter(s => s?.code !== "GP" && s?.standardCode !== "101" && s?.code !== "SUB_MATHS" && s?.standardCode !== "475S" && s?.code !== "SUB_ICT" && s?.standardCode !== "610");
+      rules.push({
+        label: `Main Subjects (${mainSubjects.length} - Max 3)`,
+        met: mainSubjects.length <= 3,
+        critical: true
+      });
+    }
+
+    return rules;
+  };
+
+  const getSubjectCategory = (code: string) => {
+    const arts = ["LIT", "HIST", "GEOG", "KISWA", "CRE", "IRE", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA", "ART", "MUSIC", "PE", "COM", "ACC", "ECON", "ENG", "CHINESE", "ATESO"];
+    return arts.includes(code) ? "Arts" : "Sciences";
   };
 
   const togglePaperForSubject = (
@@ -154,14 +217,40 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     paper: PaperOption,
     checked: boolean,
   ) => {
+    const subject = subjects.find(s => s.id === subjectId);
+    if (!subject) return;
+
+    // Check if paper is compulsory
+    const paperName = `Paper ${paper}`;
+    const paperDef = subject.papers.find(p => 
+      p.name === paperName || p.name.includes(String(paper))
+    );
+    
+    if (paperDef?.isCompulsory && !checked) {
+      toast.error(`${paperName} is compulsory for ${subject.name}`);
+      return;
+    }
+
     setSelectedSubjects((prev) => {
       if (!prev[subjectId]) return prev;
       const currentPapers = prev[subjectId].selectedPapers;
+      
+      // Enforce maxPapers rule
+      if (checked && subject.maxPapers && currentPapers.length >= subject.maxPapers) {
+        toast.error(`You can only select up to ${subject.maxPapers} papers for ${subject.name}`);
+        return prev;
+      }
+
       const nextPapers = checked
         ? Array.from(new Set([...currentPapers, paper]))
         : currentPapers.filter((item) => item !== paper);
 
       if (nextPapers.length === 0) {
+        // Only allow removing subject if it's optional
+        if (!subject.optional) {
+          toast.error(`${subject.name} is a compulsory subject`);
+          return prev;
+        }
         const updated = { ...prev };
         delete updated[subjectId];
         return updated;
@@ -187,32 +276,19 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         delete newState[subjectId];
         return newState;
       } else {
-        // Add subject with auto-applied paper rules
-        let autoPapers: PaperOption[] = [1, 2]; // Default: Paper 1 & 2
+        // Add subject with dynamic papers
+        const autoPapers: PaperOption[] = subject.papers
+          .filter(p => p.isCompulsory)
+          .map(p => {
+            // Extract number from paper name if possible, otherwise use index + 1
+            const match = p.name.match(/\d+/);
+            return (match ? parseInt(match[0]) : subject.papers.indexOf(p) + 1) as PaperOption;
+          });
 
-        // Apply EXACT rules from prompt
-        if (subject.code === "GP" || subject.standardCode === "101") {
-          autoPapers = [1]; // General Paper -> Only Paper 1
-        } else if (subject.code === "MATH" || subject.standardCode === "456" || subject.standardCode === "475") {
-          autoPapers = [1]; // Mathematics -> Only Paper 1
-        } else if (subject.code === "PHY" || subject.code === "CHEM" || subject.code === "BIO" || subject.standardCode === "535" || subject.standardCode === "545" || subject.standardCode === "553") {
-          autoPapers = [1, 2]; // Physics, Chemistry, Biology -> P1 mandatory + choice (default P2)
-        } else if (subject.code === "TD" || subject.standardCode === "680" || subject.standardCode === "745") {
-          autoPapers = [1, 2, 3]; // Technical Drawing / Design -> Paper 1, 2, 3
-        } else if (subject.code === "GEOG" || subject.standardCode === "273" || subject.standardCode === "230") {
-          autoPapers = [1]; // Geography -> Only Paper 1
-        } else if (subject.code === "SUB_MATHS" || subject.standardCode === "475S") {
-          autoPapers = [1]; // Subsidiary Mathematics -> Only Paper 1
-        } else if (subject.code === "SUB_ICT" || subject.standardCode === "610" || subject.standardCode === "840") {
-          autoPapers = [1, 2]; // Subsidiary ICT -> P1 compulsory, default P2
-        } else if (subject.code === "ENG" || subject.standardCode === "112") {
-          autoPapers = [1, 2]; // English -> Paper 1 & 2
-        } else if (subject.code === "HIST" || subject.standardCode === "241" || subject.code === "CRE" || subject.standardCode === "223" || subject.code === "IRE" || subject.standardCode === "225" || subject.code === "LIT" || subject.standardCode === "208") {
-          autoPapers = [1]; // Paper 1 only subjects
-        } else if (subject.code === "CHINESE" || subject.standardCode === "396") {
-          autoPapers = [1, 2]; // Chinese -> Paper 1 & 2
-        } else if (subject.code === "ATESO" || subject.standardCode === "365") {
-          autoPapers = [1, 2]; // Ateso -> Paper 1 & 2
+        // If no compulsory papers, select the first one by default if it's the only one
+        if (autoPapers.length === 0 && subject.papers.length > 0) {
+          const match = subject.papers[0].name.match(/\d+/);
+          autoPapers.push((match ? parseInt(match[0]) : 1) as PaperOption);
         }
 
         return {
@@ -230,13 +306,18 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     const compulsory = subjects
       .filter((s) => s.educationLevel === registrationLevel && !s.optional)
       .reduce((acc, subj) => {
-        let papers: PaperOption[] = [1, 2];
-        if (subj.code === "GP" || subj.standardCode === "101") papers = [1];
-        if (subj.code === "MATH" || subj.standardCode === "456" || subj.standardCode === "475") papers = [1];
-        if (subj.code === "GEOG" || subj.standardCode === "273" || subj.standardCode === "230") papers = [1];
-        if (subj.code === "ENG" || subj.standardCode === "112") papers = [1, 2];
-        if (subj.code === "TD" || subj.standardCode === "680" || subj.standardCode === "745") papers = [1, 2, 3];
-        if (subj.code === "HIST" || subj.standardCode === "241" || subj.code === "CRE" || subj.standardCode === "223" || subj.code === "IRE" || subj.standardCode === "225" || subj.code === "LIT" || subj.standardCode === "208") papers = [1];
+        const papers: PaperOption[] = subj.papers
+          .filter(p => p.isCompulsory)
+          .map(p => {
+            const match = p.name.match(/\d+/);
+            return (match ? parseInt(match[0]) : subj.papers.indexOf(p) + 1) as PaperOption;
+          });
+
+        // If no compulsory papers defined but subject is compulsory, select the first paper
+        if (papers.length === 0 && subj.papers.length > 0) {
+          const match = subj.papers[0].name.match(/\d+/);
+          papers.push((match ? parseInt(match[0]) : 1) as PaperOption);
+        }
         
         acc[subj.id] = { selectedPapers: papers };
         return acc;
@@ -252,34 +333,70 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     if (!studentName.trim()) errors.push("Student name is required");
     
     const selectedSubjectIds = Object.keys(selectedSubjects);
+    const selectedSubjectsData = selectedSubjectIds.map(id => subjects.find(s => s.id === id));
+    
     if (selectedSubjectIds.length === 0) {
       errors.push("At least one subject must be selected");
     }
 
-    // UCE RULES: Max subjects = 9
-    if (registrationLevel === "UCE" && selectedSubjectIds.length > 9) {
-      errors.push("UCE students can register for a maximum of 9 subjects");
+    // UCE RULES: 7 Compulsory + 1 or 2 Optional (Total 8-9)
+    if (registrationLevel === "UCE") {
+      const uceSubjects = subjects.filter(s => s.educationLevel === "UCE");
+      const compulsorySubjects = uceSubjects.filter(s => !s.optional);
+      const missingCompulsory = compulsorySubjects.filter(cs => !selectedSubjectIds.includes(cs.id));
+      
+      if (missingCompulsory.length > 0) {
+        errors.push(`COMPULSORY SUBJECT MISSING: ${missingCompulsory.map(s => s.name).join(", ")}`);
+      }
+
+      if (selectedSubjectIds.length < 8) {
+        errors.push("REJECTED: UCE students must have a minimum of 8 subjects (7 Compulsory + at least 1 Optional)");
+      } else if (selectedSubjectIds.length > 9) {
+        errors.push("REJECTED: UCE students can register for a maximum of 9 subjects only");
+      }
     }
 
     // UACE RULES
     if (registrationLevel === "UACE") {
-      const selectedSubjectCodes = selectedSubjectIds.map(id => subjects.find(s => s.id === id)?.code);
+      const selectedSubjectCodes = selectedSubjectsData.map(s => s?.code);
+      const selectedStandardCodes = selectedSubjectsData.map(s => s?.standardCode);
       
       // General Paper = compulsory
-      if (!selectedSubjectCodes.includes("GP")) {
-        errors.push("General Paper (GP) is compulsory for UACE students");
+      if (!selectedSubjectCodes.includes("GP") && !selectedStandardCodes.includes("101")) {
+        errors.push("REJECTED: General Paper (GP) is compulsory for UACE students");
       }
 
-      // Must select Either Sub Math OR Sub ICT
-      const hasSubMath = selectedSubjectCodes.includes("SUB_MATHS");
-      const hasSubIct = selectedSubjectCodes.includes("SUB_ICT");
+      // Must select Either Sub Math OR Sub ICT (At least one)
+      const hasSubMath = selectedSubjectCodes.includes("SUB_MATHS") || selectedStandardCodes.includes("475S");
+      const hasSubIct = selectedSubjectCodes.includes("SUB_ICT") || selectedStandardCodes.includes("610");
+      
       if (!hasSubMath && !hasSubIct) {
-        errors.push("UACE students must select either Subsidiary Mathematics or Subsidiary ICT");
-      }
-      if (hasSubMath && hasSubIct) {
-        errors.push("UACE students cannot take both Subsidiary Mathematics and Subsidiary ICT");
+        errors.push("REJECTED: UACE students must select at least one subsidiary subject (Subsidiary Mathematics or Subsidiary ICT)");
       }
     }
+
+    // Subject-specific paper validation
+    Object.entries(selectedSubjects).forEach(([subjectId, data]) => {
+      const subject = subjects.find(s => s.id === subjectId);
+      if (subject) {
+        if (subject.minPapers && data.selectedPapers.length < subject.minPapers) {
+          errors.push(`${subject.name}: Minimum ${subject.minPapers} papers required (currently ${data.selectedPapers.length})`);
+        }
+        if (subject.maxPapers && data.selectedPapers.length > subject.maxPapers) {
+          errors.push(`${subject.name}: Maximum ${subject.maxPapers} papers allowed (currently ${data.selectedPapers.length})`);
+        }
+        
+        // Ensure compulsory papers are selected
+        const compulsoryPapers = subject.papers.filter(p => p.isCompulsory);
+        compulsoryPapers.forEach(cp => {
+          const match = cp.name.match(/\d+/);
+          const paperNum = (match ? parseInt(match[0]) : 0) as PaperOption;
+          if (paperNum && !data.selectedPapers.includes(paperNum)) {
+            errors.push(`${subject.name}: ${cp.name} is compulsory`);
+          }
+        });
+      }
+    });
 
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -290,17 +407,29 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     const subjectsArray: StudentSubjectEntry[] = Object.entries(selectedSubjects).flatMap(
       ([subjectId, data]) => {
         const subject = subjects.find((s) => s.id === subjectId);
-        return data.selectedPapers.map((paper) => ({
-          subjectId,
-          subjectCode: subject?.code || "",
-          subjectStandardCode: subject?.standardCode || "",
-          subjectName: subject?.name || "",
-          paper: `Paper ${paper}` as "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4",
-          entry1: false,
-          entry2: false,
-          entry3: false,
-          entry4: false,
-        }));
+        if (!subject) return [];
+
+        return data.selectedPapers.map((paperNum) => {
+          // Find the paper definition that corresponds to this paperNum
+          // We try to match by digit in name, or fallback to index
+          const paperDef = subject.papers.find((p, idx) => {
+            const match = p.name.match(/\d+/);
+            const pNum = match ? parseInt(match[0]) : idx + 1;
+            return pNum === paperNum;
+          }) || subject.papers[paperNum - 1] || subject.papers[0];
+
+          return {
+            subjectId,
+            subjectCode: subject.code || "",
+            subjectStandardCode: subject.standardCode || "",
+            subjectName: subject.name || "",
+            paper: paperDef?.name || `Paper ${paperNum}`,
+            entry1: false,
+            entry2: false,
+            entry3: false,
+            entry4: false,
+          };
+        });
       },
     );
 
@@ -311,6 +440,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       studentName,
       classLevel,
       stream,
+      bookletsCount,
       subjects: subjectsArray,
       totalEntries,
     });
@@ -324,9 +454,97 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     setRegistrationLevel("UCE");
     setClassLevel("S.1");
     setStream("");
+    setBookletsCount(0);
     setSelectedSubjects({});
     setValidationErrors([]);
     setIsAddDialogOpen(false);
+  };
+
+  const togglePaperForEdit = (
+    subjectId: string,
+    paper: PaperOption,
+    checked: boolean,
+  ) => {
+    const subject = subjects.find(s => s.id === subjectId);
+    if (!subject) return;
+
+    // Check if paper is compulsory
+    const paperName = `Paper ${paper}`;
+    const paperDef = subject.papers.find(p => 
+      p.name === paperName || p.name.includes(String(paper))
+    );
+    
+    if (paperDef?.isCompulsory && !checked) {
+      toast.error(`${paperName} is compulsory for ${subject.name}`);
+      return;
+    }
+
+    setEditSelectedSubjects((prev) => {
+      if (!prev[subjectId]) return prev;
+      const currentPapers = prev[subjectId].selectedPapers;
+      
+      // Enforce maxPapers rule
+      if (checked && subject.maxPapers && currentPapers.length >= subject.maxPapers) {
+        toast.error(`You can only select up to ${subject.maxPapers} papers for ${subject.name}`);
+        return prev;
+      }
+
+      const nextPapers = checked
+        ? Array.from(new Set([...currentPapers, paper]))
+        : currentPapers.filter((item) => item !== paper);
+
+      if (nextPapers.length === 0) {
+        // Only allow removing subject if it's optional
+        if (!subject.optional) {
+          toast.error(`${subject.name} is a compulsory subject`);
+          return prev;
+        }
+        const updated = { ...prev };
+        delete updated[subjectId];
+        return updated;
+      }
+
+      return {
+        ...prev,
+        [subjectId]: { selectedPapers: nextPapers },
+      };
+    });
+  };
+
+  // Toggle subject selection for edit
+  const toggleSubjectForEdit = (subjectId: string) => {
+    const subject = subjects.find((s) => s.id === subjectId);
+    if (!subject) return;
+
+    setEditSelectedSubjects((prev) => {
+      if (prev[subjectId]) {
+        // Remove subject (unless it's compulsory)
+        if (!subject.optional) return prev;
+        const newState = { ...prev };
+        delete newState[subjectId];
+        return newState;
+      } else {
+        // Add subject with dynamic papers
+        const autoPapers: PaperOption[] = subject.papers
+          .filter(p => p.isCompulsory)
+          .map(p => {
+            const match = p.name.match(/\d+/);
+            return (match ? parseInt(match[0]) : subject.papers.indexOf(p) + 1) as PaperOption;
+          });
+
+        if (autoPapers.length === 0 && subject.papers.length > 0) {
+          const match = subject.papers[0].name.match(/\d+/);
+          autoPapers.push((match ? parseInt(match[0]) : 1) as PaperOption);
+        }
+
+        return {
+          ...prev,
+          [subjectId]: {
+            selectedPapers: autoPapers,
+          },
+        };
+      }
+    });
   };
 
   // Handle View Student
@@ -341,23 +559,39 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     setEditStudentName(student.studentName);
     setEditClassLevel(student.classLevel);
     setEditStream(student.stream || "");
+    setEditBookletsCount(student.bookletsCount || 0);
     
     // Convert subjects to edit format
     const editSubjects: typeof editSelectedSubjects = {};
     student.subjects.forEach((subj) => {
-      const subjectId = subjects.find(
+      const subject = subjects.find(
         (s) =>
           s.code === subj.subjectCode &&
           s.educationLevel === student.examLevel,
-      )?.id;
-      if (subjectId) {
-        const existingPapers = editSubjects[subjectId]?.papers ?? [];
-        const paper = Number(subj.paper.split(" ")[1]) as PaperOption;
-        editSubjects[subjectId] = {
-          selectedPapers: existingPapers.includes(paper)
-            ? existingPapers
-            : [...existingPapers, paper],
-        };
+      );
+      
+      if (subject) {
+        const subjectId = subject.id;
+        const existingPapers = editSubjects[subjectId]?.selectedPapers ?? [];
+        
+        // Find the paper number by matching the paper name
+        const paperDef = subject.papers.find(p => p.name === subj.paper);
+        let paperNum: PaperOption;
+        
+        if (paperDef) {
+          const match = paperDef.name.match(/\d+/);
+          paperNum = (match ? parseInt(match[0]) : subject.papers.indexOf(paperDef) + 1) as PaperOption;
+        } else {
+          // Fallback if not found in definitions (maybe it was "Paper X")
+          const match = subj.paper.match(/\d+/);
+          paperNum = (match ? parseInt(match[0]) : 1) as PaperOption;
+        }
+
+        if (!existingPapers.includes(paperNum)) {
+          editSubjects[subjectId] = {
+            selectedPapers: [...existingPapers, paperNum],
+          };
+        }
       }
     });
     setEditSelectedSubjects(editSubjects);
@@ -370,9 +604,74 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
     const errors: string[] = [];
     if (!editStudentName.trim()) errors.push("Student name is required");
-    if (Object.keys(editSelectedSubjects).length === 0) {
+    
+    const selectedSubjectIds = Object.keys(editSelectedSubjects);
+    const selectedSubjectsData = selectedSubjectIds.map(id => subjects.find(s => s.id === id));
+    
+    if (selectedSubjectIds.length === 0) {
       errors.push("At least one subject must be selected");
     }
+
+    const editExamLevel = editClassLevel === "S.5" || editClassLevel === "S.6" ? "UACE" : "UCE";
+
+    // UCE RULES
+    if (editExamLevel === "UCE") {
+      const uceSubjects = subjects.filter(s => s.educationLevel === "UCE");
+      const compulsorySubjects = uceSubjects.filter(s => !s.optional);
+      const missingCompulsory = compulsorySubjects.filter(cs => !selectedSubjectIds.includes(cs.id));
+      
+      if (missingCompulsory.length > 0) {
+        errors.push(`COMPULSORY SUBJECT MISSING: ${missingCompulsory.map(s => s.name).join(", ")}`);
+      }
+
+      if (selectedSubjectIds.length < 8) {
+        errors.push("REJECTED: UCE students must have a minimum of 8 subjects (7 Compulsory + at least 1 Optional)");
+      } else if (selectedSubjectIds.length > 9) {
+        errors.push("REJECTED: UCE students can register for a maximum of 9 subjects only");
+      }
+    }
+
+    // UACE RULES
+    if (editExamLevel === "UACE") {
+      const selectedSubjectCodes = selectedSubjectsData.map(s => s?.code);
+      const selectedStandardCodes = selectedSubjectsData.map(s => s?.standardCode);
+      
+      // General Paper = compulsory
+      if (!selectedSubjectCodes.includes("GP") && !selectedStandardCodes.includes("101")) {
+        errors.push("REJECTED: General Paper (GP) is compulsory for UACE students");
+      }
+
+      // Must select Either Sub Math OR Sub ICT (At least one)
+      const hasSubMath = selectedSubjectCodes.includes("SUB_MATHS") || selectedStandardCodes.includes("475S");
+      const hasSubIct = selectedSubjectCodes.includes("SUB_ICT") || selectedStandardCodes.includes("610");
+      
+      if (!hasSubMath && !hasSubIct) {
+        errors.push("REJECTED: UACE students must select at least one subsidiary subject (Subsidiary Mathematics or Subsidiary ICT)");
+      }
+    }
+
+    // Subject-specific paper validation
+    Object.entries(editSelectedSubjects).forEach(([subjectId, data]) => {
+      const subject = subjects.find(s => s.id === subjectId);
+      if (subject) {
+        if (subject.minPapers && data.selectedPapers.length < subject.minPapers) {
+          errors.push(`${subject.name}: Minimum ${subject.minPapers} papers required (currently ${data.selectedPapers.length})`);
+        }
+        if (subject.maxPapers && data.selectedPapers.length > subject.maxPapers) {
+          errors.push(`${subject.name}: Maximum ${subject.maxPapers} papers allowed (currently ${data.selectedPapers.length})`);
+        }
+        
+        // Ensure compulsory papers are selected
+        const compulsoryPapers = subject.papers.filter(p => p.isCompulsory);
+        compulsoryPapers.forEach(cp => {
+          const match = cp.name.match(/\d+/);
+          const paperNum = (match ? parseInt(match[0]) : 0) as PaperOption;
+          if (paperNum && !data.selectedPapers.includes(paperNum)) {
+            errors.push(`${subject.name}: ${cp.name} is compulsory`);
+          }
+        });
+      }
+    });
 
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -382,17 +681,28 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     const subjectsArray: StudentSubjectEntry[] = Object.entries(editSelectedSubjects).flatMap(
       ([subjectId, data]) => {
         const subject = subjects.find((s) => s.id === subjectId);
-        return data.selectedPapers.map((paper) => ({
-          subjectId,
-          subjectCode: subject?.code || "",
-          subjectStandardCode: subject?.standardCode || "",
-          subjectName: subject?.name || "",
-          paper: `Paper ${paper}` as "Paper 1" | "Paper 2" | "Paper 3" | "Paper 4",
-          entry1: false,
-          entry2: false,
-          entry3: false,
-          entry4: false,
-        }));
+        if (!subject) return [];
+
+        return data.selectedPapers.map((paperNum) => {
+          // Find the paper definition that corresponds to this paperNum
+          const paperDef = subject.papers.find((p, idx) => {
+            const match = p.name.match(/\d+/);
+            const pNum = match ? parseInt(match[0]) : idx + 1;
+            return pNum === paperNum;
+          }) || subject.papers[paperNum - 1] || subject.papers[0];
+
+          return {
+            subjectId,
+            subjectCode: subject.code || "",
+            subjectStandardCode: subject.standardCode || "",
+            subjectName: subject.name || "",
+            paper: paperDef?.name || `Paper ${paperNum}`,
+            entry1: false,
+            entry2: false,
+            entry3: false,
+            entry4: false,
+          };
+        });
       },
     );
 
@@ -400,6 +710,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       studentName: editStudentName,
       classLevel: editClassLevel,
       stream: editStream,
+      bookletsCount: editBookletsCount,
       subjects: subjectsArray,
       totalEntries: subjectsArray.length,
     });
@@ -469,13 +780,24 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       Object.entries(selectedSubjects)
         .map(([subjectId, data]) => {
           const subject = subjects.find((s) => s.id === subjectId);
+          if (!subject) return null;
+          
+          const paperNames = data.selectedPapers.map(paperNum => {
+            const paperDef = subject.papers.find((p, idx) => {
+              const match = p.name.match(/\d+/);
+              const pNum = match ? parseInt(match[0]) : idx + 1;
+              return pNum === paperNum;
+            }) || subject.papers[paperNum - 1] || subject.papers[0];
+            return paperDef?.name || `Paper ${paperNum}`;
+          });
+
           return {
             subjectId,
-            subjectName: subject?.name ?? "Unknown Subject",
-            papers: data.selectedPapers,
+            subjectName: subject.name,
+            papers: paperNames,
           };
         })
-        .filter((item) => item.papers.length > 0),
+        .filter((item): item is NonNullable<typeof item> => item !== null && item.papers.length > 0),
     [selectedSubjects, subjects],
   );
 
@@ -516,6 +838,15 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
   return (
     <div className="flex flex-col w-full gap-6">
+      {isFinalized && !isAdmin && (
+        <Alert className="bg-blue-50 border-blue-200 text-blue-800 rounded-2xl mb-2">
+          <Lock className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-sm font-medium">
+            Your registration has been finalized. Original student entries are now locked. 
+            To edit locked records, please contact the WAKISSHA Secretariat or your Zone Leader.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">
@@ -528,27 +859,89 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
           </p>
         </div>
 
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full lg:w-auto">
-              <UserPlus className="h-4 w-4" />
-              Add Student
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[96vw] sm:max-w-[920px] h-[94vh] max-h-[94vh] overflow-hidden p-0">
-            <div className="h-full overflow-y-auto px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
-            <DialogHeader>
-              <DialogTitle>Register New Student</DialogTitle>
-              <DialogDescription>
-                Add a new student, select their class level, choose subjects, and specify entry numbers.
-              </DialogDescription>
+        <div className="flex flex-col gap-2 sm:flex-row lg:w-auto">
+          {!isAdmin && !isFinalized && (
+            <Dialog open={isFinalizeDialogOpen} onOpenChange={setIsFinalizeDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Finalize Registration
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md rounded-3xl">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-black text-slate-900">Finalize Registration</DialogTitle>
+                  <DialogDescription className="text-slate-500 font-medium">
+                    Once finalized, you will no longer be able to edit or delete existing students. 
+                    Any students added after this will be treated as "Additional Students" with separate invoices.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-6 space-y-4">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">Select Marking Guide Package</Label>
+                    <Select value={finalizeMarkingGuide} onValueChange={(value: any) => setFinalizeMarkingGuide(value)}>
+                      <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
+                        <SelectValue placeholder="Select marking guide" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Arts" className="font-bold">Arts (UGX 25,000)</SelectItem>
+                        <SelectItem value="Sciences" className="font-bold">Sciences (UGX 25,000)</SelectItem>
+                        <SelectItem value="Both" className="font-bold">Both (Arts & Sciences) (UGX 50,000)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" className="rounded-xl font-bold" onClick={() => setIsFinalizeDialogOpen(false)}>Cancel</Button>
+                  <Button 
+                    className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold"
+                    onClick={() => {
+                      if (user?.schoolCode) {
+                        finalizeRegistration(user.schoolCode, finalizeMarkingGuide);
+                        toast.success("Registration Finalized", {
+                          description: "Your registration has been locked. Generating payment items..."
+                        });
+                        setIsFinalizeDialogOpen(false);
+                        onPageChange("make-payments");
+                      }
+                    }}
+                  >
+                    Confirm & Finalize
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="w-full lg:w-auto bg-blue-600 hover:bg-blue-700">
+                <UserPlus className="h-4 w-4 mr-2" />
+                {isFinalized ? "Add Additional Student" : "Add Student"}
+              </Button>
+            </DialogTrigger>
+          <DialogContent className="w-[96vw] sm:max-w-[920px] h-[94vh] max-h-[94vh] overflow-hidden p-0 border-none shadow-2xl" aria-describedby="register-description">
+            <div className="h-full overflow-y-auto px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7 bg-slate-50/50">
+            <DialogHeader className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+                  <UserPlus className="h-6 w-6" />
+                </div>
+                <div>
+                  <DialogTitle className="text-2xl font-black text-slate-900">Register Student</DialogTitle>
+                  <DialogDescription id="register-description" className="sr-only">
+                    Fill in the details to register a new student for examinations.
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
 
             {validationErrors.length > 0 && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
+              <Alert variant="destructive" className="mb-6 border-2 border-blue-100 bg-blue-50/50 rounded-2xl">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
                 <AlertDescription>
-                  <ul className="list-disc list-inside mt-2 space-y-1">
+                  <p className="font-black text-blue-900 mb-1 uppercase tracking-wider text-[10px]">Registration Errors</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm font-bold text-blue-800">
                     {validationErrors.map((error, i) => (
                       <li key={i}>{error}</li>
                     ))}
@@ -557,41 +950,49 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </Alert>
             )}
 
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
               {/* Student Name */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="student-name">Student Name *</Label>
-                <Input
-                  id="student-name"
-                  placeholder="Enter student's full name"
-                  value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)}
-                />
+                <Label htmlFor="student-name" className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                  Student Full Name <span className="text-blue-600">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="student-name"
+                    placeholder="e.g. NAMUTEBI SHAKIRAH"
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value.toUpperCase())}
+                    className="h-12 text-lg font-bold border-2 focus-visible:ring-blue-600 rounded-xl transition-all"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Sparkles className="h-5 w-5 text-blue-400 opacity-50" />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="exam-level">Exam Level *</Label>
+                <Label htmlFor="exam-level" className="text-sm font-black text-slate-700 uppercase tracking-widest">Exam Level <span className="text-blue-600">*</span></Label>
                 <Select value={registrationLevel} onValueChange={(value: "UCE" | "UACE") => setRegistrationLevel(value)}>
-                  <SelectTrigger id="exam-level">
+                  <SelectTrigger id="exam-level" className="h-12 font-bold border-2 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UCE">UCE</SelectItem>
-                    <SelectItem value="UACE">UACE</SelectItem>
+                  <SelectContent className="rounded-xl border-2">
+                    <SelectItem value="UCE" className="font-bold py-3">UCE (O-Level)</SelectItem>
+                    <SelectItem value="UACE" className="font-bold py-3">UACE (A-Level)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Class Level */}
               <div className="space-y-2">
-                <Label htmlFor="class-level">Class Level *</Label>
+                <Label htmlFor="class-level" className="text-sm font-black text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
                 <Select value={classLevel} onValueChange={(value: any) => setClassLevel(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-12 font-bold border-2 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-2">
                     {availableClassLevels.map((level) => (
-                      <SelectItem key={level} value={level}>
+                      <SelectItem key={level} value={level} className="font-bold py-3">
                         {level}
                       </SelectItem>
                     ))}
@@ -599,38 +1000,42 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 </Select>
               </div>
 
-              {/* Exam Level */}
+              {/* Answer Booklets Calculation */}
               <div className="space-y-2">
-                <Label>Exam Level</Label>
-                <div className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg bg-slate-50">
-                  <Badge variant={registrationLevel === "UCE" ? "secondary" : "default"}>
-                    {registrationLevel}
-                  </Badge>
+                <Label htmlFor="booklets" className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                  Answer Booklets 
+                  <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold">25,000 Each</Badge>
+                </Label>
+                <div className="flex gap-3 items-center">
+                  <Input
+                    id="booklets"
+                    type="number"
+                    min="0"
+                    placeholder="Qty"
+                    value={bookletsCount || ""}
+                    onChange={(e) => setBookletsCount(parseInt(e.target.value) || 0)}
+                    className="w-24 h-12 font-bold border-2 rounded-xl text-center focus:ring-blue-600 transition-all"
+                  />
+                  <div className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-4 h-12 flex items-center justify-between shadow-inner">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Amount</p>
+                    <p className="text-base font-black text-blue-700">
+                      UGX {(bookletsCount * 25000).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Stream (for internal use) */}
-              <div className="space-y-2">
-                <Label htmlFor="stream">Stream (Optional)</Label>
-                <Input
-                  id="stream"
-                  placeholder="e.g., A, B, C (internal use only)"
-                  value={stream}
-                  onChange={(e) => setStream(e.target.value)}
-                />
               </div>
 
               {/* School Selection */}
               {isAdmin && (
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="school">School *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="school" className="text-sm font-black text-slate-700 uppercase tracking-widest">School <span className="text-blue-600">*</span></Label>
                   <Select value={schoolCode} onValueChange={setSchoolCode}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-12 font-bold border-2 rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl border-2">
                       {scopedSchools.map((school) => (
-                        <SelectItem key={school.code} value={school.code}>
+                        <SelectItem key={school.code} value={school.code} className="font-bold py-3">
                           {school.name} ({school.code})
                         </SelectItem>
                       ))}
@@ -640,114 +1045,159 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               )}
 
               {/* Subject Selection */}
-              <div className="space-y-3 md:col-span-2">
-                <Label>Select Subjects *</Label>
+              <div className="space-y-4 md:col-span-2 pt-4">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-blue-600" />
+                      Select Subjects <span className="text-blue-600">*</span>
+                    </Label>
+                  </div>
+
+                  <div className="text-sm font-bold text-blue-800 bg-blue-50 border-2 border-blue-200 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm">
+                    <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed text-xs">
+                      {registrationLevel === "UCE" 
+                        ? "7 compulsory subjects + 1 or 2 optional (Total 8 or 9)" 
+                        : "GP is compulsory + at least one Subsidiary + max 3 main subjects"}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Subject List with Paper Selection */}
-              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[52vh] overflow-y-auto border border-slate-200 rounded-xl p-4">
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-h-[52vh] overflow-y-auto border-2 border-slate-200 rounded-[2rem] p-6 bg-slate-50 shadow-inner">
                 {filteredSubjects.length === 0 ? (
-                  <p className="text-sm text-slate-500 col-span-full">No subjects available for {registrationLevel}</p>
+                  <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 gap-3 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                    <BookOpen className="h-10 w-10 opacity-20" />
+                    <p className="text-sm font-bold uppercase tracking-widest">No subjects available for {registrationLevel}</p>
+                  </div>
                 ) : (
                   filteredSubjects.map((subject) => {
                     const isSelected = !!selectedSubjects[subject.id];
                     const isCompulsory = !subject.optional;
-                    const isSubsidiary = subject.code === "SUB_ICT" || subject.code === "SUB_MATHS";
+                    const category = getSubjectCategory(subject.code);
                     
                     return (
                       <div 
                         key={subject.id} 
-                        className={`rounded-lg border p-3 transition-colors ${
-                          isSelected ? "border-blue-200 bg-blue-50/30" : "border-slate-200 bg-white"
-                        }`}
+                        className={`group relative rounded-3xl border-2 transition-all duration-300 p-5 ${
+                          isSelected 
+                            ? (category === "Arts" ? "border-amber-500 bg-white shadow-xl shadow-amber-100/30" : "border-blue-600 bg-white shadow-xl shadow-blue-100/30") 
+                            : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md"
+                        } scale-[1.0] hover:scale-[1.02]`}
                       >
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            id={subject.id}
-                            checked={isSelected}
-                            onCheckedChange={() => toggleSubject(subject.id)}
-                            disabled={isCompulsory}
-                            className="mt-1"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[11px] font-mono font-bold text-slate-500">{subject.standardCode}</span>
+                        <div className="flex flex-col h-full gap-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-col gap-1.5 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[10px] font-black font-mono px-2 py-0.5 rounded-lg uppercase tracking-tighter shadow-sm ${
+                                  isSelected 
+                                    ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
+                                    : "bg-slate-100 text-slate-600"
+                                }`}>
+                                  {subject.standardCode}
+                                </span>
+                                {isCompulsory ? (
+                                  <Badge className="bg-slate-900 text-white border-none text-[9px] px-2 h-5 font-black uppercase tracking-widest shadow-sm">
+                                    COMPULSORY
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className={`text-[9px] px-2 h-5 font-bold uppercase tracking-widest border-2 ${
+                                    category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
+                                  }`}>
+                                    OPTIONAL
+                                  </Badge>
+                                )}
+                              </div>
                               <Label 
                                 htmlFor={subject.id} 
-                                className={`font-semibold text-sm truncate cursor-pointer ${
-                                  isCompulsory ? "text-slate-900" : "text-amber-700"
+                                className={`font-black text-[15px] leading-tight transition-colors cursor-pointer ${
+                                  isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
                                 }`}
                               >
                                 {subject.name}
                               </Label>
                             </div>
-                            
-                            <div className="flex items-center gap-2 mt-1">
-                              {isCompulsory ? (
-                                <Badge className="bg-blue-600 text-white border-none text-[10px] px-2 h-5 font-bold uppercase tracking-wider">
-                                  Compulsory
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-[10px] px-2 h-5 font-bold uppercase tracking-wider border-slate-300 text-slate-500">
-                                  Optional
-                                </Badge>
-                              )}
-                              {isSelected && (
-                                <Badge variant="secondary" className={`text-[10px] px-2 h-5 font-bold ${isSubsidiary ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}>
-                                  Papers: {selectedSubjects[subject.id].selectedPapers.join(", ")}
-                                </Badge>
-                              )}
-                            </div>
 
-                            {/* Rule description text - Increased font size and clarity */}
-                            <div className="pt-1">
-                              <p className={`text-[11px] font-bold leading-tight ${isSubsidiary ? "text-blue-600" : "text-slate-500"}`}>
-                                {subject.code === "GP" || subject.standardCode === "101" ? "Paper 1 only" :
-                                 subject.code === "MATH" || subject.standardCode === "456" || subject.standardCode === "475" ? "Paper 1 only" :
-                                 subject.code === "GEOG" || subject.standardCode === "273" || subject.standardCode === "230" ? "Paper 1 (Compulsory)" :
-                                 subject.code === "TD" || subject.standardCode === "680" || subject.standardCode === "745" ? "Papers 1, 2, 3 (Compulsory)" :
-                                 subject.code === "SUB_ICT" || subject.code === "PHY" || subject.code === "CHEM" || subject.code === "BIO" ? "Paper 1 + choose Paper 2 or 3" :
-                                 subject.code === "SUB_MATHS" || subject.standardCode === "475S" ? "Paper 1 only" :
-                                 subject.code === "ENG" || subject.standardCode === "112" ? "Papers 1 & 2" :
-                                 subject.code === "HIST" || subject.standardCode === "241" || subject.code === "CRE" || subject.standardCode === "223" || subject.code === "IRE" || subject.standardCode === "225" || subject.code === "LIT" || subject.standardCode === "208" ? "Paper 1 only" :
-                                 "Papers 1 & 2"}
-                              </p>
-                            </div>
-
-                            {/* Special Rule Logic Display for Subsidiary ICT and Sciences */}
-                            {(subject.code === "SUB_ICT" || subject.code === "PHY" || subject.code === "CHEM" || subject.code === "BIO") && isSelected && (
-                              <div className={`mt-3 space-y-2 pt-3 border-t ${isSubsidiary ? "border-blue-200" : "border-orange-200"}`}>
-                                <Label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Choose Paper 2 OR 3:</Label>
-                                <div className="flex gap-6">
-                                  {[2, 3].map((p) => (
-                                    <label key={p} className="flex items-center gap-2 text-sm font-bold cursor-pointer group">
-                                      <input 
-                                        type="radio"
-                                        name={`${subject.code}-paper-${subject.id}`}
-                                        className={`h-4 w-4 border-slate-300 focus:ring-offset-0 ${isSubsidiary ? "text-blue-600 focus:ring-blue-500" : "text-orange-600 focus:ring-orange-500"}`}
-                                        checked={selectedSubjects[subject.id].selectedPapers.includes(p as any)}
-                                        onChange={() => {
-                                          setSelectedSubjects(prev => ({
-                                            ...prev,
-                                            [subject.id]: { selectedPapers: [1, p as any] }
-                                          }));
-                                        }}
-                                      />
-                                      <span className={`transition-colors ${selectedSubjects[subject.id].selectedPapers.includes(p as any) ? isSubsidiary ? "text-blue-700" : "text-orange-700" : "text-slate-600"}`}>
-                                        Paper {p}
-                                      </span>
-                                    </label>
-                                  ))}
-                                </div>
+                            <Checkbox
+                              id={subject.id}
+                              checked={isSelected}
+                              onCheckedChange={() => toggleSubject(subject.id)}
+                              disabled={isCompulsory}
+                              className={`h-7 w-7 rounded-lg border-2 transition-all duration-200 ${
+                                isSelected 
+                                  ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
+                                  : "border-slate-300 bg-white hover:border-blue-400"
+                              }`}
+                            />
+                          </div>
+                          
+                          <div className="mt-auto pt-4 border-t-2 border-slate-50">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <BookOpen className={`h-3.5 w-3.5 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
+                                <p className={`text-[11px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
+                                  {subject.papers.length} {subject.papers.length === 1 ? 'Paper' : 'Papers'} configured
+                                </p>
                               </div>
-                            )}
+                              
+                              {isSelected && (
+                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[10px] px-2 h-6 font-black rounded-lg`}>
+                                  {selectedSubjects[subject.id].selectedPapers.length} Selected
+                                </Badge>
+                              )}
+                            </div>
 
-                            {/* Auto-assigned indicators */}
-                            {isSelected && (subject.code === "TD" || subject.code === "ENG" || subject.standardCode === "112") && (
-                              <div className={`mt-2 py-1 px-2 rounded-md inline-block ${isSubsidiary ? "bg-blue-100" : "bg-orange-100"}`}>
-                                <span className={`text-[10px] font-black uppercase tracking-wider ${isSubsidiary ? "text-blue-700" : "text-orange-700"}`}>
-                                  {subject.code === "TD" ? "Auto-assigned: P1, P2, P3" : "Auto-assigned: P1, P2"}
-                                </span>
+                            {/* Dynamic Paper Selection Logic */}
+                            {isSelected && subject.papers.length > 0 && (
+                              <div className={`mt-3 space-y-2 p-3 rounded-2xl border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <Label className={`text-[9px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
+                                    Select Papers:
+                                  </Label>
+                                  {(subject.minPapers || subject.maxPapers) && (
+                                    <span className="text-[8px] font-bold text-slate-400">
+                                      {subject.minPapers ? `Min: ${subject.minPapers}` : ""} {subject.maxPapers ? `Max: ${subject.maxPapers}` : ""}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                                  {subject.papers.map((p, idx) => {
+                                    const paperNum = (p.name.match(/\d+/) ? parseInt(p.name.match(/\d+/)![0]) : idx + 1) as PaperOption;
+                                    const isPaperSelected = selectedSubjects[subject.id].selectedPapers.includes(paperNum);
+                                    
+                                    return (
+                                      <label key={p.id} className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer group/paper ${p.isCompulsory ? 'cursor-default opacity-80' : ''}`}>
+                                        <div className="relative flex items-center">
+                                          <input 
+                                            type="checkbox"
+                                            className={`h-3.5 w-3.5 rounded border-2 transition-all ${
+                                              category === "Arts" 
+                                                ? "border-amber-300 text-amber-600 focus:ring-amber-500" 
+                                                : "border-blue-300 text-blue-600 focus:ring-blue-500"
+                                            } ${p.isCompulsory ? 'bg-slate-200 border-slate-300' : ''}`}
+                                            checked={isPaperSelected}
+                                            disabled={p.isCompulsory}
+                                            onChange={(e) => togglePaperForSubject(subject.id, paperNum, e.target.checked)}
+                                          />
+                                          {p.isCompulsory && (
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                              <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                            </div>
+                                          )}
+                                        </div>
+                                        <span className={`transition-colors uppercase tracking-wider text-[10px] ${
+                                          isPaperSelected 
+                                            ? (category === "Arts" ? "text-amber-800" : "text-blue-800") 
+                                            : "text-slate-400 group-hover/paper:text-slate-600"
+                                        }`}>
+                                          {p.name} {p.isCompulsory && <span className="text-[8px] opacity-60">(Comp)</span>}
+                                        </span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -767,7 +1217,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     </span>
                     <span className="h-8 w-px bg-blue-200"></span>
                     <span className="flex items-center gap-2">
-                      Total Entries: <span className="text-2xl font-black text-blue-600 tracking-tighter">{calculateTotalEntries()}</span>
+                      Total Entries: <span className="text-2xl font-black text-blue-600 tracking-tighter">{calculateTotalEntries(selectedSubjects)}</span>
                     </span>
                   </p>
                 </div>
@@ -782,7 +1232,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     <div className="space-y-1.5">
                       {registrationPreview.map((item) => (
                         <p key={item.subjectId} className="text-sm text-slate-700">
-                          {item.subjectName} {"\u2192"} {item.papers.map((paper) => `Paper ${paper}`).join(", ")}
+                          {item.subjectName} {"\u2192"} {item.papers.join(", ")}
                         </p>
                       ))}
                     </div>
@@ -801,8 +1251,9 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
           </DialogContent>
         </Dialog>
       </div>
+    </div>
 
-      {/* Students Table */}
+    {/* Students Table */}
       <Card>
         <CardHeader className="border-b border-slate-200">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -886,7 +1337,14 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                         {student.registrationNumber}
                       </TableCell>
                       <TableCell className="font-semibold text-slate-900">
-                        {student.studentName}
+                        <div className="flex flex-col gap-1">
+                          {student.studentName}
+                          {student.isAdditional && (
+                            <Badge variant="outline" className="w-fit text-[10px] bg-orange-50 text-orange-600 border-orange-200 font-black uppercase tracking-widest">
+                              Additional Student
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{student.classLevel}</Badge>
@@ -917,7 +1375,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                title="Edit or delete student"
+                                title={isFinalized && !student.isAdditional ? "Cannot edit/delete after finalization" : "Edit or delete student"}
+                                disabled={isFinalized && !student.isAdditional && !isAdmin}
                               >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
@@ -974,12 +1433,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     {viewingStudent.examLevel}
                   </Badge>
                 </div>
-                {viewingStudent.stream && (
-                  <div className="col-span-2">
-                    <p className="text-xs font-semibold text-slate-500 uppercase">Stream</p>
-                    <p className="text-sm font-medium text-slate-900">{viewingStudent.stream}</p>
-                  </div>
-                )}
               </div>
 
               <div>
@@ -1016,16 +1469,24 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 <p className="text-xs font-semibold text-slate-500 uppercase">Total Entries</p>
                 <p className="text-sm font-medium text-slate-900">{viewingStudent.totalEntries}</p>
               </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase">Answer Booklets</p>
+                <p className="text-sm font-medium text-slate-900">{viewingStudent.bookletsCount || 0} (UGX {((viewingStudent.bookletsCount || 0) * 25000).toLocaleString()})</p>
+              </div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
               Close
             </Button>
-            <Button onClick={() => {
-              setIsViewModalOpen(false);
-              handleEditStudent(viewingStudent!);
-            }}>
+            <Button 
+              disabled={isFinalized && !viewingStudent?.isAdditional && !isAdmin}
+              title={isFinalized && !viewingStudent?.isAdditional && !isAdmin ? "Cannot edit after finalization" : ""}
+              onClick={() => {
+                setIsViewModalOpen(false);
+                handleEditStudent(viewingStudent!);
+              }}
+            >
               Edit Student
             </Button>
           </DialogFooter>
@@ -1034,162 +1495,248 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
       {/* Edit Student Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="edit-description">
           <DialogHeader>
             <DialogTitle>Edit Student</DialogTitle>
-            <DialogDescription>
-              Update information for {editingStudent?.studentName}
+            <DialogDescription id="edit-description" className="sr-only">
+              Update student registration details and subject entries.
             </DialogDescription>
           </DialogHeader>
           
           {validationErrors.length > 0 && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
+            <Alert variant="destructive" className="mb-8 border-2 border-blue-100 bg-blue-50/50 rounded-3xl p-6 shadow-sm">
+              <AlertCircle className="h-6 w-6 text-blue-600" />
               <AlertDescription>
-                <ul className="list-disc list-inside">
+                <p className="font-black text-blue-900 mb-2 uppercase tracking-widest text-xs">Registration Errors</p>
+                <ul className="list-disc list-inside space-y-1.5 text-sm font-bold text-blue-800">
                   {validationErrors.map((error, idx) => (
-                    <li key={idx}>{error}</li>
+                    <li key={idx} className="leading-relaxed">{error}</li>
                   ))}
                 </ul>
               </AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Student Name */}
-            <div>
-              <Label htmlFor="edit-student-name" className="font-semibold">
-                Student Name
+            <div className="space-y-2">
+              <Label htmlFor="edit-student-name" className="text-sm font-black text-slate-700 uppercase tracking-widest">
+                Student Name <span className="text-blue-600">*</span>
               </Label>
               <Input
                 id="edit-student-name"
                 value={editStudentName}
                 onChange={(e) => setEditStudentName(e.target.value)}
-                placeholder="Enter student name"
+                placeholder="Enter full student name"
+                className="h-12 font-bold border-2 rounded-xl focus:ring-blue-600 transition-all"
               />
             </div>
 
-            {/* Class Level */}
-            <div>
-              <Label className="font-semibold">Class Level</Label>
-              <Select value={editClassLevel} onValueChange={(value: any) => setEditClassLevel(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLASS_LEVELS_ARRAY.map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {level}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Class Level */}
+              <div className="space-y-2">
+                <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
+                <Select value={editClassLevel} onValueChange={(value: any) => setEditClassLevel(value)}>
+                  <SelectTrigger className="h-12 font-bold border-2 rounded-xl focus:ring-blue-600 transition-all">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-2">
+                    {CLASS_LEVELS_ARRAY.map((level) => (
+                      <SelectItem key={level} value={level} className="font-bold py-3">
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Stream */}
-            <div>
-              <Label htmlFor="edit-stream" className="font-semibold">
-                Stream (Optional)
-              </Label>
-              <Input
-                id="edit-stream"
-                value={editStream}
-                onChange={(e) => setEditStream(e.target.value)}
-                placeholder="e.g., Science, Arts"
-              />
+              {/* Answer Booklets Calculation */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-booklets" className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                  Answer Booklets 
+                  <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-black px-2 py-0.5 rounded-lg">25,000 Each</Badge>
+                </Label>
+                <div className="flex gap-4 items-center">
+                  <Input
+                    id="edit-booklets"
+                    type="number"
+                    min="0"
+                    placeholder="Qty"
+                    value={editBookletsCount || ""}
+                    onChange={(e) => setEditBookletsCount(parseInt(e.target.value) || 0)}
+                    className="w-28 h-12 font-black border-2 rounded-xl text-center focus:ring-blue-600 transition-all"
+                  />
+                  <div className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-6 h-12 flex items-center justify-between shadow-inner">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Amount</p>
+                    <p className="text-base font-black text-blue-700">
+                      UGX {(editBookletsCount * 25000).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Subjects Selection */}
-            <div>
-              <Label className="font-semibold mb-3 block">Select Subjects</Label>
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                {filteredSubjectsForEdit.map((subject) => (
-                  <div key={subject.id} className="border border-slate-200 rounded-lg p-3">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        id={`edit-${subject.id}`}
-                        checked={!!editSelectedSubjects[subject.id]}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setEditSelectedSubjects((prev) => ({
-                              ...prev,
-                              [subject.id]: { selectedPapers: [1] },
-                            }));
-                          } else {
-                            setEditSelectedSubjects((prev) => {
-                              const updated = { ...prev };
-                              delete updated[subject.id];
-                              return updated;
-                            });
-                          }
-                        }}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-bold text-black">
-                            {subject.standardCode}
-                          </span>
-                          {editSelectedSubjects[subject.id] && (
-                            <span className="text-xs font-semibold text-blue-600">
-                              /{editSelectedSubjects[subject.id].selectedPapers.join(",")}
-                            </span>
-                          )}
-                          <Label htmlFor={`edit-${subject.id}`} className="font-semibold cursor-pointer text-amber-600">
-                            {subject.name}
-                          </Label>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          {subject.optional ? "Optional" : "Compulsory"}
-                        </p>
-                      </div>
-                      {subject.optional && (
-                        <Badge variant="outline" className="text-xs">
-                          Optional
-                        </Badge>
-                      )}
-                    </div>
+            <div className="space-y-4 pt-2">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-blue-600" />
+                    Select Subjects <span className="text-blue-600">*</span>
+                  </Label>
+                </div>
+                
+                <div className="text-sm font-bold text-blue-800 bg-blue-50 border-2 border-blue-200 rounded-3xl px-6 py-5 flex items-start gap-4 shadow-sm">
+                  <Info className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    {(editClassLevel === "S.5" || editClassLevel === "S.6")
+                      ? "GP is compulsory + at least one Subsidiary + max 3 main subjects"
+                      : "7 compulsory subjects + 1 or 2 optional (Total 8 or 9)"}
+                  </p>
+                </div>
+              </div>
 
-                    {/* Paper Selection */}
-                    {editSelectedSubjects[subject.id] && (
-                      <div className="ml-6 pl-3 border-l-2 border-slate-200 mt-2">
-                        <Label className="text-xs font-semibold text-slate-600 mb-2 block">
-                          Select Paper(s):
-                        </Label>
-                        <div className="flex flex-wrap gap-4">
-                          {PAPER_OPTIONS.map((paper) => (
-                            <label
-                              key={`edit-${subject.id}-${paper}`}
-                              className="flex items-center gap-2 text-sm text-slate-700"
-                            >
-                              <Checkbox
-                                checked={editSelectedSubjects[subject.id].selectedPapers.includes(paper)}
-                                onCheckedChange={(checked) => {
-                                  setEditSelectedSubjects((prev) => {
-                                    if (!prev[subject.id]) return prev;
-                                    const currentPapers = prev[subject.id].selectedPapers;
-                                    const nextPapers = checked
-                                      ? Array.from(new Set([...currentPapers, paper]))
-                                      : currentPapers.filter((item) => item !== paper);
-                                    if (nextPapers.length === 0) {
-                                      const updated = { ...prev };
-                                      delete updated[subject.id];
-                                      return updated;
-                                    }
-                                    return {
-                                      ...prev,
-                                      [subject.id]: { selectedPapers: nextPapers },
-                                    };
-                                  });
-                                }}
-                              />
-                              <span>{`Paper ${paper}`}</span>
-                            </label>
-                          ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-h-[52vh] overflow-y-auto border-2 border-slate-200 rounded-[2rem] p-6 bg-slate-50 shadow-inner">
+                {filteredSubjectsForEdit.length === 0 ? (
+                  <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 gap-3 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                    <BookOpen className="h-10 w-10 opacity-20" />
+                    <p className="text-sm font-bold uppercase tracking-widest">No subjects available</p>
+                  </div>
+                ) : (
+                  filteredSubjectsForEdit.map((subject) => {
+                    const isSelected = !!editSelectedSubjects[subject.id];
+                    const isCompulsory = !subject.optional;
+                    const category = getSubjectCategory(subject.code);
+                    const editExamLevel = editClassLevel === "S.5" || editClassLevel === "S.6" ? "UACE" : "UCE";
+                    
+                    return (
+                      <div 
+                        key={subject.id} 
+                        className={`group relative rounded-3xl border-2 transition-all duration-300 p-5 ${
+                          isSelected 
+                            ? (category === "Arts" ? "border-amber-500 bg-white shadow-xl shadow-amber-100/30" : "border-blue-600 bg-white shadow-xl shadow-blue-100/30") 
+                            : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md"
+                        } scale-[1.0] hover:scale-[1.02]`}
+                      >
+                        <div className="flex flex-col h-full gap-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-col gap-1.5 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[10px] font-black font-mono px-2 py-0.5 rounded-lg uppercase tracking-tighter shadow-sm ${
+                                  isSelected 
+                                    ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
+                                    : "bg-slate-100 text-slate-600"
+                                }`}>
+                                  {subject.standardCode}
+                                </span>
+                                {isCompulsory ? (
+                                  <Badge className="bg-slate-900 text-white border-none text-[9px] px-2 h-5 font-black uppercase tracking-widest shadow-sm">
+                                    COMPULSORY
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className={`text-[9px] px-2 h-5 font-bold uppercase tracking-widest border-2 ${
+                                    category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
+                                  }`}>
+                                    OPTIONAL
+                                  </Badge>
+                                )}
+                              </div>
+                              <Label 
+                                htmlFor={`edit-${subject.id}`} 
+                                className={`font-black text-[15px] leading-tight transition-colors cursor-pointer ${
+                                  isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
+                                }`}
+                              >
+                                {subject.name}
+                              </Label>
+                            </div>
+
+                            <Checkbox
+                              id={`edit-${subject.id}`}
+                              checked={isSelected}
+                              onCheckedChange={() => toggleSubjectForEdit(subject.id)}
+                              disabled={isCompulsory}
+                              className={`h-7 w-7 rounded-lg border-2 transition-all duration-200 ${
+                                isSelected 
+                                  ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
+                                  : "border-slate-300 bg-white hover:border-slate-400"
+                              }`}
+                            />
+                          </div>
+                          
+                          <div className="mt-auto pt-4 border-t-2 border-slate-50">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <BookOpen className={`h-3.5 w-3.5 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
+                                <p className={`text-[11px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
+                                  {subject.papers.length} {subject.papers.length === 1 ? 'Paper' : 'Papers'} configured
+                                </p>
+                              </div>
+                              
+                              {isSelected && (
+                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[10px] px-2 h-6 font-black rounded-lg`}>
+                                  {editSelectedSubjects[subject.id].selectedPapers.length} Selected
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Dynamic Paper Selection Logic for Edit Modal */}
+                            {isSelected && subject.papers.length > 0 && (
+                              <div className={`mt-3 space-y-2 p-3 rounded-2xl border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <Label className={`text-[9px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
+                                    Select Papers:
+                                  </Label>
+                                  {(subject.minPapers || subject.maxPapers) && (
+                                    <span className="text-[8px] font-bold text-slate-400">
+                                      {subject.minPapers ? `Min: ${subject.minPapers}` : ""} {subject.maxPapers ? `Max: ${subject.maxPapers}` : ""}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                                  {subject.papers.map((p, idx) => {
+                                    const paperNum = (p.name.match(/\d+/) ? parseInt(p.name.match(/\d+/)![0]) : idx + 1) as PaperOption;
+                                    const isPaperSelected = editSelectedSubjects[subject.id].selectedPapers.includes(paperNum);
+                                    
+                                    return (
+                                      <label key={p.id} className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer group/paper ${p.isCompulsory ? 'cursor-default opacity-80' : ''}`}>
+                                        <div className="relative flex items-center">
+                                          <input 
+                                            type="checkbox"
+                                            className={`h-3.5 w-3.5 rounded border-2 transition-all ${
+                                              category === "Arts" 
+                                                ? "border-amber-300 text-amber-600 focus:ring-amber-500" 
+                                                : "border-blue-300 text-blue-600 focus:ring-blue-500"
+                                            } ${p.isCompulsory ? 'bg-slate-200 border-slate-300' : ''}`}
+                                            checked={isPaperSelected}
+                                            disabled={p.isCompulsory}
+                                            onChange={(e) => togglePaperForEdit(subject.id, paperNum, e.target.checked)}
+                                          />
+                                          {p.isCompulsory && (
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                              <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                            </div>
+                                          )}
+                                        </div>
+                                        <span className={`transition-colors uppercase tracking-wider text-[10px] ${
+                                          isPaperSelected 
+                                            ? (category === "Arts" ? "text-amber-800" : "text-blue-800") 
+                                            : "text-slate-400 group-hover/paper:text-slate-600"
+                                        }`}>
+                                          {p.name} {p.isCompulsory && <span className="text-[8px] opacity-60">(Comp)</span>}
+                                        </span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
