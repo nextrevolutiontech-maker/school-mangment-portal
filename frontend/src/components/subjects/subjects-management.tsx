@@ -37,6 +37,7 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
   }
 
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
+  const [levelFilter, setLevelFilter] = useState<"UCE" | "UACE">("UCE");
   const [newSubject, setNewSubject] = useState({
     name: "",
     code: "",
@@ -130,15 +131,12 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
     [students],
   );
 
-  const orderedSubjects = useMemo(
+  const filteredSubjects = useMemo(
     () =>
-      [...subjects].sort((left, right) => {
-        if (left.educationLevel !== right.educationLevel) {
-          return left.educationLevel.localeCompare(right.educationLevel);
-        }
-        return left.code.localeCompare(right.code);
-      }),
-    [subjects],
+      subjects
+        .filter((subject) => subject.educationLevel === levelFilter)
+        .sort((left, right) => left.code.localeCompare(right.code)),
+    [subjects, levelFilter],
   );
 
   const handleSubmitSubject = () => {
@@ -417,13 +415,27 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
 
       <Card>
         <CardHeader className="border-b border-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-              <BookOpen className="h-5 w-5" />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle>Registered Standard Subjects</CardTitle>
+                <CardDescription>Subjects available for school registration forms.</CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle>Registered Standard Subjects</CardTitle>
-              <CardDescription>Subjects available for school registration forms.</CardDescription>
+            <div className="flex items-center gap-3">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Filter Level:</Label>
+              <Select value={levelFilter} onValueChange={(val: any) => setLevelFilter(val)}>
+                <SelectTrigger className="w-[120px] bg-slate-50 border-slate-200 rounded-xl h-10 font-bold">
+                  <SelectValue placeholder="Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UCE">UCE</SelectItem>
+                  <SelectItem value="UACE">UACE</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
@@ -442,26 +454,17 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orderedSubjects.map((subject) => (
+                {filteredSubjects.map((subject) => (
                   <TableRow key={subject.id}>
                     <TableCell className="font-mono text-xs">{subject.code}</TableCell>
                     <TableCell className="font-mono text-xs">{subject.standardCode}</TableCell>
                     <TableCell className="font-semibold text-slate-900">{subject.name}</TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1.5">
-                        {subject.educationLevel === "UCE" ? (
-                          <Badge variant="secondary">UCE</Badge>
-                        ) : (
-                          <Badge variant="default">UACE</Badge>
-                        )}
-                        {subjects.some(
-                          (item) =>
-                            item.id !== subject.id &&
-                            item.code.toUpperCase() === subject.code.toUpperCase() &&
-                            item.standardCode.toUpperCase() === subject.standardCode.toUpperCase() &&
-                            item.educationLevel !== subject.educationLevel,
-                        ) && <Badge variant="outline">BOTH</Badge>}
-                      </div>
+                      {subject.educationLevel === "UCE" ? (
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 font-bold">UCE</Badge>
+                      ) : (
+                        <Badge variant="default" className="bg-indigo-600 text-white font-bold">UACE</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-semibold text-slate-900">
                       {subjectTotals[`${subject.educationLevel}:${subject.code.toUpperCase()}`] ?? 0}

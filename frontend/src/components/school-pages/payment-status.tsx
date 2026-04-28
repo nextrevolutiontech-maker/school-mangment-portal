@@ -245,6 +245,18 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
 
   const paymentStatus = user?.status || "pending";
   const getStatusContent = () => {
+    // Priority: If no invoices exist, we must show "Awaiting Registration Finalization"
+    if (schoolInvoices.length === 0) {
+      return {
+        title: "Awaiting Registration Finalization",
+        description: "Your student registration must be completed and finalized before an invoice can be generated. Once finalized, you can download your payment slip and upload proof of payment.",
+        variant: "warning" as const,
+        badgeVariant: "warning" as const,
+        icon: Info,
+        needsFinalization: true
+      };
+    }
+
     switch (paymentStatus) {
       case "active":
         return {
@@ -299,10 +311,42 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
         </p>
       </div>
 
-      <Alert variant={status.variant} className="rounded-2xl border-2">
-        <StatusIcon className="h-5 w-5" />
-        <AlertTitle className="font-bold">{status.title}</AlertTitle>
-        <AlertDescription className="font-medium">{status.description}</AlertDescription>
+      <Alert variant={status.variant} className="rounded-2xl border-2 shadow-sm bg-white overflow-hidden relative group">
+        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
+          status.variant === 'success' ? 'bg-emerald-500' : 
+          status.variant === 'info' ? 'bg-blue-500' : 
+          'bg-orange-500'
+        }`} />
+        <div className="flex items-start gap-4 pr-2">
+          <div className={`mt-1 p-2 rounded-xl ${
+            status.variant === 'success' ? 'bg-emerald-50 text-emerald-600' : 
+            status.variant === 'info' ? 'bg-blue-50 text-blue-600' : 
+            'bg-orange-50 text-orange-600'
+          }`}>
+            <StatusIcon className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <AlertTitle className="text-lg font-bold text-slate-900 mb-1">{status.title}</AlertTitle>
+            <AlertDescription className="text-slate-600 font-medium leading-relaxed">
+              {status.description}
+            </AlertDescription>
+            {(status as any).needsFinalization && (
+              <div className="mt-4 flex items-center gap-3">
+                <Button 
+                  onClick={() => onPageChange("subject-entries")}
+                  className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold h-11 px-6 shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Complete Registration
+                </Button>
+                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Info className="h-3.5 w-3.5" />
+                  Required to generate invoice
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </Alert>
 
       {/* Invoice History */}

@@ -4,13 +4,6 @@ import { UACE_WPF_SECTIONS, UCE_WPF_SECTIONS } from "../constants/wpf-schedules"
 import { StudentRecord } from "../components/auth-context";
 import { toast } from "sonner";
 
-function getPaperNumber(paper: string | any) {
-  if (!paper) return "-";
-  const paperStr = String(paper);
-  const match = paperStr.match(/\d+/);
-  return match?.[0] ?? "-";
-}
-
 export const generateWPF_PDF = (
   level: "UCE" | "UACE",
   schoolContext: {
@@ -24,10 +17,19 @@ export const generateWPF_PDF = (
   },
   students: StudentRecord[]
 ) => {
+  console.log("[WPF DEBUG] Starting PDF generation");
+  console.log("[WPF DEBUG] Level:", level);
+  console.log("[WPF DEBUG] School context:", schoolContext);
+  console.log("[WPF DEBUG] Total students passed:", students.length);
+  console.log("[WPF DEBUG] Student data sample:", JSON.stringify(students.slice(0, 2), null, 2));
+  
   const sections = level === "UACE" ? UACE_WPF_SECTIONS : UCE_WPF_SECTIONS;
   const schoolStudents = students.filter(
     (student) => student.schoolCode === schoolContext.code && student.examLevel === level,
   );
+  
+  console.log("[WPF DEBUG] Filtered school students count:", schoolStudents.length);
+  console.log("[WPF DEBUG] School students sample:", JSON.stringify(schoolStudents.slice(0, 2), null, 2));
 
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -135,18 +137,37 @@ export const generateWPF_PDF = (
       }
 
       const processRow = (r: typeof row) => {
-        const candidateCount = schoolStudents.reduce((count, student) => {
-          const hasSubject = student.subjects?.some((subj) => {
-            const subjCode = subj.subjectStandardCode || subj.subjectCode;
-            const paperNum = getPaperNumber(subj.paper);
-            const codes = r.code.split("/");
-            const codeMatch = codes.some(c => subjCode.includes(c) || c.includes(subjCode));
-            const paperMatch = paperNum === String(r.paper);
-            return codeMatch && paperMatch;
-          });
-          return count + (hasSubject ? 1 : 0);
-        }, 0);
-        return candidateCount > 0 ? candidateCount.toString() : "";
+        const targetPaperNum = r.paper;
+        let candidateCount = 0;
+        
+        for (const student of schoolStudents) {
+          for (const subj of student.subjects ?? []) {
+            const subjCode = (subj.subjectStandardCode || subj.subjectCode || "").trim().toUpperCase();
+            const rowCodes = r.code.split("/").map((c: string) => c.trim().toUpperCase());
+            
+            const codeMatch = rowCodes.some((c: string) => 
+              subjCode === c || 
+              subjCode.includes(c) || 
+              c.includes(subjCode)
+            );
+            
+            if (!codeMatch) continue;
+
+            const paperStr = String(subj.paper || "").toUpperCase();
+            const paperMatchResult = paperStr.match(/\d+/);
+            if (!paperMatchResult) continue;
+            
+            const studentPaperNum = parseInt(paperMatchResult[0], 10);
+            
+            if (studentPaperNum === targetPaperNum) {
+              candidateCount++;
+              break;
+            }
+          }
+        }
+        
+        console.log(`[WPF DEBUG] Row: ${r.code}/${r.paper} ${r.subjectName}, Count: ${candidateCount}`);
+        return candidateCount.toString();
       };
 
       tableBody.push([

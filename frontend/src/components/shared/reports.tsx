@@ -6,6 +6,12 @@ import {
   Loader2,
   School,
   Search,
+  PlusCircle,
+  Info,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
+  FileQuestion,
 } from "lucide-react";
 import {
   Card,
@@ -33,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { toast } from "sonner";
 import { useAuth, isStudentFullyRegistered, mapSubjectCode } from "../auth-context";
 import { jsPDF } from "jspdf";
@@ -429,7 +436,7 @@ function getStatusBadge(status: string) {
 }
 
 export function Reports({ onPageChange }: ReportsProps) {
-  const { user, schools, students, subjects, zones } = useAuth();
+  const { user, schools, students, subjects, zones, invoices } = useAuth();
   const isAdmin = user?.role === "admin";
   const scopedSchools =
     user?.role === "school"
@@ -439,6 +446,10 @@ export function Reports({ onPageChange }: ReportsProps) {
     user?.role === "school"
       ? students.filter((student) => student.schoolCode === user.schoolCode)
       : students;
+
+  const schoolInvoices = invoices.filter((inv) => inv.schoolCode === user?.schoolCode);
+  const hasCompletedRegistration = scopedStudents.some((student) => isStudentFullyRegistered(student, subjects));
+  const hasGeneratedInvoice = schoolInvoices.length > 0;
   const [selectedSchool, setSelectedSchool] = useState("all");
   const [selectedZone, setSelectedZone] = useState("all");
   const [schoolSearch, setSchoolSearch] = useState("");
@@ -463,8 +474,24 @@ export function Reports({ onPageChange }: ReportsProps) {
     [subjects],
   );
 
+  const uniqueZones = useMemo(() => {
+    const zonesSet = new Set<string>();
+    scopedSchools.forEach((school) => {
+      if (school.zone) zonesSet.add(school.zone);
+    });
+    return Array.from(zonesSet).sort();
+  }, [scopedSchools]);
+
   const filteredStudents = useMemo(() => {
+    // Get schools in the selected zone to filter students
+    const schoolsInZone = selectedZone === "all" 
+      ? null 
+      : new Set(scopedSchools.filter(s => s.zone === selectedZone).map(s => s.code));
+
     return scopedStudents.filter((student) => {
+      // Filter by Zone (via schoolCode)
+      if (schoolsInZone && !schoolsInZone.has(student.schoolCode)) return false;
+
       // Basic student type filter
       const matchesType = 
         studentTypeFilter === "all" || 
@@ -476,7 +503,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       // Only include fully registered students in reports
       return isStudentFullyRegistered(student, subjects);
     });
-  }, [scopedStudents, studentTypeFilter, subjects]);
+  }, [scopedStudents, studentTypeFilter, subjects, selectedZone, scopedSchools]);
 
   useEffect(() => {
     if (user?.role === "school" && user.schoolCode) {
@@ -1988,6 +2015,98 @@ export function Reports({ onPageChange }: ReportsProps) {
     }
   };
 
+  const getReportsStatus = () => {
+    if (isAdmin) return "ready";
+
+    if (!hasCompletedRegistration) {
+      return "registration_incomplete";
+    }
+
+    if (!hasGeneratedInvoice) {
+      return "invoice_pending";
+    }
+
+    if (user?.status !== "verified" && user?.status !== "active") {
+      return "verification_pending";
+    }
+
+    return "ready";
+  };
+
+  const reportsStatus = getReportsStatus();
+
+  const renderStatusMessage = () => {
+    if (reportsStatus === "registration_incomplete") {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-8 max-w-lg text-center shadow-lg">
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileQuestion className="h-8 w-8 text-orange-600" />
+            </div>
+            <h2 className="text-xl font-bold text-orange-900 mb-2">Student Registration Required</h2>
+            <p className="text-orange-700 mb-6 text-sm">
+              Reports will become available after completing student registration. Please add your students and their subject entries first.
+            </p>
+            <Button
+              onClick={() => onPageChange("subject-entries")}
+              className="bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl h-11 px-6 shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Complete Registration
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (reportsStatus === "invoice_pending") {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-8 max-w-lg text-center shadow-lg">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-8 w-8 text-amber-600" />
+            </div>
+            <h2 className="text-xl font-bold text-amber-900 mb-2">Invoice Generation Pending</h2>
+            <p className="text-amber-700 mb-6 text-sm">
+              Your registration has been completed, but an invoice has not been generated yet. Finalize your registration to generate an invoice and proceed with payment.
+            </p>
+            <Button
+              onClick={() => onPageChange("subject-entries")}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl h-11 px-6 shadow-lg shadow-amber-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Finalize Registration
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (reportsStatus === "verification_pending") {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-8 max-w-lg text-center shadow-lg">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Clock className="h-8 w-8 text-blue-600" />
+            </div>
+            <h2 className="text-xl font-bold text-blue-900 mb-2">Awaiting Verification</h2>
+            <p className="text-blue-700 mb-6 text-sm">
+              Your payment is being processed and verified by the WAKISSHA admin team. Reports will become available once your account is verified and activated.
+            </p>
+            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold">
+              <Clock className="h-4 w-4" />
+              Status: {user?.status?.replace("_", " ")}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const isReady = reportsStatus === "ready";
+
   return (
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 anim-fade-up px-3 md:px-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between py-1.5">
@@ -2009,7 +2128,11 @@ export function Reports({ onPageChange }: ReportsProps) {
         </div>
       </div>
 
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      {!isReady ? (
+        renderStatusMessage()
+      ) : (
+        <>
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {summaryCards.map((card) => (
           <Card key={card.label} className="group overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
             <CardContent className="p-0">
@@ -2416,48 +2539,72 @@ export function Reports({ onPageChange }: ReportsProps) {
         <TabsContent value="school-wise" className="mt-0">
           <Card className="border-none shadow-none bg-transparent">
             <CardHeader className="px-0 pb-6">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="space-y-1 min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="rounded-md border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 whitespace-nowrap">
-                      School Records
-                    </Badge>
-                    <CardTitle className="text-lg md:text-xl font-bold text-slate-900 truncate">
-                      {isAdmin ? "Individual School Reports" : "My School Registration"}
-                    </CardTitle>
-                    {selectedSchoolProfile && (
-                      <Badge className="bg-emerald-600 text-white border-none px-3 py-1 whitespace-nowrap">
-                        {selectedSchoolProfile.totalStudents} Candidates
-                      </Badge>
-                    )}
+              <div className="flex flex-col bg-white p-6 md:p-7 rounded-3xl border border-slate-200 shadow-sm gap-6">
+                {/* First Row: Content Block */}
+                <div className="flex flex-col gap-2 min-w-0">
+                  <Badge variant="outline" className="w-fit rounded-md border-emerald-200 bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 text-[10px] uppercase tracking-[0.15em]">
+                    School Records
+                  </Badge>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <CardTitle className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                        {isAdmin ? "Individual School Reports" : "My School Registration"}
+                      </CardTitle>
+                      {selectedSchoolProfile && (
+                        <Badge className="bg-emerald-600 text-white border-none px-3 py-1.5 rounded-lg text-sm font-black whitespace-nowrap shadow-md">
+                          {selectedSchoolProfile.totalStudents} Candidates
+                        </Badge>
+                      )}
+                    </div>
+                    <CardDescription className="text-slate-500 text-sm md:text-base leading-relaxed max-w-2xl">
+                      Access detailed subject breakdowns, candidate lists, and official entry summaries for a specific institution.
+                    </CardDescription>
                   </div>
-                  <CardDescription className="text-slate-500 max-w-md leading-relaxed text-sm">
-                    Access detailed subject breakdowns, candidate lists, and official entry summaries for a specific institution.
-                  </CardDescription>
                 </div>
 
-                <div className="flex flex-col gap-3 w-full lg:w-auto">
+                {/* Second Row: Filter Controls */}
+                <div className="w-full pt-4 border-t border-slate-100">
                   {isAdmin ? (
-                    <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl border border-slate-100 bg-slate-50">
-                      <div className="relative flex-1 min-w-[200px]">
+                    <div className="flex flex-wrap items-center gap-3 p-2 rounded-2xl border border-slate-100 bg-slate-50 shadow-inner w-full">
+                      <div className="relative flex-1 min-w-[200px] max-w-sm">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                         <Input
                           placeholder="Search schools..."
                           value={singleSchoolSearch}
                           onChange={(e) => setSingleSchoolSearch(e.target.value)}
-                          className="h-9 pl-9 bg-white border-none shadow-sm rounded-lg focus-visible:ring-emerald-500 w-full"
+                          className="h-10 pl-9 bg-white border-none shadow-sm rounded-xl focus-visible:ring-emerald-500 w-full"
                         />
                       </div>
+                      <Select 
+                        value={selectedZone} 
+                        onValueChange={(val) => {
+                          setSelectedZone(val);
+                          setSelectedSchool("all");
+                        }}
+                      >
+                        <SelectTrigger className="h-10 w-[160px] border-none bg-white shadow-sm rounded-xl text-slate-700 font-medium">
+                          <SelectValue placeholder="Select Zone" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Zones</SelectItem>
+                          {uniqueZones.map((zone) => (
+                            <SelectItem key={zone} value={zone}>
+                              {zone}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Select value={selectedSchool} onValueChange={setSelectedSchool}>
-                        <SelectTrigger className="h-9 w-[180px] border-none bg-white shadow-sm rounded-lg">
+                        <SelectTrigger className="h-10 flex-1 min-w-[200px] border-none bg-white shadow-sm rounded-xl text-slate-700 font-medium">
                           <SelectValue placeholder="Select a school" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Schools</SelectItem>
                           {scopedSchools
                             .filter(school => 
-                              school.name.toLowerCase().includes(singleSchoolSearch.toLowerCase()) || 
-                              school.code.toLowerCase().includes(singleSchoolSearch.toLowerCase())
+                              (selectedZone === "all" || school.zone === selectedZone) &&
+                              (school.name.toLowerCase().includes(singleSchoolSearch.toLowerCase()) || 
+                              school.code.toLowerCase().includes(singleSchoolSearch.toLowerCase()))
                             )
                             .map((school) => (
                               <SelectItem key={school.code} value={school.code}>
@@ -2470,7 +2617,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                         value={selectedSchoolReportLevel}
                         onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
                       >
-                        <SelectTrigger className="h-9 w-[100px] border-none bg-white shadow-sm rounded-lg">
+                        <SelectTrigger className="h-10 w-[100px] border-none bg-white shadow-sm rounded-xl text-slate-700 font-medium">
                           <SelectValue placeholder="Level" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2485,7 +2632,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                         </SelectContent>
                       </Select>
                       <Select value={studentTypeFilter} onValueChange={(val: any) => setStudentTypeFilter(val)}>
-                        <SelectTrigger className="h-9 w-[130px] border-none bg-white shadow-sm rounded-lg">
+                        <SelectTrigger className="h-10 w-[130px] border-none bg-white shadow-sm rounded-xl text-slate-700 font-medium">
                           <SelectValue placeholder="Type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2496,15 +2643,15 @@ export function Reports({ onPageChange }: ReportsProps) {
                       </Select>
                     </div>
                   ) : (
-                    <div className="flex flex-wrap items-center gap-3 p-1.5 rounded-xl border border-slate-100 bg-slate-50">
-                      <div className="px-3 py-1.5 text-sm font-bold text-slate-900 bg-white rounded-lg shadow-sm border border-slate-100 truncate max-w-[200px]">
+                    <div className="flex flex-wrap items-center gap-3 p-2 rounded-2xl border border-slate-100 bg-slate-50 shadow-inner w-full">
+                      <div className="px-4 py-2 text-sm font-bold text-slate-900 bg-white rounded-xl shadow-sm border border-slate-100 truncate max-w-[300px] flex-1">
                         {scopedSchools[0]?.name || user?.schoolCode}
                       </div>
                       <Select
                         value={selectedSchoolReportLevel}
                         onValueChange={(value: "UCE" | "UACE") => setSelectedSchoolReportLevel(value)}
                       >
-                        <SelectTrigger className="h-9 w-28 border-none bg-white shadow-sm rounded-lg">
+                        <SelectTrigger className="h-10 w-32 border-none bg-white shadow-sm rounded-xl text-slate-700 font-medium">
                           <SelectValue placeholder="Level" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2519,7 +2666,7 @@ export function Reports({ onPageChange }: ReportsProps) {
                         </SelectContent>
                       </Select>
                       <Select value={studentTypeFilter} onValueChange={(val: any) => setStudentTypeFilter(val)}>
-                        <SelectTrigger className="h-9 w-32 border-none bg-white shadow-sm rounded-lg">
+                        <SelectTrigger className="h-10 w-40 border-none bg-white shadow-sm rounded-xl text-slate-700 font-medium">
                           <SelectValue placeholder="Type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2695,6 +2842,8 @@ export function Reports({ onPageChange }: ReportsProps) {
           </Card>
         </TabsContent>
       </Tabs>
+        </>
+      )}
     </div>
   );
 }

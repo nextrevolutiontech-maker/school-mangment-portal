@@ -75,12 +75,27 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     return students.filter(s => s.schoolCode === user?.schoolCode);
   }, [students, user]);
 
-  const isFinalized = currentSchool?.registrationFinalized ?? false;
-
   const [searchTerm, setSearchTerm] = useState("");
+  const [zoneFilter, setZoneFilter] = useState("all");
   const [schoolFilter, setSchoolFilter] = useState("all");
   const [levelFilter, setLevelFilter] = useState<"all" | "UCE" | "UACE">("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(autoOpenAddDialog);
+
+  const uniqueZones = useMemo(() => {
+    return [...new Set(schools.map(s => s.zone))].filter(Boolean).sort();
+  }, [schools]);
+
+  const zoneFilteredSchools = useMemo(() => {
+    if (zoneFilter === "all") return scopedSchools;
+    return scopedSchools.filter(s => s.zone === zoneFilter);
+  }, [scopedSchools, zoneFilter]);
+
+  const isFinalized = currentSchool?.registrationFinalized ?? false;
+
+  // Reset school filter when zone changes
+  useEffect(() => {
+    setSchoolFilter("all");
+  }, [zoneFilter]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
   const [finalizeMarkingGuide, setFinalizeMarkingGuide] = useState<"Arts" | "Sciences" | "Both">("Arts");
@@ -220,6 +235,43 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     const subject = subjects.find(s => s.id === subjectId);
     if (!subject) return;
 
+    // Special logic for Physics, Chemistry, Biology
+    const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
+                            ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
+
+    if (isSpecialSubject) {
+      if (paper === 1) {
+        toast.error("Paper 1 is compulsory and cannot be deselected");
+        return;
+      }
+      
+      if (checked && (paper === 2 || paper === 3)) {
+        // Mutually exclusive: If checking 2, keep 1 and 2. If checking 3, keep 1 and 3.
+        setSelectedSubjects((prev) => {
+          if (!prev[subjectId]) return prev;
+          return {
+            ...prev,
+            [subjectId]: { selectedPapers: [1, paper] },
+          };
+        });
+        return;
+      }
+
+      if (!checked && (paper === 2 || paper === 3)) {
+        // Automatically toggle to the other optional paper to ensure exactly two papers are always selected
+        const otherPaper = paper === 2 ? 3 : 2;
+        setSelectedSubjects((prev) => {
+          if (!prev[subjectId]) return prev;
+          return {
+            ...prev,
+            [subjectId]: { selectedPapers: [1, otherPaper] },
+          };
+        });
+        toast.info(`Switched to Paper ${otherPaper} to maintain the required 2 papers for ${subject.name}`);
+        return;
+      }
+    }
+
     // Check if paper is compulsory
     const paperName = `Paper ${paper}`;
     const paperDef = subject.papers.find(p => 
@@ -277,15 +329,25 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         return newState;
       } else {
         // Add subject with dynamic papers
+        const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
+                                ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
+
+        if (isSpecialSubject) {
+          return {
+            ...prev,
+            [subjectId]: {
+              selectedPapers: [1, 2], // Default to Paper 1 and Paper 2 to ensure exactly two papers
+            },
+          };
+        }
+
         const autoPapers: PaperOption[] = subject.papers
           .filter(p => p.isCompulsory)
           .map(p => {
-            // Extract number from paper name if possible, otherwise use index + 1
             const match = p.name.match(/\d+/);
             return (match ? parseInt(match[0]) : subject.papers.indexOf(p) + 1) as PaperOption;
           });
 
-        // If no compulsory papers, select the first one by default if it's the only one
         if (autoPapers.length === 0 && subject.papers.length > 0) {
           const match = subject.papers[0].name.match(/\d+/);
           autoPapers.push((match ? parseInt(match[0]) : 1) as PaperOption);
@@ -306,6 +368,14 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     const compulsory = subjects
       .filter((s) => s.educationLevel === registrationLevel && !s.optional)
       .reduce((acc, subj) => {
+        const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subj.name.toUpperCase()) || 
+                                ["PHY", "CHEM", "BIO"].includes(subj.code?.toUpperCase() || "");
+
+        if (isSpecialSubject) {
+          acc[subj.id] = { selectedPapers: [1, 2] }; // Default to Paper 1 and Paper 2 to ensure exactly two papers
+          return acc;
+        }
+
         const papers: PaperOption[] = subj.papers
           .filter(p => p.isCompulsory)
           .map(p => {
@@ -313,7 +383,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
             return (match ? parseInt(match[0]) : subj.papers.indexOf(p) + 1) as PaperOption;
           });
 
-        // If no compulsory papers defined but subject is compulsory, select the first paper
         if (papers.length === 0 && subj.papers.length > 0) {
           const match = subj.papers[0].name.match(/\d+/);
           papers.push((match ? parseInt(match[0]) : 1) as PaperOption);
@@ -379,22 +448,40 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     Object.entries(selectedSubjects).forEach(([subjectId, data]) => {
       const subject = subjects.find(s => s.id === subjectId);
       if (subject) {
-        if (subject.minPapers && data.selectedPapers.length < subject.minPapers) {
-          errors.push(`${subject.name}: Minimum ${subject.minPapers} papers required (currently ${data.selectedPapers.length})`);
-        }
-        if (subject.maxPapers && data.selectedPapers.length > subject.maxPapers) {
-          errors.push(`${subject.name}: Maximum ${subject.maxPapers} papers allowed (currently ${data.selectedPapers.length})`);
-        }
+        const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
+                                ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
         
-        // Ensure compulsory papers are selected
-        const compulsoryPapers = subject.papers.filter(p => p.isCompulsory);
-        compulsoryPapers.forEach(cp => {
-          const match = cp.name.match(/\d+/);
-          const paperNum = (match ? parseInt(match[0]) : 0) as PaperOption;
-          if (paperNum && !data.selectedPapers.includes(paperNum)) {
-            errors.push(`${subject.name}: ${cp.name} is compulsory`);
+        if (isSpecialSubject) {
+          if (!data.selectedPapers.includes(1)) {
+            errors.push(`${subject.name}: Paper 1 is compulsory`);
           }
-        });
+          if (!data.selectedPapers.includes(2) && !data.selectedPapers.includes(3)) {
+            errors.push(`${subject.name}: You must select either Paper 2 or Paper 3`);
+          }
+          if (data.selectedPapers.includes(2) && data.selectedPapers.includes(3)) {
+            errors.push(`${subject.name}: You cannot select both Paper 2 and Paper 3`);
+          }
+          if (data.selectedPapers.length !== 2) {
+            errors.push(`${subject.name}: Exactly 2 papers must be selected (Paper 1 + Paper 2 or 3)`);
+          }
+        } else {
+          if (subject.minPapers && data.selectedPapers.length < subject.minPapers) {
+            errors.push(`${subject.name}: Minimum ${subject.minPapers} papers required (currently ${data.selectedPapers.length})`);
+          }
+          if (subject.maxPapers && data.selectedPapers.length > subject.maxPapers) {
+            errors.push(`${subject.name}: Maximum ${subject.maxPapers} papers allowed (currently ${data.selectedPapers.length})`);
+          }
+          
+          // Ensure compulsory papers are selected
+          const compulsoryPapers = subject.papers.filter(p => p.isCompulsory);
+          compulsoryPapers.forEach(cp => {
+            const match = cp.name.match(/\d+/);
+            const paperNum = (match ? parseInt(match[0]) : 0) as PaperOption;
+            if (paperNum && !data.selectedPapers.includes(paperNum)) {
+              errors.push(`${subject.name}: ${cp.name} is compulsory`);
+            }
+          });
+        }
       }
     });
 
@@ -468,6 +555,43 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     const subject = subjects.find(s => s.id === subjectId);
     if (!subject) return;
 
+    // Special logic for Physics, Chemistry, Biology
+    const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
+                            ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
+
+    if (isSpecialSubject) {
+      if (paper === 1) {
+        toast.error("Paper 1 is compulsory and cannot be deselected");
+        return;
+      }
+      
+      if (checked && (paper === 2 || paper === 3)) {
+        // Mutually exclusive: If checking 2, keep 1 and 2. If checking 3, keep 1 and 3.
+        setEditSelectedSubjects((prev) => {
+          if (!prev[subjectId]) return prev;
+          return {
+            ...prev,
+            [subjectId]: { selectedPapers: [1, paper] },
+          };
+        });
+        return;
+      }
+
+      if (!checked && (paper === 2 || paper === 3)) {
+        // Automatically toggle to the other optional paper to ensure exactly two papers are always selected
+        const otherPaper = paper === 2 ? 3 : 2;
+        setEditSelectedSubjects((prev) => {
+          if (!prev[subjectId]) return prev;
+          return {
+            ...prev,
+            [subjectId]: { selectedPapers: [1, otherPaper] },
+          };
+        });
+        toast.info(`Switched to Paper ${otherPaper} to maintain the required 2 papers for ${subject.name}`);
+        return;
+      }
+    }
+
     // Check if paper is compulsory
     const paperName = `Paper ${paper}`;
     const paperDef = subject.papers.find(p => 
@@ -525,6 +649,18 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         return newState;
       } else {
         // Add subject with dynamic papers
+        const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
+                                ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
+
+        if (isSpecialSubject) {
+          return {
+            ...prev,
+            [subjectId]: {
+              selectedPapers: [1, 2], // Default to Paper 1 and Paper 2 to ensure exactly two papers
+            },
+          };
+        }
+
         const autoPapers: PaperOption[] = subject.papers
           .filter(p => p.isCompulsory)
           .map(p => {
@@ -654,22 +790,40 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     Object.entries(editSelectedSubjects).forEach(([subjectId, data]) => {
       const subject = subjects.find(s => s.id === subjectId);
       if (subject) {
-        if (subject.minPapers && data.selectedPapers.length < subject.minPapers) {
-          errors.push(`${subject.name}: Minimum ${subject.minPapers} papers required (currently ${data.selectedPapers.length})`);
-        }
-        if (subject.maxPapers && data.selectedPapers.length > subject.maxPapers) {
-          errors.push(`${subject.name}: Maximum ${subject.maxPapers} papers allowed (currently ${data.selectedPapers.length})`);
-        }
+        const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
+                                ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
         
-        // Ensure compulsory papers are selected
-        const compulsoryPapers = subject.papers.filter(p => p.isCompulsory);
-        compulsoryPapers.forEach(cp => {
-          const match = cp.name.match(/\d+/);
-          const paperNum = (match ? parseInt(match[0]) : 0) as PaperOption;
-          if (paperNum && !data.selectedPapers.includes(paperNum)) {
-            errors.push(`${subject.name}: ${cp.name} is compulsory`);
+        if (isSpecialSubject) {
+          if (!data.selectedPapers.includes(1)) {
+            errors.push(`${subject.name}: Paper 1 is compulsory`);
           }
-        });
+          if (!data.selectedPapers.includes(2) && !data.selectedPapers.includes(3)) {
+            errors.push(`${subject.name}: You must select either Paper 2 or Paper 3`);
+          }
+          if (data.selectedPapers.includes(2) && data.selectedPapers.includes(3)) {
+            errors.push(`${subject.name}: You cannot select both Paper 2 and Paper 3`);
+          }
+          if (data.selectedPapers.length !== 2) {
+            errors.push(`${subject.name}: Exactly 2 papers must be selected (Paper 1 + Paper 2 or 3)`);
+          }
+        } else {
+          if (subject.minPapers && data.selectedPapers.length < subject.minPapers) {
+            errors.push(`${subject.name}: Minimum ${subject.minPapers} papers required (currently ${data.selectedPapers.length})`);
+          }
+          if (subject.maxPapers && data.selectedPapers.length > subject.maxPapers) {
+            errors.push(`${subject.name}: Maximum ${subject.maxPapers} papers allowed (currently ${data.selectedPapers.length})`);
+          }
+          
+          // Ensure compulsory papers are selected
+          const compulsoryPapers = subject.papers.filter(p => p.isCompulsory);
+          compulsoryPapers.forEach(cp => {
+            const match = cp.name.match(/\d+/);
+            const paperNum = (match ? parseInt(match[0]) : 0) as PaperOption;
+            if (paperNum && !data.selectedPapers.includes(paperNum)) {
+              errors.push(`${subject.name}: ${cp.name} is compulsory`);
+            }
+          });
+        }
       }
     });
 
@@ -753,7 +907,14 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
           student.registrationNumber.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesSchool = schoolFilter === "all" || student.schoolCode === schoolFilter;
         const matchesLevel = levelFilter === "all" || student.examLevel === levelFilter;
-        return matchesSearch && matchesSchool && matchesLevel;
+        
+        let matchesZone = true;
+        if (zoneFilter !== "all") {
+          const school = schools.find(s => s.code === student.schoolCode);
+          matchesZone = school?.zone === zoneFilter;
+        }
+
+        return matchesSearch && matchesSchool && matchesLevel && matchesZone;
       })
       .map((student, idx) => {
         // Format: WAK/26-0001/001
@@ -773,7 +934,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
           
         return { ...student, registrationNumber: formattedRegNo };
       });
-  }, [scopedStudents, searchTerm, schoolFilter, levelFilter, user]);
+  }, [scopedStudents, searchTerm, schoolFilter, levelFilter, zoneFilter, schools, user]);
 
   const registrationPreview = useMemo(
     () =>
@@ -799,6 +960,32 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         })
         .filter((item): item is NonNullable<typeof item> => item !== null && item.papers.length > 0),
     [selectedSubjects, subjects],
+  );
+
+  const editRegistrationPreview = useMemo(
+    () =>
+      Object.entries(editSelectedSubjects)
+        .map(([subjectId, data]) => {
+          const subject = subjects.find((s) => s.id === subjectId);
+          if (!subject) return null;
+
+          const paperNames = data.selectedPapers.map((paperNum) => {
+            const paperDef = subject.papers.find((p, idx) => {
+              const match = p.name.match(/\d+/);
+              const pNum = match ? parseInt(match[0]) : idx + 1;
+              return pNum === paperNum;
+            }) || subject.papers[paperNum - 1] || subject.papers[0];
+            return paperDef?.name || `Paper ${paperNum}`;
+          });
+
+          return {
+            subjectId,
+            subjectName: subject.name,
+            papers: paperNames,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null && item.papers.length > 0),
+    [editSelectedSubjects, subjects],
   );
 
   const groupedViewingSubjects = useMemo(() => {
@@ -920,15 +1107,15 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 {isFinalized ? "Add Additional Student" : "Add Student"}
               </Button>
             </DialogTrigger>
-          <DialogContent className="w-[96vw] sm:max-w-[920px] h-[94vh] max-h-[94vh] overflow-hidden p-0 border-none shadow-2xl" aria-describedby="register-description">
-            <div className="h-full overflow-y-auto px-5 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7 bg-slate-50/50">
-            <DialogHeader className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200">
-                  <UserPlus className="h-6 w-6" />
+          <DialogContent className="w-[96vw] sm:max-w-[850px] h-[90vh] max-h-[90vh] overflow-hidden p-0 border-none shadow-2xl" aria-describedby="register-description">
+            <div className="h-full overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 bg-slate-50/50">
+            <DialogHeader className="mb-4">
+              <div className="flex items-center gap-2.5 mb-1">
+                <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-lg shadow-blue-200">
+                  <UserPlus className="h-5 w-5" />
                 </div>
                 <div>
-                  <DialogTitle className="text-2xl font-black text-slate-900">Register Student</DialogTitle>
+                  <DialogTitle className="text-lg font-black text-slate-900">Register Student</DialogTitle>
                   <DialogDescription id="register-description" className="sr-only">
                     Fill in the details to register a new student for examinations.
                   </DialogDescription>
@@ -937,11 +1124,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
             </DialogHeader>
 
             {validationErrors.length > 0 && (
-              <Alert variant="destructive" className="mb-6 border-2 border-blue-100 bg-blue-50/50 rounded-2xl">
-                <AlertCircle className="h-5 w-5 text-blue-600" />
+              <Alert variant="destructive" className="mb-4 border-2 border-blue-100 bg-blue-50/50 rounded-xl">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
                 <AlertDescription>
-                  <p className="font-black text-blue-900 mb-1 uppercase tracking-wider text-[10px]">Registration Errors</p>
-                  <ul className="list-disc list-inside space-y-1 text-sm font-bold text-blue-800">
+                  <p className="font-black text-blue-900 mb-0.5 uppercase tracking-wider text-[9px]">Registration Errors</p>
+                  <ul className="list-disc list-inside space-y-0.5 text-xs font-bold text-blue-800">
                     {validationErrors.map((error, i) => (
                       <li key={i}>{error}</li>
                     ))}
@@ -950,10 +1137,10 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </Alert>
             )}
 
-            <div className="grid gap-6 md:grid-cols-2 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+            <div className="grid gap-4 md:grid-cols-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
               {/* Student Name */}
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="student-name" className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="student-name" className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
                   Student Full Name <span className="text-blue-600">*</span>
                 </Label>
                 <div className="relative">
@@ -962,37 +1149,37 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     placeholder="e.g. NAMUTEBI SHAKIRAH"
                     value={studentName}
                     onChange={(e) => setStudentName(e.target.value.toUpperCase())}
-                    className="h-12 text-lg font-bold border-2 focus-visible:ring-blue-600 rounded-xl transition-all"
+                    className="h-10 text-sm font-bold border-2 focus-visible:ring-blue-600 rounded-lg transition-all"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Sparkles className="h-5 w-5 text-blue-400 opacity-50" />
+                    <Sparkles className="h-4 w-4 text-blue-400 opacity-50" />
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="exam-level" className="text-sm font-black text-slate-700 uppercase tracking-widest">Exam Level <span className="text-blue-600">*</span></Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="exam-level" className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Exam Level <span className="text-blue-600">*</span></Label>
                 <Select value={registrationLevel} onValueChange={(value: "UCE" | "UACE") => setRegistrationLevel(value)}>
-                  <SelectTrigger id="exam-level" className="h-12 font-bold border-2 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-2">
-                    <SelectItem value="UCE" className="font-bold py-3">UCE (O-Level)</SelectItem>
-                    <SelectItem value="UACE" className="font-bold py-3">UACE (A-Level)</SelectItem>
+                  <SelectTrigger id="exam-level" className="h-10 text-sm font-bold border-2 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                  <SelectContent className="rounded-lg border-2">
+                    <SelectItem value="UCE" className="font-bold py-2">UCE (O-Level)</SelectItem>
+                    <SelectItem value="UACE" className="font-bold py-2">UACE (A-Level)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Class Level */}
-              <div className="space-y-2">
-                <Label htmlFor="class-level" className="text-sm font-black text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="class-level" className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
                 <Select value={classLevel} onValueChange={(value: any) => setClassLevel(value)}>
-                  <SelectTrigger className="h-12 font-bold border-2 rounded-xl">
+                  <SelectTrigger className="h-10 text-sm font-bold border-2 rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-2">
+                  <SelectContent className="rounded-lg border-2">
                     {availableClassLevels.map((level) => (
-                      <SelectItem key={level} value={level} className="font-bold py-3">
+                      <SelectItem key={level} value={level} className="font-bold py-2">
                         {level}
                       </SelectItem>
                     ))}
@@ -1001,12 +1188,12 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </div>
 
               {/* Answer Booklets Calculation */}
-              <div className="space-y-2">
-                <Label htmlFor="booklets" className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="booklets" className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
                   Answer Booklets 
-                  <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold">25,000 Each</Badge>
+                  <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold text-[9px] px-1.5 h-4">25,000 Each</Badge>
                 </Label>
-                <div className="flex gap-3 items-center">
+                <div className="flex gap-2.5 items-center">
                   <Input
                     id="booklets"
                     type="number"
@@ -1014,11 +1201,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     placeholder="Qty"
                     value={bookletsCount || ""}
                     onChange={(e) => setBookletsCount(parseInt(e.target.value) || 0)}
-                    className="w-24 h-12 font-bold border-2 rounded-xl text-center focus:ring-blue-600 transition-all"
+                    className="w-20 h-10 font-bold border-2 rounded-lg text-center focus:ring-blue-600 transition-all text-sm"
                   />
-                  <div className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-4 h-12 flex items-center justify-between shadow-inner">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Amount</p>
-                    <p className="text-base font-black text-blue-700">
+                  <div className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-lg px-3 h-10 flex items-center justify-between shadow-inner">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Amount</p>
+                    <p className="text-sm font-black text-blue-700">
                       UGX {(bookletsCount * 25000).toLocaleString()}
                     </p>
                   </div>
@@ -1027,15 +1214,15 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
               {/* School Selection */}
               {isAdmin && (
-                <div className="space-y-2">
-                  <Label htmlFor="school" className="text-sm font-black text-slate-700 uppercase tracking-widest">School <span className="text-blue-600">*</span></Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="school" className="text-[11px] font-black text-slate-700 uppercase tracking-widest">School <span className="text-blue-600">*</span></Label>
                   <Select value={schoolCode} onValueChange={setSchoolCode}>
-                    <SelectTrigger className="h-12 font-bold border-2 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-2">
-                      {scopedSchools.map((school) => (
-                        <SelectItem key={school.code} value={school.code} className="font-bold py-3">
+                    <SelectTrigger className="h-10 text-sm font-bold border-2 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                    <SelectContent className="rounded-lg border-2">
+                      {zoneFilteredSchools.map((school) => (
+                        <SelectItem key={school.code} value={school.code} className="font-bold py-2">
                           {school.name} ({school.code})
                         </SelectItem>
                       ))}
@@ -1045,18 +1232,18 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               )}
 
               {/* Subject Selection */}
-              <div className="space-y-4 md:col-span-2 pt-4">
-                <div className="flex flex-col gap-3">
+              <div className="space-y-3 md:col-span-2 pt-2">
+                <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-blue-600" />
+                    <Label className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
+                      <BookOpen className="h-3.5 w-3.5 text-blue-600" />
                       Select Subjects <span className="text-blue-600">*</span>
                     </Label>
                   </div>
 
-                  <div className="text-sm font-bold text-blue-800 bg-blue-50 border-2 border-blue-200 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm">
-                    <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                    <p className="leading-relaxed text-xs">
+                  <div className="text-xs font-bold text-blue-800 bg-blue-50 border-2 border-blue-200 rounded-xl px-4 py-2.5 flex items-start gap-2.5 shadow-sm">
+                    <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed text-[11px]">
                       {registrationLevel === "UCE" 
                         ? "7 compulsory subjects + 1 or 2 optional (Total 8 or 9)" 
                         : "GP is compulsory + at least one Subsidiary + max 3 main subjects"}
@@ -1066,11 +1253,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </div>
 
               {/* Subject List with Paper Selection */}
-              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-h-[52vh] overflow-y-auto border-2 border-slate-200 rounded-[2rem] p-6 bg-slate-50 shadow-inner">
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[42vh] overflow-y-auto border-2 border-slate-200 rounded-[1.5rem] p-4 bg-slate-50 shadow-inner">
                 {filteredSubjects.length === 0 ? (
-                  <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 gap-3 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                    <BookOpen className="h-10 w-10 opacity-20" />
-                    <p className="text-sm font-bold uppercase tracking-widest">No subjects available for {registrationLevel}</p>
+                  <div className="col-span-full py-10 flex flex-col items-center justify-center text-slate-400 gap-2.5 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+                    <BookOpen className="h-8 w-8 opacity-20" />
+                    <p className="text-[11px] font-bold uppercase tracking-widest">No subjects available for {registrationLevel}</p>
                   </div>
                 ) : (
                   filteredSubjects.map((subject) => {
@@ -1081,17 +1268,17 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     return (
                       <div 
                         key={subject.id} 
-                        className={`group relative rounded-3xl border-2 transition-all duration-300 p-5 ${
+                        className={`group relative rounded-2xl border-2 transition-all duration-300 p-4 ${
                           isSelected 
-                            ? (category === "Arts" ? "border-amber-500 bg-white shadow-xl shadow-amber-100/30" : "border-blue-600 bg-white shadow-xl shadow-blue-100/30") 
+                            ? (category === "Arts" ? "border-amber-500 bg-white shadow-lg shadow-amber-100/30" : "border-blue-600 bg-white shadow-lg shadow-blue-100/30") 
                             : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md"
-                        } scale-[1.0] hover:scale-[1.02]`}
+                        } scale-[1.0] hover:scale-[1.01]`}
                       >
-                        <div className="flex flex-col h-full gap-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex flex-col gap-1.5 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-[10px] font-black font-mono px-2 py-0.5 rounded-lg uppercase tracking-tighter shadow-sm ${
+                        <div className="flex flex-col h-full gap-3">
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="flex flex-col gap-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`text-[9px] font-black font-mono px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm ${
                                   isSelected 
                                     ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
                                     : "bg-slate-100 text-slate-600"
@@ -1099,11 +1286,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                   {subject.standardCode}
                                 </span>
                                 {isCompulsory ? (
-                                  <Badge className="bg-slate-900 text-white border-none text-[9px] px-2 h-5 font-black uppercase tracking-widest shadow-sm">
+                                  <Badge className="bg-slate-900 text-white border-none text-[8px] px-1.5 h-4 font-black uppercase tracking-widest shadow-sm">
                                     COMPULSORY
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className={`text-[9px] px-2 h-5 font-bold uppercase tracking-widest border-2 ${
+                                  <Badge variant="outline" className={`text-[8px] px-1.5 h-4 font-bold uppercase tracking-widest border-2 ${
                                     category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
                                   }`}>
                                     OPTIONAL
@@ -1112,7 +1299,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                               </div>
                               <Label 
                                 htmlFor={subject.id} 
-                                className={`font-black text-[15px] leading-tight transition-colors cursor-pointer ${
+                                className={`font-black text-[13px] leading-tight transition-colors cursor-pointer ${
                                   isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
                                 }`}
                               >
@@ -1125,7 +1312,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                               checked={isSelected}
                               onCheckedChange={() => toggleSubject(subject.id)}
                               disabled={isCompulsory}
-                              className={`h-7 w-7 rounded-lg border-2 transition-all duration-200 ${
+                              className={`h-6 w-6 rounded-md border-2 transition-all duration-200 ${
                                 isSelected 
                                   ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
                                   : "border-slate-300 bg-white hover:border-blue-400"
@@ -1133,17 +1320,17 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                             />
                           </div>
                           
-                          <div className="mt-auto pt-4 border-t-2 border-slate-50">
+                          <div className="mt-auto pt-3 border-t-2 border-slate-50">
                             <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1.5">
-                                <BookOpen className={`h-3.5 w-3.5 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
-                                <p className={`text-[11px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
-                                  {subject.papers.length} {subject.papers.length === 1 ? 'Paper' : 'Papers'} configured
+                              <div className="flex items-center gap-1">
+                                <BookOpen className={`h-3 w-3 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
+                                <p className={`text-[10px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
+                                  {subject.papers.length} {subject.papers.length === 1 ? 'Paper' : 'Papers'}
                                 </p>
                               </div>
                               
                               {isSelected && (
-                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[10px] px-2 h-6 font-black rounded-lg`}>
+                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[9px] px-1.5 h-5 font-black rounded-md`}>
                                   {selectedSubjects[subject.id].selectedPapers.length} Selected
                                 </Badge>
                               )}
@@ -1151,52 +1338,62 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
                             {/* Dynamic Paper Selection Logic */}
                             {isSelected && subject.papers.length > 0 && (
-                              <div className={`mt-3 space-y-2 p-3 rounded-2xl border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
-                                <div className="flex items-center justify-between mb-1">
-                                  <Label className={`text-[9px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
+                              <div className={`mt-2.5 space-y-1.5 p-2.5 rounded-xl border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <Label className={`text-[8px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
                                     Select Papers:
                                   </Label>
                                   {(subject.minPapers || subject.maxPapers) && (
-                                    <span className="text-[8px] font-bold text-slate-400">
+                                    <span className="text-[7px] font-bold text-slate-400">
                                       {subject.minPapers ? `Min: ${subject.minPapers}` : ""} {subject.maxPapers ? `Max: ${subject.maxPapers}` : ""}
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                  {subject.papers.map((p, idx) => {
-                                    const paperNum = (p.name.match(/\d+/) ? parseInt(p.name.match(/\d+/)![0]) : idx + 1) as PaperOption;
-                                    const isPaperSelected = selectedSubjects[subject.id].selectedPapers.includes(paperNum);
+                                <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                                  {(() => {
+                                    const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
+                                                            ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
                                     
-                                    return (
-                                      <label key={p.id} className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer group/paper ${p.isCompulsory ? 'cursor-default opacity-80' : ''}`}>
-                                        <div className="relative flex items-center">
-                                          <input 
-                                            type="checkbox"
-                                            className={`h-3.5 w-3.5 rounded border-2 transition-all ${
-                                              category === "Arts" 
-                                                ? "border-amber-300 text-amber-600 focus:ring-amber-500" 
-                                                : "border-blue-300 text-blue-600 focus:ring-blue-500"
-                                            } ${p.isCompulsory ? 'bg-slate-200 border-slate-300' : ''}`}
-                                            checked={isPaperSelected}
-                                            disabled={p.isCompulsory}
-                                            onChange={(e) => togglePaperForSubject(subject.id, paperNum, e.target.checked)}
-                                          />
-                                          {p.isCompulsory && (
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                              <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                                            </div>
-                                          )}
-                                        </div>
-                                        <span className={`transition-colors uppercase tracking-wider text-[10px] ${
-                                          isPaperSelected 
-                                            ? (category === "Arts" ? "text-amber-800" : "text-blue-800") 
-                                            : "text-slate-400 group-hover/paper:text-slate-600"
-                                        }`}>
-                                          {p.name} {p.isCompulsory && <span className="text-[8px] opacity-60">(Comp)</span>}
-                                        </span>
-                                      </label>
-                                    );
-                                  })}
+                                    return subject.papers.map((p, idx) => {
+                                      const paperNum = (p.name.match(/\d+/) ? parseInt(p.name.match(/\d+/)![0]) : idx + 1) as PaperOption;
+                                      const isPaperSelected = selectedSubjects[subject.id].selectedPapers.includes(paperNum);
+                                      const isPaperFixed = isSpecialSubject && paperNum === 1;
+                                      
+                                      return (
+                                        <label 
+                                          key={p.id} 
+                                          className={`flex items-center gap-1.5 text-[10px] font-bold cursor-pointer group/paper ${(p.isCompulsory && !isSpecialSubject) || isPaperFixed ? 'cursor-default opacity-80' : ''}`}
+                                        >
+                                          <div className="relative flex items-center">
+                                            <input 
+                                              type={isSpecialSubject && (paperNum === 2 || paperNum === 3) ? "radio" : "checkbox"}
+                                              name={isSpecialSubject && (paperNum === 2 || paperNum === 3) ? `subject-${subject.id}-paper23` : undefined}
+                                              className={`h-3 w-3 rounded border-2 transition-all ${
+                                                category === "Arts" 
+                                                  ? "border-amber-300 text-amber-600 focus:ring-amber-500" 
+                                                  : "border-blue-300 text-blue-600 focus:ring-blue-500"
+                                              } ${(p.isCompulsory && !isSpecialSubject) || isPaperFixed ? 'bg-slate-200 border-slate-300' : ''} ${isSpecialSubject && (paperNum === 2 || paperNum === 3) ? 'rounded-full' : 'rounded'}`}
+                                              checked={isPaperSelected}
+                                              disabled={(p.isCompulsory && !isSpecialSubject) || isPaperFixed}
+                                              onChange={(e) => togglePaperForSubject(subject.id, paperNum, e.target.checked)}
+                                            />
+                                            {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && (
+                                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <div className="h-1 w-1 rounded-full bg-slate-400" />
+                                              </div>
+                                            )}
+                                          </div>
+                                          <span className={`transition-colors uppercase tracking-wider text-[9px] ${
+                                            isPaperSelected 
+                                              ? (category === "Arts" ? "text-amber-800" : "text-blue-800") 
+                                              : "text-slate-400 group-hover/paper:text-slate-600"
+                                          }`}>
+                                            {p.name} {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && <span className="text-[7px] opacity-60">(Fixed)</span>}
+                                          </span>
+                                        </label>
+                                      );
+                                    });
+                                  })()}
                                 </div>
                               </div>
                             )}
@@ -1210,28 +1407,28 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
               {/* Total Entries Display */}
               <div className="md:col-span-2">
-                <div className="rounded-xl border-2 border-blue-500 bg-blue-50 px-6 py-4 shadow-sm">
-                  <p className="text-base font-bold text-blue-900 flex items-center justify-center gap-6">
+                <div className="rounded-xl border-2 border-blue-500 bg-blue-50 px-5 py-3 shadow-sm">
+                  <p className="text-sm font-bold text-blue-900 flex items-center justify-center gap-6">
                     <span className="flex items-center gap-2">
-                      Subjects Selected: <span className="text-2xl font-black text-blue-600 tracking-tighter">{Object.keys(selectedSubjects).length}</span>
-                    </span>
-                    <span className="h-8 w-px bg-blue-200"></span>
-                    <span className="flex items-center gap-2">
-                      Total Entries: <span className="text-2xl font-black text-blue-600 tracking-tighter">{calculateTotalEntries(selectedSubjects)}</span>
-                    </span>
+                      Subjects Selected: <span className="text-lg font-black text-blue-600 tracking-tighter">{Object.keys(selectedSubjects).length}</span>
+                  </span>
+                  <span className="h-6 w-px bg-blue-200"></span>
+                  <span className="flex items-center gap-2">
+                    Total Entries: <span className="text-lg font-black text-blue-600 tracking-tighter">{calculateTotalEntries(selectedSubjects)}</span>
+                  </span>
                   </p>
                 </div>
               </div>
 
               <div className="md:col-span-2">
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="mb-2 text-sm font-semibold text-slate-800">Live Preview</p>
+                <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+                  <p className="mb-1.5 text-xs font-semibold text-slate-800">Live Preview</p>
                   {registrationPreview.length === 0 ? (
-                    <p className="text-sm text-slate-500">No subject papers selected yet.</p>
+                    <p className="text-xs text-slate-500">No subject papers selected yet.</p>
                   ) : (
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       {registrationPreview.map((item) => (
-                        <p key={item.subjectId} className="text-sm text-slate-700">
+                        <p key={item.subjectId} className="text-[11px] text-slate-700">
                           {item.subjectName} {"\u2192"} {item.papers.join(", ")}
                         </p>
                       ))}
@@ -1241,14 +1438,14 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </div>
             </div>
 
-            <DialogFooter className="mt-6">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" size="sm" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddStudent}>Register Student</Button>
-            </DialogFooter>
-            </div>
-          </DialogContent>
+              <Button size="sm" onClick={handleAddStudent}>Register Student</Button>
+          </DialogFooter>
+          </div>
+        </DialogContent>
         </Dialog>
       </div>
     </div>
@@ -1283,6 +1480,21 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                   className="pl-10"
                 />
               </div>
+              {isAdmin && (
+                <Select value={zoneFilter} onValueChange={setZoneFilter}>
+                  <SelectTrigger className="w-full lg:w-[150px]">
+                    <SelectValue placeholder="Filter by zone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Zones</SelectItem>
+                    {uniqueZones.map((zone) => (
+                      <SelectItem key={zone} value={zone}>
+                        {zone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={levelFilter} onValueChange={(value: any) => setLevelFilter(value)}>
                 <SelectTrigger className="w-full lg:w-[150px]">
                   <SelectValue placeholder="Filter by level" />
@@ -1300,7 +1512,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Schools</SelectItem>
-                    {scopedSchools.map((school) => (
+                    {zoneFilteredSchools.map((school) => (
                       <SelectItem key={school.code} value={school.code}>
                         {school.name}
                       </SelectItem>
@@ -1495,100 +1707,106 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
       {/* Edit Student Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="edit-description">
-          <DialogHeader>
-            <DialogTitle>Edit Student</DialogTitle>
-            <DialogDescription id="edit-description" className="sr-only">
-              Update student registration details and subject entries.
-            </DialogDescription>
+        <DialogContent className="w-[96vw] sm:max-w-[850px] h-[90vh] max-h-[90vh] overflow-hidden p-0 border-none shadow-2xl" aria-describedby="edit-description">
+          <div className="h-full overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 bg-slate-50/50">
+          <DialogHeader className="mb-4">
+            <div className="flex items-center gap-2.5 mb-1">
+              <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-lg shadow-blue-200">
+                <Edit2 className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-black text-slate-900">Edit Student</DialogTitle>
+                <DialogDescription id="edit-description" className="sr-only">
+                  Update student registration details and subject entries.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           
           {validationErrors.length > 0 && (
-            <Alert variant="destructive" className="mb-8 border-2 border-blue-100 bg-blue-50/50 rounded-3xl p-6 shadow-sm">
-              <AlertCircle className="h-6 w-6 text-blue-600" />
+            <Alert variant="destructive" className="mb-4 border-2 border-blue-100 bg-blue-50/50 rounded-xl">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertDescription>
-                <p className="font-black text-blue-900 mb-2 uppercase tracking-widest text-xs">Registration Errors</p>
-                <ul className="list-disc list-inside space-y-1.5 text-sm font-bold text-blue-800">
+                <p className="font-black text-blue-900 mb-0.5 uppercase tracking-wider text-[9px]">Registration Errors</p>
+                <ul className="list-disc list-inside space-y-0.5 text-xs font-bold text-blue-800">
                   {validationErrors.map((error, idx) => (
-                    <li key={idx} className="leading-relaxed">{error}</li>
+                    <li key={idx}>{error}</li>
                   ))}
                 </ul>
               </AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
             {/* Student Name */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-student-name" className="text-sm font-black text-slate-700 uppercase tracking-widest">
-                Student Name <span className="text-blue-600">*</span>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="edit-student-name" className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                Student Full Name <span className="text-blue-600">*</span>
               </Label>
               <Input
-                id="edit-student-name"
-                value={editStudentName}
-                onChange={(e) => setEditStudentName(e.target.value)}
-                placeholder="Enter full student name"
-                className="h-12 font-bold border-2 rounded-xl focus:ring-blue-600 transition-all"
+                id="student-name"
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value.toUpperCase())}
+                placeholder="e.g. NAMUTEBI SHAKIRAH"
+                className="h-10 text-sm font-bold border-2 focus-visible:ring-blue-600 rounded-lg transition-all"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Class Level */}
-              <div className="space-y-2">
-                <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
-                <Select value={editClassLevel} onValueChange={(value: any) => setEditClassLevel(value)}>
-                  <SelectTrigger className="h-12 font-bold border-2 rounded-xl focus:ring-blue-600 transition-all">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-2">
-                    {CLASS_LEVELS_ARRAY.map((level) => (
-                      <SelectItem key={level} value={level} className="font-bold py-3">
-                        {level}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Class Level */}
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
+              <Select value={editClassLevel} onValueChange={(value: any) => setEditClassLevel(value)}>
+                <SelectTrigger className="h-10 text-sm font-bold border-2 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-lg border-2">
+                  {CLASS_LEVELS_ARRAY.map((level) => (
+                    <SelectItem key={level} value={level} className="font-bold py-2">
+                      {level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Answer Booklets Calculation */}
-              <div className="space-y-2">
-                <Label htmlFor="edit-booklets" className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                  Answer Booklets 
-                  <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-black px-2 py-0.5 rounded-lg">25,000 Each</Badge>
-                </Label>
-                <div className="flex gap-4 items-center">
-                  <Input
-                    id="edit-booklets"
-                    type="number"
-                    min="0"
-                    placeholder="Qty"
-                    value={editBookletsCount || ""}
-                    onChange={(e) => setEditBookletsCount(parseInt(e.target.value) || 0)}
-                    className="w-28 h-12 font-black border-2 rounded-xl text-center focus:ring-blue-600 transition-all"
-                  />
-                  <div className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-xl px-6 h-12 flex items-center justify-between shadow-inner">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Amount</p>
-                    <p className="text-base font-black text-blue-700">
-                      UGX {(editBookletsCount * 25000).toLocaleString()}
-                    </p>
-                  </div>
+            {/* Answer Booklets Calculation */}
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-booklets" className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                Answer Booklets 
+                <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold text-[9px] px-1.5 h-4">25,000 Each</Badge>
+              </Label>
+              <div className="flex gap-2.5 items-center">
+                <Input
+                  id="edit-booklets"
+                  type="number"
+                  min="0"
+                  placeholder="Qty"
+                  value={editBookletsCount || ""}
+                  onChange={(e) => setEditBookletsCount(parseInt(e.target.value) || 0)}
+                  className="w-20 h-10 font-bold border-2 rounded-lg text-center focus:ring-blue-600 transition-all text-sm"
+                />
+                <div className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-lg px-3 h-10 flex items-center justify-between shadow-inner">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Amount</p>
+                  <p className="text-sm font-black text-blue-700">
+                    UGX {(editBookletsCount * 25000).toLocaleString()}
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Subjects Selection */}
-            <div className="space-y-4 pt-2">
-              <div className="flex flex-col gap-3">
+            <div className="space-y-3 md:col-span-2 pt-2">
+              <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-blue-600" />
+                  <Label className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <BookOpen className="h-3.5 w-3.5 text-blue-600" />
                     Select Subjects <span className="text-blue-600">*</span>
                   </Label>
                 </div>
                 
-                <div className="text-sm font-bold text-blue-800 bg-blue-50 border-2 border-blue-200 rounded-3xl px-6 py-5 flex items-start gap-4 shadow-sm">
-                  <Info className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
-                  <p className="leading-relaxed">
+                <div className="text-xs font-bold text-blue-800 bg-blue-50 border-2 border-blue-200 rounded-xl px-4 py-2.5 flex items-start gap-2.5 shadow-sm">
+                  <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed text-[11px]">
                     {(editClassLevel === "S.5" || editClassLevel === "S.6")
                       ? "GP is compulsory + at least one Subsidiary + max 3 main subjects"
                       : "7 compulsory subjects + 1 or 2 optional (Total 8 or 9)"}
@@ -1596,33 +1814,32 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-h-[52vh] overflow-y-auto border-2 border-slate-200 rounded-[2rem] p-6 bg-slate-50 shadow-inner">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[42vh] overflow-y-auto border-2 border-slate-200 rounded-[1.5rem] p-4 bg-slate-50 shadow-inner">
                 {filteredSubjectsForEdit.length === 0 ? (
-                  <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 gap-3 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                    <BookOpen className="h-10 w-10 opacity-20" />
-                    <p className="text-sm font-bold uppercase tracking-widest">No subjects available</p>
+                  <div className="col-span-full py-10 flex flex-col items-center justify-center text-slate-400 gap-2.5 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+                    <BookOpen className="h-8 w-8 opacity-20" />
+                    <p className="text-[11px] font-bold uppercase tracking-widest">No subjects available</p>
                   </div>
                 ) : (
                   filteredSubjectsForEdit.map((subject) => {
                     const isSelected = !!editSelectedSubjects[subject.id];
                     const isCompulsory = !subject.optional;
                     const category = getSubjectCategory(subject.code);
-                    const editExamLevel = editClassLevel === "S.5" || editClassLevel === "S.6" ? "UACE" : "UCE";
                     
                     return (
                       <div 
                         key={subject.id} 
-                        className={`group relative rounded-3xl border-2 transition-all duration-300 p-5 ${
+                        className={`group relative rounded-2xl border-2 transition-all duration-300 p-4 ${
                           isSelected 
-                            ? (category === "Arts" ? "border-amber-500 bg-white shadow-xl shadow-amber-100/30" : "border-blue-600 bg-white shadow-xl shadow-blue-100/30") 
+                            ? (category === "Arts" ? "border-amber-500 bg-white shadow-lg shadow-amber-100/30" : "border-blue-600 bg-white shadow-lg shadow-blue-100/30") 
                             : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md"
-                        } scale-[1.0] hover:scale-[1.02]`}
+                        } scale-[1.0] hover:scale-[1.01]`}
                       >
-                        <div className="flex flex-col h-full gap-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex flex-col gap-1.5 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-[10px] font-black font-mono px-2 py-0.5 rounded-lg uppercase tracking-tighter shadow-sm ${
+                        <div className="flex flex-col h-full gap-3">
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="flex flex-col gap-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`text-[9px] font-black font-mono px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm ${
                                   isSelected 
                                     ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
                                     : "bg-slate-100 text-slate-600"
@@ -1630,11 +1847,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                   {subject.standardCode}
                                 </span>
                                 {isCompulsory ? (
-                                  <Badge className="bg-slate-900 text-white border-none text-[9px] px-2 h-5 font-black uppercase tracking-widest shadow-sm">
+                                  <Badge className="bg-slate-900 text-white border-none text-[8px] px-1.5 h-4 font-black uppercase tracking-widest shadow-sm">
                                     COMPULSORY
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className={`text-[9px] px-2 h-5 font-bold uppercase tracking-widest border-2 ${
+                                  <Badge variant="outline" className={`text-[8px] px-1.5 h-4 font-bold uppercase tracking-widest border-2 ${
                                     category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
                                   }`}>
                                     OPTIONAL
@@ -1643,7 +1860,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                               </div>
                               <Label 
                                 htmlFor={`edit-${subject.id}`} 
-                                className={`font-black text-[15px] leading-tight transition-colors cursor-pointer ${
+                                className={`font-black text-[13px] leading-tight transition-colors cursor-pointer ${
                                   isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
                                 }`}
                               >
@@ -1656,25 +1873,25 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                               checked={isSelected}
                               onCheckedChange={() => toggleSubjectForEdit(subject.id)}
                               disabled={isCompulsory}
-                              className={`h-7 w-7 rounded-lg border-2 transition-all duration-200 ${
+                              className={`h-6 w-6 rounded-md border-2 transition-all duration-200 ${
                                 isSelected 
                                   ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
-                                  : "border-slate-300 bg-white hover:border-slate-400"
+                                  : "border-slate-300 bg-white hover:border-blue-400"
                               }`}
                             />
                           </div>
                           
-                          <div className="mt-auto pt-4 border-t-2 border-slate-50">
+                          <div className="mt-auto pt-3 border-t-2 border-slate-50">
                             <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1.5">
-                                <BookOpen className={`h-3.5 w-3.5 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
-                                <p className={`text-[11px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
-                                  {subject.papers.length} {subject.papers.length === 1 ? 'Paper' : 'Papers'} configured
+                              <div className="flex items-center gap-1">
+                                <BookOpen className={`h-3 w-3 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
+                                <p className={`text-[10px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
+                                  {subject.papers.length} {subject.papers.length === 1 ? 'Paper' : 'Papers'}
                                 </p>
                               </div>
                               
                               {isSelected && (
-                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[10px] px-2 h-6 font-black rounded-lg`}>
+                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[9px] px-1.5 h-5 font-black rounded-md`}>
                                   {editSelectedSubjects[subject.id].selectedPapers.length} Selected
                                 </Badge>
                               )}
@@ -1682,52 +1899,62 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
                             {/* Dynamic Paper Selection Logic for Edit Modal */}
                             {isSelected && subject.papers.length > 0 && (
-                              <div className={`mt-3 space-y-2 p-3 rounded-2xl border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
-                                <div className="flex items-center justify-between mb-1">
-                                  <Label className={`text-[9px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
+                              <div className={`mt-2.5 space-y-1.5 p-2.5 rounded-xl border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <Label className={`text-[8px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
                                     Select Papers:
                                   </Label>
                                   {(subject.minPapers || subject.maxPapers) && (
-                                    <span className="text-[8px] font-bold text-slate-400">
+                                    <span className="text-[7px] font-bold text-slate-400">
                                       {subject.minPapers ? `Min: ${subject.minPapers}` : ""} {subject.maxPapers ? `Max: ${subject.maxPapers}` : ""}
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                  {subject.papers.map((p, idx) => {
-                                    const paperNum = (p.name.match(/\d+/) ? parseInt(p.name.match(/\d+/)![0]) : idx + 1) as PaperOption;
-                                    const isPaperSelected = editSelectedSubjects[subject.id].selectedPapers.includes(paperNum);
+                                <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                                  {(() => {
+                                    const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
+                                                            ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
                                     
-                                    return (
-                                      <label key={p.id} className={`flex items-center gap-2 text-[11px] font-bold cursor-pointer group/paper ${p.isCompulsory ? 'cursor-default opacity-80' : ''}`}>
-                                        <div className="relative flex items-center">
-                                          <input 
-                                            type="checkbox"
-                                            className={`h-3.5 w-3.5 rounded border-2 transition-all ${
-                                              category === "Arts" 
-                                                ? "border-amber-300 text-amber-600 focus:ring-amber-500" 
-                                                : "border-blue-300 text-blue-600 focus:ring-blue-500"
-                                            } ${p.isCompulsory ? 'bg-slate-200 border-slate-300' : ''}`}
-                                            checked={isPaperSelected}
-                                            disabled={p.isCompulsory}
-                                            onChange={(e) => togglePaperForEdit(subject.id, paperNum, e.target.checked)}
-                                          />
-                                          {p.isCompulsory && (
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                              <div className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                                            </div>
-                                          )}
-                                        </div>
-                                        <span className={`transition-colors uppercase tracking-wider text-[10px] ${
-                                          isPaperSelected 
-                                            ? (category === "Arts" ? "text-amber-800" : "text-blue-800") 
-                                            : "text-slate-400 group-hover/paper:text-slate-600"
-                                        }`}>
-                                          {p.name} {p.isCompulsory && <span className="text-[8px] opacity-60">(Comp)</span>}
-                                        </span>
-                                      </label>
-                                    );
-                                  })}
+                                    return subject.papers.map((p, idx) => {
+                                      const paperNum = (p.name.match(/\d+/) ? parseInt(p.name.match(/\d+/)![0]) : idx + 1) as PaperOption;
+                                      const isPaperSelected = editSelectedSubjects[subject.id].selectedPapers.includes(paperNum);
+                                      const isPaperFixed = isSpecialSubject && paperNum === 1;
+                                      
+                                      return (
+                                        <label 
+                                          key={p.id} 
+                                          className={`flex items-center gap-1.5 text-[10px] font-bold cursor-pointer group/paper ${(p.isCompulsory && !isSpecialSubject) || isPaperFixed ? 'cursor-default opacity-80' : ''}`}
+                                        >
+                                          <div className="relative flex items-center">
+                                            <input 
+                                              type={isSpecialSubject && (paperNum === 2 || paperNum === 3) ? "radio" : "checkbox"}
+                                              name={isSpecialSubject && (paperNum === 2 || paperNum === 3) ? `edit-subject-${subject.id}-paper23` : undefined}
+                                              className={`h-3 w-3 rounded border-2 transition-all ${
+                                                category === "Arts" 
+                                                  ? "border-amber-300 text-amber-600 focus:ring-amber-500" 
+                                                  : "border-blue-300 text-blue-600 focus:ring-blue-500"
+                                              } ${(p.isCompulsory && !isSpecialSubject) || isPaperFixed ? 'bg-slate-200 border-slate-300' : ''} ${isSpecialSubject && (paperNum === 2 || paperNum === 3) ? 'rounded-full' : 'rounded'}`}
+                                              checked={isPaperSelected}
+                                              disabled={(p.isCompulsory && !isSpecialSubject) || isPaperFixed}
+                                              onChange={(e) => togglePaperForEdit(subject.id, paperNum, e.target.checked)}
+                                            />
+                                            {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && (
+                                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <div className="h-1 w-1 rounded-full bg-slate-400" />
+                                              </div>
+                                            )}
+                                          </div>
+                                          <span className={`transition-colors uppercase tracking-wider text-[9px] ${
+                                            isPaperSelected 
+                                              ? (category === "Arts" ? "text-amber-800" : "text-blue-800") 
+                                              : "text-slate-400 group-hover/paper:text-slate-600"
+                                          }`}>
+                                            {p.name} {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && <span className="text-[7px] opacity-60">(Fixed)</span>}
+                                          </span>
+                                        </label>
+                                      );
+                                    });
+                                  })()}
                                 </div>
                               </div>
                             )}
@@ -1736,22 +1963,55 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                       </div>
                     );
                   })
+                  )}
+                </div>
+              </div>
+
+            {/* Total Entries Display */}
+            <div className="md:col-span-2">
+              <div className="rounded-xl border-2 border-blue-500 bg-blue-50 px-5 py-3 shadow-sm">
+                <p className="text-sm font-bold text-blue-900 flex items-center justify-center gap-6">
+                  <span className="flex items-center gap-2">
+                    Subjects Selected: <span className="text-lg font-black text-blue-600 tracking-tighter">{Object.keys(editSelectedSubjects).length}</span>
+                  </span>
+                  <span className="h-6 w-px bg-blue-200"></span>
+                  <span className="flex items-center gap-2">
+                    Total Entries: <span className="text-lg font-black text-blue-600 tracking-tighter">{calculateTotalEntries(editSelectedSubjects)}</span>
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+                <p className="mb-1.5 text-xs font-semibold text-slate-800">Live Preview</p>
+                {editRegistrationPreview.length === 0 ? (
+                  <p className="text-xs text-slate-500">No subject papers selected yet.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {editRegistrationPreview.map((item) => (
+                      <p key={item.subjectId} className="text-[11px] text-slate-700">
+                        {item.subjectName} {"\u2192"} {item.papers.join(", ")}
+                      </p>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
+          <DialogFooter className="mt-4">
+            <Button variant="outline" size="sm" onClick={() => {
               setIsEditModalOpen(false);
               setValidationErrors([]);
             }}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit}>
+            <Button size="sm" onClick={handleSaveEdit}>
               Save Changes
             </Button>
           </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -250,35 +250,62 @@ export function PaymentsVerification({
                     {school.amountPaid}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewProof(school)}
-                      className="font-bold border-blue-100 text-blue-600 hover:bg-blue-50"
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View File
-                    </Button>
+                    {school.status === "payment_submitted" ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewProof(school)}
+                        className="font-bold border-blue-100 text-blue-600 hover:bg-blue-50"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View File
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="font-bold opacity-40 grayscale"
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        No File
+                      </Button>
+                    )}
                   </TableCell>
                   <TableCell>{getStatusBadge(school.status)}</TableCell>
                   <TableCell>
-                    {school.status === "payment_submitted" ? (
-                      <Button size="sm" onClick={() => setSelectedSchool(school)} className="bg-slate-900 hover:bg-slate-800 font-bold">
-                        <ShieldCheck className="h-4 w-4 mr-1" />
-                        Verify Payment
-                      </Button>
-                    ) : school.status === "active" ? (
-                      <div className="text-sm text-slate-500">
-                        Activation:{" "}
-                        <span className="font-black text-slate-900 bg-slate-100 px-2 py-1 rounded">
-                          {school.activationCode || "Generated"}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-slate-500">
-                        Awaiting next action
-                      </div>
-                    )}
+                    <div className="flex items-center justify-start min-h-[40px]">
+                      {school.status === "payment_submitted" ? (
+                        <Button 
+                          size="sm" 
+                          onClick={() => setSelectedSchool(school)} 
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm"
+                        >
+                          <ShieldCheck className="h-4 w-4 mr-1" />
+                          Verify Payment
+                        </Button>
+                      ) : school.status === "verified" ? (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg border border-blue-100">
+                          <ShieldCheck className="h-4 w-4" />
+                          <span className="text-xs font-bold uppercase tracking-wider">Verification Complete</span>
+                        </div>
+                      ) : school.status === "active" ? (
+                        <div className="flex flex-col gap-1">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Activation Ref</p>
+                          <div className="flex items-center gap-2 text-sm">
+                            <KeyRound className="h-3.5 w-3.5 text-green-600" />
+                            <span className="font-mono font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 shadow-sm">
+                              {school.activationCode || "ACT-XXXX-XXXX"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg border border-slate-200 italic">
+                          <Loader2 className="h-4 w-4 opacity-50" />
+                          <span className="text-xs font-bold uppercase tracking-wider">Pending Submission</span>
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

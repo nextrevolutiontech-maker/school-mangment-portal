@@ -176,56 +176,54 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
     {
       label: "Total Schools",
       value: schools.length,
-      className: "border-l-4 border-l-primary",
-      valueClass: "text-foreground",
+      className: "border-l-blue-600",
+      valueClass: "text-slate-900",
     },
     {
       label: "Active",
       value: schools.filter((school) => school.status === "active").length,
-      className: "border-l-4 border-l-success",
-      valueClass: "text-foreground",
+      className: "border-l-emerald-500",
+      valueClass: "text-slate-900",
     },
     {
       label: "Verified",
       value: schools.filter((school) => school.status === "verified").length,
-      className: "border-l-4 border-l-primary",
-      valueClass: "text-foreground",
+      className: "border-l-blue-400",
+      valueClass: "text-slate-900",
     },
     {
       label: "Payment Submitted",
       value: schools.filter((school) => school.status === "payment_submitted").length,
-      className: "border-l-4 border-l-warning",
-      valueClass: "text-foreground",
+      className: "border-l-amber-500",
+      valueClass: "text-slate-900",
     },
     {
       label: "Pending",
       value: schools.filter((school) => school.status === "pending").length,
-      className: "border-l-4 border-l-destructive",
-      valueClass: "text-foreground",
+      className: "border-l-rose-500",
+      valueClass: "text-slate-900",
     },
   ];
 
   return (
-    <div className="flex flex-col w-full gap-6">
+    <div className="flex flex-col w-full gap-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600">
             School Administration
           </p>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              Schools Management
-            </h1>
-            <p className="mt-2 max-w-3xl text-muted-foreground">
-              Track registration, payment verification, and activation progress
-              for member schools across all WAKISSHA zones.
-            </p>
-          </div>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Schools Management
+          </h1>
+          <p className="max-w-3xl text-slate-500">
+            Track registration, payment verification, and activation progress
+            for member schools across all WAKISSHA zones.
+          </p>
         </div>
 
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full lg:w-auto">
+            <Button className="h-11 px-6 rounded-lg font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-100 flex items-center justify-center gap-2 transition-all hover:translate-y-[-1px]">
               <Plus className="h-4 w-4" />
               Add School
             </Button>
@@ -439,12 +437,17 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {stats.map((stat) => (
-          <Card key={stat.label} className={`border-l-4 ${stat.className}`}>
-            <CardContent className="pt-6">
-              <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-              <p className={`mt-3 text-3xl font-bold ${stat.valueClass}`}>
+      <div className="grid grid-cols-2 gap-4 w-full">
+        {stats.map((stat, index) => (
+          <Card 
+            key={stat.label} 
+            className={`border-l-2 ${stat.className} rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.04)] border-y-slate-100 border-r-slate-100 h-[80px] flex items-center transition-all hover:shadow-md ${
+              index === stats.length - 1 && stats.length % 2 !== 0 ? "col-span-2" : ""
+            }`}
+          >
+            <CardContent className="p-4 w-full">
+              <p className="text-sm font-medium text-slate-500 leading-none">{stat.label}</p>
+              <p className={`mt-1.5 text-[22px] font-bold leading-none ${stat.valueClass}`}>
                 {stat.value}
               </p>
             </CardContent>

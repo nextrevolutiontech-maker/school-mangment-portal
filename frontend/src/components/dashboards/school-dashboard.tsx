@@ -15,6 +15,7 @@ import {
   Lock,
   ChevronRight,
   Info,
+  PlusCircle,
 } from "lucide-react";
 import {
   Card,
@@ -246,37 +247,59 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </div>
       </div>
 
-      {user?.status === "pending" && (
-        <Alert variant="warning">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Account Pending Verification</AlertTitle>
-          <AlertDescription>
-            Your account is awaiting payment review. Some actions may remain
-            limited until verification is complete.
+      {schoolInvoices.length === 0 ? (
+        <Alert variant="warning" className="border-orange-200 bg-orange-50/50">
+          <Info className="h-4 w-4 text-orange-600" />
+          <AlertTitle className="text-orange-900 font-bold">Registration Incomplete</AlertTitle>
+          <AlertDescription className="text-orange-700">
+            You must finalize your student registration before an invoice can be generated and payment made.
+            <div className="mt-3">
+              <Button 
+                onClick={() => onPageChange("subject-entries")}
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg h-9"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Complete Registration
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
-      )}
+      ) : (
+        <>
+          {user?.status === "pending" && (
+            <Alert variant="warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Account Pending Verification</AlertTitle>
+              <AlertDescription>
+                Your account is awaiting payment review. Some actions may remain
+                limited until verification is complete.
+              </AlertDescription>
+            </Alert>
+          )}
 
-      {user?.status === "verified" && (
-        <Alert variant="info">
-          <Clock className="h-4 w-4" />
-          <AlertTitle>Payment Confirmed</AlertTitle>
-          <AlertDescription>
-            Your payment has been confirmed and your school is awaiting final
-            activation.
-          </AlertDescription>
-        </Alert>
-      )}
+          {user?.status === "verified" && (
+            <Alert variant="info">
+              <Clock className="h-4 w-4" />
+              <AlertTitle>Payment Confirmed</AlertTitle>
+              <AlertDescription>
+                Your payment has been confirmed and your school is awaiting final
+                activation.
+              </AlertDescription>
+            </Alert>
+          )}
 
-      {user?.status === "active" && (
-        <Alert variant="success">
-          <CheckCircle className="h-4 w-4" />
-          <AlertTitle>Portal Fully Active</AlertTitle>
-          <AlertDescription>
-            Your registration is complete and all school portal features are
-            available.
-          </AlertDescription>
-        </Alert>
+          {user?.status === "active" && (
+            <Alert variant="success">
+              <CheckCircle className="h-4 w-4" />
+              <AlertTitle>Portal Fully Active</AlertTitle>
+              <AlertDescription>
+                Your registration is complete and all school portal features are
+                available.
+              </AlertDescription>
+            </Alert>
+          )}
+        </>
       )}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
