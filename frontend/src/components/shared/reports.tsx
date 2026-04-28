@@ -1822,6 +1822,7 @@ export function Reports({ onPageChange }: ReportsProps) {
         }
       });
       const studentRows = Array.from(groupedStudents.values());
+      const hasAnyReg = studentRows.some(s => !!s.registrationNumber);
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       pdf.setFont("helvetica", "bold");
@@ -1837,9 +1838,9 @@ export function Reports({ onPageChange }: ReportsProps) {
       autoTable(pdf, {
         startY: 30,
         margin: { left: 12, right: 12 },
-        head: [["Reg No", "Student Name", "Exam Level", "Subjects (Code/Paper)"]],
+        head: [[...(hasAnyReg ? ["Reg No"] : []), "Student Name", "Exam Level", "Subjects (Code/Paper)"]],
         body: studentRows.map((student) => [
-          student.registrationNumber,
+          ...(hasAnyReg ? [student.registrationNumber || "-"] : []),
           student.studentName,
           student.examLevel,
           buildStudentSubjectsDisplay(student, subjectLookup),
@@ -1848,8 +1849,8 @@ export function Reports({ onPageChange }: ReportsProps) {
         headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: "bold", lineColor: [0, 0, 0], lineWidth: 0.5 },
         alternateRowStyles: { fillColor: [255, 255, 255], lineColor: [0, 0, 0], textColor: [0, 0, 0] },
         columnStyles: {
-          0: { cellWidth: 40 },
-          1: { cellWidth: 42 },
+          0: { cellWidth: hasAnyReg ? 40 : 42 },
+          1: { cellWidth: hasAnyReg ? 42 : 50 },
           2: { cellWidth: 20, halign: "center" },
           3: { cellWidth: "auto" },
         },
@@ -1887,14 +1888,19 @@ export function Reports({ onPageChange }: ReportsProps) {
         }
       });
       const studentRows = Array.from(groupedStudents.values());
+      const hasAnyReg = studentRows.some(s => !!s.registrationNumber);
 
       const worksheet = XLSXUtils.json_to_sheet(
-        studentRows.map((student) => ({
-          RegistrationNumber: student.registrationNumber,
-          StudentName: student.studentName,
-          ExamLevel: student.examLevel,
-          Subjects: buildStudentSubjectsDisplay(student, subjectLookup),
-        })),
+        studentRows.map((student) => {
+          const row: any = {};
+          if (hasAnyReg) {
+            row.RegistrationNumber = student.registrationNumber || "-";
+          }
+          row.StudentName = student.studentName;
+          row.ExamLevel = student.examLevel;
+          row.Subjects = buildStudentSubjectsDisplay(student, subjectLookup);
+          return row;
+        }),
       );
       const workbook = XLSXUtils.book_new();
       XLSXUtils.book_append_sheet(workbook, worksheet, "StudentsList");
@@ -1916,8 +1922,12 @@ export function Reports({ onPageChange }: ReportsProps) {
         return;
       }
 
-      if (!selected.registrationFinalized && user?.role !== "admin") {
-        toast.error("WPF can only be generated for schools with finalized registration");
+      const levelFinalized = level === "UCE" 
+        ? selected.uceRegistrationFinalized 
+        : selected.uaceRegistrationFinalized;
+
+      if (!levelFinalized && user?.role !== "admin") {
+        toast.error(`WPF can only be generated for schools with finalized ${level} registration`);
         return;
       }
 
@@ -2375,35 +2385,6 @@ export function Reports({ onPageChange }: ReportsProps) {
                     {filteredStudents.length} Candidates
                   </Badge>
                 </div>
-                
-                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-                  <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100 flex-1 md:flex-none">
-                    <Select value={subjectWiseLevelFilter} onValueChange={(value: "UCE" | "UACE") => setSubjectWiseLevelFilter(value)}>
-                      <SelectTrigger className="h-9 w-full md:w-[140px] border-none bg-white shadow-sm rounded-lg text-xs font-semibold">
-                        <SelectValue placeholder="Level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="UCE">UCE (O Level)</SelectItem>
-                        <SelectItem value="UACE">UACE (A Level)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-5 font-bold transition-all shadow-sm md:ml-auto"
-                    onClick={() => handleExport("pdf", "Subject-Wise")}
-                    disabled={isExporting("pdf", "Subject-Wise")}
-                  >
-                    {isExporting("pdf", "Subject-Wise") ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <FileText className="h-4 w-4 mr-2" />
-                    )}
-                    Export Report
-                  </Button>
-                </div>
               </div>
             </CardHeader>
 
@@ -2485,6 +2466,35 @@ export function Reports({ onPageChange }: ReportsProps) {
                 </div>
               </div>
 
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100 flex-1 md:flex-none">
+                  <Select value={subjectWiseLevelFilter} onValueChange={(value: "UCE" | "UACE") => setSubjectWiseLevelFilter(value)}>
+                    <SelectTrigger className="h-9 w-full md:w-[140px] border-none bg-white shadow-sm rounded-lg text-xs font-semibold">
+                      <SelectValue placeholder="Level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UCE">UCE (O Level)</SelectItem>
+                      <SelectItem value="UACE">UACE (A Level)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-5 font-bold transition-all shadow-sm md:ml-auto"
+                  onClick={() => handleExport("pdf", "Subject-Wise")}
+                  disabled={isExporting("pdf", "Subject-Wise")}
+                >
+                  {isExporting("pdf", "Subject-Wise") ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  Export Report
+                </Button>
+              </div>
+
               <Card className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3 md:py-4 px-4 md:px-6">
                   <div className="flex items-center justify-between gap-4">
@@ -2506,7 +2516,9 @@ export function Reports({ onPageChange }: ReportsProps) {
                     <Table className="min-w-[600px]">
                       <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                         <TableRow className="border-none">
-                          <TableHead className="bg-white font-black text-[10px] uppercase h-10 px-4">REG NUMBER</TableHead>
+                          {subjectStudentsList.some(s => !!s.registrationNumber) && (
+                            <TableHead className="bg-white font-black text-[10px] uppercase h-10 px-4">REG NUMBER</TableHead>
+                          )}
                           <TableHead className="bg-white font-black text-[10px] uppercase h-10">CANDIDATE NAME</TableHead>
                           <TableHead className="bg-white font-black text-[10px] uppercase h-10">SCHOOL NAME</TableHead>
                           <TableHead className="bg-white text-right font-black text-[10px] uppercase h-10 px-4">SUBJECT</TableHead>
@@ -2515,7 +2527,15 @@ export function Reports({ onPageChange }: ReportsProps) {
                       <TableBody>
                         {subjectStudentsList.map((student) => (
                           <TableRow key={student.id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
-                            <TableCell className="font-mono text-[10px] text-slate-500 px-4">{student.registrationNumber}</TableCell>
+                            {subjectStudentsList.some(s => !!s.registrationNumber) && (
+                              <TableCell className="font-mono text-[10px] text-slate-500 px-4">
+                                {student.registrationNumber || (
+                                  <Badge variant="outline" className="text-[9px] font-bold text-orange-600 bg-orange-50 border-orange-200 uppercase">
+                                    Pending
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            )}
                             <TableCell className="font-bold text-slate-900 text-xs">{student.studentName}</TableCell>
                             <TableCell className="text-slate-600 text-xs max-w-[200px] truncate">{student.schoolName}</TableCell>
                             <TableCell className="text-right px-4">

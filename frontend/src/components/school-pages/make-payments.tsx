@@ -32,13 +32,42 @@ interface MakePaymentsProps {
 import { Checkbox } from "../ui/checkbox";
 
 export function MakePayments({ onPageChange }: MakePaymentsProps) {
-  const { user, students, subjects, addInvoice, schools } = useAuth();
-  const [bookletsCount, setBookletsCount] = useState<number>(0);
+  const { user, students, subjects, addInvoice, schools, invoices } = useAuth();
+  const [paymentLevel, setPaymentLevel] = useState<"UCE" | "UACE">("UCE");
   const [markingGuides, setMarkingGuides] = useState<{ arts: boolean; sciences: boolean }>({
     arts: false,
     sciences: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const currentSchool = useMemo(() => {
+    return schools.find(s => s.code === user?.schoolCode);
+  }, [schools, user]);
+
+  const isUceFinalized = currentSchool?.uceRegistrationFinalized ?? false;
+  const isUaceFinalized = currentSchool?.uaceRegistrationFinalized ?? false;
+  const isLevelFinalized = paymentLevel === "UCE" ? isUceFinalized : isUaceFinalized;
+  const hasAnyLevelFinalized = isUceFinalized || isUaceFinalized;
+
+  const hasRegistrationInvoice = useMemo(() => {
+    return invoices.some(inv => 
+      inv.schoolCode === user?.schoolCode && 
+      inv.items.some(item => item.description === "School Registration Fee")
+    );
+  }, [invoices, user]);
+
+  const schoolStudents = useMemo(() => {
+    return students.filter(s => 
+      s.schoolCode === user?.schoolCode && 
+      s.examLevel === paymentLevel &&
+      !s.isInvoiced &&
+      (isLevelFinalized ? s.isAdditional : !s.isAdditional)
+    );
+  }, [students, user, paymentLevel, isLevelFinalized]);
+
+  const fullySubmittedCount = useMemo(() => {
+    return schoolStudents.filter(student => isStudentFullyRegistered(student, subjects)).length;
+  }, [schoolStudents, subjects]);
 
   const markingGuideTotalCount = (markingGuides.arts ? 1 : 0) + (markingGuides.sciences ? 1 : 0);
 
@@ -46,45 +75,24 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
     setMarkingGuides(prev => ({ ...prev, [type]: !prev[type] }));
   };
 
-  const currentSchool = useMemo(() => {
-    return schools.find(s => s.code === user?.schoolCode);
-  }, [schools, user]);
-
-  const isFinalized = currentSchool?.registrationFinalized ?? false;
-
-  const schoolStudents = useMemo(() => {
-    return students.filter(s => 
-      s.schoolCode === user?.schoolCode && 
-      !s.isInvoiced &&
-      (isFinalized ? s.isAdditional : !s.isAdditional)
-    );
-  }, [students, user, isFinalized]);
-
-  const fullySubmittedCount = useMemo(() => {
-    return schoolStudents.filter(student => isStudentFullyRegistered(student, subjects)).length;
-  }, [schoolStudents, subjects]);
-
   const pricing = {
     registration: 500000,
     student: 27000,
-    booklet: 25000,
     markingGuide: 25000,
   };
 
   const totals = useMemo(() => {
-    const registrationTotal = isFinalized ? 0 : pricing.registration;
+    const registrationTotal = (!hasAnyLevelFinalized && !isLevelFinalized && !hasRegistrationInvoice) ? pricing.registration : 0;
     const studentTotal = fullySubmittedCount * pricing.student;
-    const bookletTotal = bookletsCount * pricing.booklet;
     const markingGuideTotal = markingGuideTotalCount * pricing.markingGuide;
 
     return {
       registration: registrationTotal,
       student: studentTotal,
-      booklet: bookletTotal,
       markingGuide: markingGuideTotal,
-      grandTotal: registrationTotal + studentTotal + bookletTotal + markingGuideTotal
+      grandTotal: registrationTotal + studentTotal + markingGuideTotal
     };
-  }, [fullySubmittedCount, bookletsCount, markingGuideTotalCount, isFinalized]);
+  }, [fullySubmittedCount, markingGuideTotalCount, isLevelFinalized, hasAnyLevelFinalized, hasRegistrationInvoice]);
 
   const handleGenerateInvoice = () => {
     if (markingGuideTotalCount === 0) {
@@ -109,18 +117,11 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
         formula: "Fixed Amount"
       },
       { 
-        description: `${isFinalized ? "Additional " : ""}Student Fee`, 
+        description: `${isLevelFinalized ? "Additional " : ""}${paymentLevel} Student Fee`, 
         quantity: fullySubmittedCount, 
         unitPrice: pricing.student, 
         total: totals.student,
         formula: `${pricing.student.toLocaleString()} × ${fullySubmittedCount} = ${totals.student.toLocaleString()}`
-      },
-      { 
-        description: "Answer Booklets", 
-        quantity: bookletsCount, 
-        unitPrice: pricing.booklet, 
-        total: totals.booklet,
-        formula: `${pricing.booklet.toLocaleString()} × ${bookletsCount} = ${totals.booklet.toLocaleString()}`
       },
       { 
         description: `Marking Guide (${selectedGuides.join(" & ")})`, 
@@ -129,7 +130,7 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
         total: totals.markingGuide,
         formula: `${pricing.markingGuide.toLocaleString()} × ${markingGuideTotalCount} = ${totals.markingGuide.toLocaleString()}`
       },
-    ].filter(item => item.total > 0 || (!isFinalized && item.description.includes("Registration")));
+    ].filter(item => item.total > 0 || (!isLevelFinalized && !hasAnyLevelFinalized && !hasRegistrationInvoice && item.description.includes("Registration")));
 
     const studentIds = schoolStudents
       .filter(student => isStudentFullyRegistered(student, subjects))
@@ -142,13 +143,13 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
       items,
       totalAmount: totals.grandTotal,
       status: "pending",
-      type: isFinalized ? "additional" : "original"
+      type: isLevelFinalized ? "additional" : "original"
     }, studentIds);
 
     toast.success("Invoice Generated", {
-      description: isFinalized 
-        ? "Your additional student invoice has been generated successfully."
-        : "Your payment invoice has been generated successfully."
+      description: isLevelFinalized 
+        ? `Your additional student invoice for ${paymentLevel} has been generated successfully.`
+        : `Your payment invoice for ${paymentLevel} has been generated successfully.`
     });
 
     onPageChange("payment-status");
@@ -158,18 +159,59 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
     <div className="mx-auto w-full max-w-4xl space-y-6 pb-12 anim-fade-up">
       <div className="space-y-2">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-          Step 2: {isFinalized ? "Additional Students Payment" : "Payment Generation"}
+          Step 2: {isLevelFinalized ? "Additional Students Payment" : "Payment Generation"}
         </p>
         <h1 className="text-3xl font-bold text-slate-900">
-          {isFinalized ? "Additional Payment" : "Make Payment"}
+          {isLevelFinalized ? "Additional Payment" : "Make Payment"}
         </h1>
         <p className="text-slate-500">
-          {isFinalized 
-            ? "Generate an invoice for students added after finalization. Registration fee is not required."
-            : "Select the items you need for this examination cycle. School registration and student fees are mandatory."
+          {isLevelFinalized 
+            ? `Generate an invoice for ${paymentLevel} students added after finalization. Registration fee is not required.`
+            : `Select the items you need for this ${paymentLevel} examination cycle. School registration and student fees are mandatory.`
           }
         </p>
       </div>
+
+      {/* Level Selection */}
+      <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden mb-6">
+        <CardHeader className="bg-slate-50/50 border-b pb-4">
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-blue-600" />
+            Select Examination Level
+          </CardTitle>
+          <CardDescription>Choose the level you want to make payments for</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <RadioGroup 
+            value={paymentLevel} 
+            onValueChange={(value: "UCE" | "UACE") => setPaymentLevel(value)}
+            className="grid grid-cols-2 gap-4"
+          >
+            <div>
+              <RadioGroupItem value="UCE" id="uce-pay" className="peer sr-only" />
+              <Label
+                htmlFor="uce-pay"
+                className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 cursor-pointer`}
+              >
+                <span className="text-sm font-bold">UCE (O-Level)</span>
+                {isUceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED (Additional Mode)</span>}
+                {!isUceFinalized && <span className="text-[10px] text-blue-600 font-bold mt-1">NOT FINALIZED (Original Mode)</span>}
+              </Label>
+            </div>
+            <div>
+              <RadioGroupItem value="UACE" id="uace-pay" className="peer sr-only" />
+              <Label
+                htmlFor="uace-pay"
+                className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 cursor-pointer`}
+              >
+                <span className="text-sm font-bold">UACE (A-Level)</span>
+                {isUaceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED (Additional Mode)</span>}
+                {!isUaceFinalized && <span className="text-[10px] text-blue-600 font-bold mt-1">NOT FINALIZED (Original Mode)</span>}
+              </Label>
+            </div>
+          </RadioGroup>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2 space-y-6">
@@ -181,14 +223,14 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 Mandatory Fees
               </CardTitle>
               <CardDescription>
-                {isFinalized 
-                  ? "Calculated for additional candidates" 
-                  : "Automatically calculated based on your registration"
+                {isLevelFinalized 
+                  ? `Calculated for additional ${paymentLevel} candidates` 
+                  : `Automatically calculated based on your ${paymentLevel} registration`
                 }
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
-              {!isFinalized && (
+              {(!hasAnyLevelFinalized && !isLevelFinalized) && (
                 <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-primary border border-slate-100">
@@ -212,7 +254,7 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                   <BookOpen className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900">{isFinalized ? "Additional " : ""}Student Fee</p>
+                  <p className="font-bold text-slate-900">{isLevelFinalized ? "Additional " : ""}{paymentLevel} Student Fee</p>
                   <p className="text-xs text-slate-500">{pricing.student.toLocaleString()} × {fullySubmittedCount} candidates</p>
                 </div>
               </div>
@@ -226,7 +268,7 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 <Alert variant="warning" className="bg-amber-50 border-amber-200 text-amber-800 rounded-xl">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs font-medium">
-                    No fully submitted {isFinalized ? "additional " : ""}candidates found. Student fees will be 0 UGX. 
+                    No fully submitted {isLevelFinalized ? "additional " : ""}{paymentLevel} candidates found. Student fees will be 0 UGX. 
                     Ensure candidates have all compulsory subjects selected.
                   </AlertDescription>
                 </Alert>
@@ -241,26 +283,12 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 <Calculator className="h-5 w-5 text-blue-600" />
                 Additional Items
               </CardTitle>
-              <CardDescription>Select booklets and marking guides</CardDescription>
+              <CardDescription>Select marking guides for your school</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
-              <div className="space-y-3">
-                <Label className="text-sm font-bold text-slate-700">Answer Booklets (25,000 UGX per booklet)</Label>
-                <div className="flex items-center gap-4">
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    value={bookletsCount} 
-                    onChange={(e) => setBookletsCount(parseInt(e.target.value) || 0)}
-                    className="max-w-[120px] rounded-xl font-bold"
-                  />
-                  <p className="text-sm text-slate-500 font-medium">= {pricing.booklet.toLocaleString()} × {bookletsCount} = {totals.booklet.toLocaleString()} UGX</p>
-                </div>
-              </div>
-
-              <div className="space-y-4 border-t pt-6">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-bold text-slate-700">Marking Guide (25,000 UGX per selection) <span className="text-red-500">*</span></Label>
+                  <Label className="text-sm font-bold text-slate-700">Select Marking Guide (25,000 UGX each) <span className="text-red-500">*</span></Label>
                   {markingGuideTotalCount === 0 && <Badge variant="destructive" className="text-[10px]">REQUIRED</Badge>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -315,13 +343,6 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                     <span className="text-[11px] text-slate-400 font-bold italic">{pricing.student.toLocaleString()} × {fullySubmittedCount}</span>
                   </div>
                   <span className="font-bold text-slate-900">{totals.student.toLocaleString()} UGX</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <div className="flex flex-col">
-                    <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Answer Booklets</span>
-                    <span className="text-[11px] text-slate-400 font-bold italic">{pricing.booklet.toLocaleString()} × {bookletsCount}</span>
-                  </div>
-                  <span className="font-bold text-slate-900">{totals.booklet.toLocaleString()} UGX</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <div className="flex flex-col">

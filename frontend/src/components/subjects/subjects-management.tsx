@@ -22,7 +22,7 @@ interface SubjectsManagementProps {
 }
 
 export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
-  const { user, subjects, students, addSubject, updateSubject } = useAuth();
+  const { user, subjects, students, addSubject, updateSubject, deleteSubject } = useAuth();
 
   // Permission check - admin only
   if (user?.role !== "admin") {
@@ -475,27 +475,43 @@ export function SubjectsManagement({ onPageChange }: SubjectsManagementProps) {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditingSubjectId(subject.id);
-                          setNewSubject({
-                            name: subject.name,
-                            code: subject.code,
-                            standardCode: subject.standardCode,
-                            educationLevel: subject.educationLevel,
-                            optional: subject.optional ? "yes" : "no",
-                            papers: subject.papers,
-                            minPapers: subject.minPapers ?? "",
-                            maxPapers: subject.maxPapers ?? "",
-                          });
-                        }}
-                      >
-                        <PencilLine className="h-4 w-4" />
-                        Edit
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingSubjectId(subject.id);
+                            setNewSubject({
+                              name: subject.name,
+                              code: subject.code,
+                              standardCode: subject.standardCode,
+                              educationLevel: subject.educationLevel,
+                              optional: subject.optional ? "yes" : "no",
+                              papers: subject.papers,
+                              minPapers: subject.minPapers ?? "",
+                              maxPapers: subject.maxPapers ?? "",
+                            });
+                          }}
+                        >
+                          <PencilLine className="h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete ${subject.name}?`)) {
+                              deleteSubject(subject.id);
+                              toast.success("Subject deleted successfully");
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

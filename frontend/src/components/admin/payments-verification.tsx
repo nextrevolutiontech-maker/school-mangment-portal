@@ -69,7 +69,7 @@ function buildActivationCode(schoolCode: string) {
 export function PaymentsVerification({
   onPageChange,
 }: PaymentsVerificationProps) {
-  const { schools, updateSchoolStatus, invoices } = useAuth();
+  const { schools, updateSchoolStatus, invoices, markInvoiceAsPaid } = useAuth();
   const [activeFilter, setActiveFilter] = useState<"all" | SchoolStatus>("all");
   const [selectedSchool, setSelectedSchool] = useState<SchoolRecord | null>(null);
   const [activationCode, setActivationCode] = useState("");
@@ -136,11 +136,22 @@ export function PaymentsVerification({
     setTimeout(() => {
       const nextCode = buildActivationCode(selectedSchool.code);
       updateSchoolStatus(selectedSchool.code, "verified");
+      
+      // Mark the invoice being previewed as paid
+      if (previewInvoice) {
+        markInvoiceAsPaid(previewInvoice.id);
+      } else {
+        // Fallback: mark all pending invoices with proof for this school as paid
+        invoices
+          .filter(inv => inv.schoolCode === selectedSchool.code && inv.status === "pending" && inv.paymentProof)
+          .forEach(inv => markInvoiceAsPaid(inv.id));
+      }
+
       setActivationCode(nextCode);
       setIsProcessing(false);
 
       toast.success("Payment verified successfully.", {
-        description: `${selectedSchool.name} moved to verified status.`,
+        description: `${selectedSchool.name} moved to verified status and registration numbers assigned.`,
       });
     }, 1500);
   };

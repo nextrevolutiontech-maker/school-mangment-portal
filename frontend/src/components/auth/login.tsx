@@ -1,19 +1,13 @@
 import { useState } from "react";
-import { Eye, EyeOff, Loader2, ShieldCheck, FileText, LayoutDashboard, CheckCircle2 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
+import { Eye, EyeOff, Loader2, Shield, FileText, LayoutDashboard, Lock } from "lucide-react";
+import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Alert, AlertDescription } from "../ui/alert";
 import { useAuth } from "../auth-context";
 import wakisshaLogo from "../../assets/logo.png";
-import loginBackground from "../../assets/login.jpeg";
+import loginImage from "../../assets/login.jpeg";
 
 export function Login() {
   const [identifier, setIdentifier] = useState("");
@@ -40,138 +34,142 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="flex min-h-screen">
-        {/* Left Section - Content & Branding with Background Image */}
-        <div className="hidden w-1/2 flex-col justify-between p-12 lg:flex relative overflow-hidden">
-          {/* Background Image with Light Overlay */}
-          <div className="absolute inset-0 z-0">
-            <img
-              src={loginBackground}
-              alt=""
-              className="h-full w-full object-cover opacity-25 grayscale-[40%]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/20 to-transparent" />
-          </div>
+    <div className="h-screen w-full flex bg-white font-['Inter'] overflow-hidden">
+      {/* Left Section - Image with Gradient Overlay */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${loginImage})` }}
+        />
+        
+        {/* Dark Gradient Overlay for high text visibility */}
+        <div 
+          className="absolute inset-0 z-10"
+          style={{ 
+            background: 'linear-gradient(to right, rgba(20, 40, 70, 0.92), rgba(10, 80, 80, 0.85))' 
+          }}
+        />
 
-          <div className="relative space-y-12">
-            <div className="inline-block">
+        {/* Content on Left Panel */}
+        <div className="relative z-20 flex flex-col p-16 w-full text-white">
+          <div className="flex items-center gap-4 mb-12">
+            <div className="bg-white p-2 rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-white/20">
               <img
                 src={wakisshaLogo}
                 alt="WAKISSHA logo"
-                className="h-10 w-auto opacity-80"
+                className="w-9 h-9 object-contain"
               />
             </div>
-
-            <div className="space-y-8">
-              <div className="space-y-3">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900 lg:text-4xl leading-tight">
-                  Welcome back to your <br />
-                  <span className="text-[#2347A2]">Examination Workspace</span>
-                </h1>
-                <p className="max-w-md text-sm leading-relaxed text-slate-600">
-                  The official portal for Wakiso Secondary School Headteachers Association. 
-                  Manage registration, entries, and reports in one place.
-                </p>
-              </div>
-
-              <div className="space-y-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm border border-slate-100">
-                    <ShieldCheck className="h-4 w-4 text-[#2347A2]" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Secure Access</h3>
-                    <p className="text-xs text-slate-600 mt-0.5">Role-based security for schools and administrators.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm border border-slate-100">
-                    <LayoutDashboard className="h-4 w-4 text-[#2347A2]" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Real-time Visibility</h3>
-                    <p className="text-xs text-slate-600 mt-0.5">Track registration progress and financial status live.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm border border-slate-100">
-                    <FileText className="h-4 w-4 text-[#2347A2]" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Automated Reporting</h3>
-                    <p className="text-xs text-slate-600 mt-0.5">Generate and download official exam forms instantly.</p>
-                  </div>
-                </div>
-              </div>
+            <div>
+              <h2 className="text-xl font-black tracking-tighter font-['Sora'] text-white">WAKISSHA</h2>
+              <p className="text-[9px] text-teal-300 font-bold uppercase tracking-[0.25em]">Examination Portal</p>
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 -inset-x-4 -inset-y-2 bg-white/30 backdrop-blur-[2px] rounded-xl -z-10" />
+          <div className="space-y-10">
             <div className="space-y-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
-                Trusted by 1000+ Schools
+              <h1 className="text-4xl font-extrabold leading-tight font-['Sora'] tracking-tight text-white">
+                Welcome back to your <br />
+                <span className="text-teal-300">Examination Workspace</span>
+              </h1>
+              <p className="text-base text-white/90 max-w-md font-medium leading-relaxed">
+                The official portal for Wakiso Secondary School Headteachers Association. 
+                Manage registration, entries, and reports in one place.
               </p>
-              <div className="flex gap-6 opacity-60 grayscale italic font-serif text-lg text-slate-900">
-                <span>WAKISSHA</span>
-                <span>UNEP</span>
-                <span>MOES</span>
+            </div>
+
+            <div className="space-y-6 pt-2">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 flex-shrink-0">
+                  <Shield className="w-5 h-5 text-teal-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Secure Access</h3>
+                  <p className="text-sm text-white/60 font-medium leading-snug">Role-based security for schools and administrators.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 flex-shrink-0">
+                  <LayoutDashboard className="w-5 h-5 text-teal-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Real-time Visibility</h3>
+                  <p className="text-sm text-white/60 font-medium leading-snug">Track registration progress and financial status live.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 flex-shrink-0">
+                  <FileText className="w-5 h-5 text-teal-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Automated Reporting</h3>
+                  <p className="text-sm text-white/60 font-medium leading-snug">Generate and download official exam forms instantly.</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Right Section - Login Form */}
-        <div className="flex w-full items-center justify-center p-6 lg:w-1/2 lg:p-12">
-          <div className="w-full max-w-[400px] space-y-8">
-            <div className="lg:hidden">
-              <img
-                src={wakisshaLogo}
-                alt="WAKISSHA logo"
-                className="mb-8 h-10 w-auto"
-              />
-            </div>
+      {/* Right Section - Login Form */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-between p-6 lg:p-12 bg-white relative overflow-hidden">
+        {/* Decorative background elements for Right Panel */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-teal-50/30 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-50/20 rounded-full blur-[100px] -ml-48 -mb-48 pointer-events-none" />
 
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                Sign in to your account
+        {/* Mobile Logo Only */}
+        <div className="lg:hidden flex items-center justify-center gap-3 mb-4 relative z-10">
+          <div className="bg-white p-2 rounded-xl shadow-lg ring-1 ring-gray-100">
+            <img src={wakisshaLogo} alt="Logo" className="w-8 h-8 object-contain" />
+          </div>
+          <h1 className="text-xl font-black tracking-tight text-gray-900 font-['Sora']">WAKISSHA</h1>
+        </div>
+
+        {/* Main Content Area - Centered Card */}
+        <div className="max-w-[440px] w-full mx-auto flex-1 flex flex-col justify-center space-y-4 relative z-10 min-h-0">
+          <div className="w-full">
+            <div className="text-center mb-4">
+              <h2 className="text-2xl font-black text-gray-900 font-['Sora'] tracking-tight mb-1">
+                Secure Login
               </h2>
-              <p className="text-sm text-slate-500">
-                Enter your credentials to access your workspace
+              <p className="text-gray-600 font-semibold text-[13px]">
+                Enter your credentials to access the portal
               </p>
             </div>
 
-            <Card className="border-slate-200 shadow-2xl shadow-slate-300/40 rounded-2xl overflow-hidden">
-              <CardContent className="p-8 space-y-5">
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="identifier" className="text-xs font-semibold text-slate-600">
-                      School Code / Admin Email
+            <Card className="border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] rounded-[32px] bg-white overflow-hidden ring-1 ring-gray-200/60">
+              <CardContent className="p-6 lg:p-8">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="identifier" className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.18em] ml-1">
+                      School Code or Email
                     </Label>
-                    <Input
-                      id="identifier"
-                      type="text"
-                      placeholder="name@school.ug"
-                      value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
-                      required
-                      className="h-11 bg-slate-50/50 border-slate-200 focus:bg-white focus:border-[#2347A2] focus:ring-1 focus:ring-[#2347A2]/20 transition-all"
-                    />
+                    <div className="relative group">
+                      <Input
+                        id="identifier"
+                        type="text"
+                        placeholder="e.g. WAK-001 or admin@wakissha.ug"
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
+                        required
+                        className="h-11 border-gray-200 rounded-2xl bg-gray-50/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 transition-all duration-300 placeholder:text-gray-400 font-medium pl-5 text-gray-900 text-sm"
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password" className="text-xs font-semibold text-slate-600">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between ml-1">
+                      <Label htmlFor="password" className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.18em]">
                         Password
                       </Label>
-                      <button type="button" className="text-[11px] font-medium text-[#2347A2] hover:text-[#1a357a] transition-colors">
+                      <button type="button" className="text-[10px] font-bold text-teal-700 hover:text-teal-800 transition-colors">
                         Forgot?
                       </button>
                     </div>
-                    <div className="relative">
+                    <div className="relative group">
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
@@ -179,95 +177,89 @@ export function Login() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        className="h-11 bg-slate-50/50 border-slate-200 pr-10 focus:bg-white focus:border-[#2347A2] focus:ring-1 focus:ring-[#2347A2]/20 transition-all"
+                        className="h-11 border-gray-200 rounded-2xl bg-gray-50/50 pr-14 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 transition-all duration-300 placeholder:text-gray-400 font-medium pl-5 text-gray-900 text-sm"
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        onClick={() => setShowPassword((prev) => !prev)}
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-teal-600 transition-colors p-1"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" id="remember" className="h-3.5 w-3.5 rounded border-slate-300 text-[#2347A2] focus:ring-[#2347A2] focus:ring-offset-0" />
-                    <label htmlFor="remember" className="text-xs text-slate-500 font-medium cursor-pointer">
-                      Remember me for 30 days
-                    </label>
-                  </div>
-
                   {error && (
-                    <Alert variant="destructive" className="py-2.5">
-                      <AlertDescription className="text-xs">{error}</AlertDescription>
+                    <Alert variant="destructive" className="rounded-2xl border-red-50 bg-red-50/50 py-2">
+                      <AlertDescription className="text-[11px] font-semibold text-red-600 text-center">
+                        {error}
+                      </AlertDescription>
                     </Alert>
                   )}
 
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-[#2347A2] hover:bg-[#1a357a] hover:shadow-lg hover:shadow-[#2347A2]/25 text-white font-semibold transition-all duration-200 active:scale-[0.98]"
+                    className="w-full h-11 bg-teal-600 hover:bg-teal-700 text-white font-bold tracking-wide rounded-2xl shadow-lg shadow-teal-600/20 transition-all duration-300 active:scale-[0.98] font-['Sora'] text-sm mt-1"
                     disabled={isLoading}
                   >
                     {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
-                      </>
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Verifying...</span>
+                      </div>
                     ) : (
-                      "Sign in to Dashboard"
+                      "Sign In to Portal"
                     )}
                   </Button>
+                </form>
 
-                  {/* Quick Login - Subtle */}
-                  <div className="pt-2">
-                    <div className="relative mb-5">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-slate-100"></div>
-                      </div>
-                      <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-bold">
-                        <span className="bg-white px-3 text-slate-400">Quick Access</span>
-                      </div>
+                {/* Quick Access Section */}
+                <div className="space-y-3 pt-1 mt-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-gray-100" />
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIdentifier("admin@wakissha.ug");
-                          setPassword("wakissha2026");
-                        }}
-                        className="flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-500 transition-all duration-150 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-700"
-                      >
-                        Admin
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIdentifier("WAK26-0001");
-                          setPassword("demo123");
-                        }}
-                        className="flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-500 transition-all duration-150 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-700"
-                      >
-                        School
-                      </button>
+                    <div className="relative flex justify-center text-[9px] uppercase tracking-[0.25em] font-black">
+                      <span className="bg-white px-4 text-gray-400">Quick Access</span>
                     </div>
                   </div>
-                </form>
+
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <button 
+                      onClick={() => {
+                        setIdentifier("admin@wakissha.ug");
+                        setPassword("admin123");
+                      }}
+                      className="h-10 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-teal-500/30 transition-all duration-300 group"
+                    >
+                      <span className="text-[11px] font-bold text-gray-600 group-hover:text-teal-700">Admin</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setIdentifier("WAK26-0001");
+                        setPassword("demo123");
+                      }}
+                      className="h-10 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-teal-500/30 transition-all duration-300 group"
+                    >
+                      <span className="text-[11px] font-bold text-gray-600 group-hover:text-teal-700">School</span>
+                    </button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-
-            <div className="text-center pt-8 mt-auto">
-              <p className="text-[10px] text-slate-500 tracking-wide">
-                Developed by <span className="font-semibold text-slate-600">Infosight Tech-Systems</span>
-              </p>
-            </div>
           </div>
+        </div>
+
+        {/* Footer Below Login Card */}
+        <div className="w-full text-center space-y-1 pb-4 pt-2 relative z-10">
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">
+            © 2026 WAKISSHA • ALL RIGHTS RESERVED
+          </p>
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.05em]">
+            Developed by <span className="text-teal-600">INFOSIGHT TECH-SYSTEMS</span>
+          </p>
         </div>
       </div>
     </div>
   );
 }
-
-
-

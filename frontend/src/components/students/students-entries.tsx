@@ -35,7 +35,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { Badge } from "../ui/badge";
-import { Search, UserPlus, AlertCircle, Info, Edit2, Trash2, MoreVertical, Eye, BookOpen, Sparkles, Lock } from "lucide-react";
+import { Search, UserPlus, AlertCircle, Info, Edit2, Trash2, MoreVertical, Eye, BookOpen, Sparkles, Lock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "../ui/alert";
 import { useAuth, CLASS_LEVELS, CLASS_LEVELS_ARRAY } from "../auth-context";
@@ -90,7 +90,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     return scopedSchools.filter(s => s.zone === zoneFilter);
   }, [scopedSchools, zoneFilter]);
 
-  const isFinalized = currentSchool?.registrationFinalized ?? false;
+  const isUceFinalized = currentSchool?.uceRegistrationFinalized ?? false;
+  const isUaceFinalized = currentSchool?.uaceRegistrationFinalized ?? false;
+  const isAllFinalized = (currentSchool?.educationLevel === "UCE" && isUceFinalized) || 
+                         (currentSchool?.educationLevel === "UACE" && isUaceFinalized) ||
+                         (isUceFinalized && isUaceFinalized);
 
   // Reset school filter when zone changes
   useEffect(() => {
@@ -98,7 +102,14 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   }, [zoneFilter]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
+  const [finalizeLevel, setFinalizeLevel] = useState<"UCE" | "UACE">("UCE");
   const [finalizeMarkingGuide, setFinalizeMarkingGuide] = useState<"Arts" | "Sciences" | "Both">("Arts");
+
+  // Set default finalize level based on what's not finalized
+  useEffect(() => {
+    if (isUceFinalized && !isUaceFinalized) setFinalizeLevel("UACE");
+    else if (!isUceFinalized) setFinalizeLevel("UCE");
+  }, [isUceFinalized, isUaceFinalized]);
 
   // View Student Modal
   const [viewingStudent, setViewingStudent] = useState<typeof students[0] | null>(null);
@@ -110,7 +121,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   const [editStudentName, setEditStudentName] = useState("");
   const [editClassLevel, setEditClassLevel] = useState<"S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6">("S.1");
   const [editStream, setEditStream] = useState("");
-  const [editBookletsCount, setEditBookletsCount] = useState<number>(0);
   const [editSelectedSubjects, setEditSelectedSubjects] = useState<{
     [subjectId: string]: {
       selectedPapers: PaperOption[];
@@ -133,7 +143,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   const [registrationLevel, setRegistrationLevel] = useState<"UCE" | "UACE">("UCE");
   const [classLevel, setClassLevel] = useState<"S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6">("S.1");
   const [stream, setStream] = useState<"Arts" | "Sciences" | "">("");
-  const [bookletsCount, setBookletsCount] = useState<number>(0);
   const [schoolCode, setSchoolCode] = useState(user?.role === "school" ? user.schoolCode ?? "WAK26-0001" : "WAK26-0001");
   const [selectedSubjects, setSelectedSubjects] = useState<{
     [subjectId: string]: {
@@ -197,7 +206,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       });
     } else {
       const hasGP = selectedData.some(s => s?.code === "GP" || s?.standardCode === "101");
-      const hasSub = selectedData.some(s => s?.code === "SUB_MATHS" || s?.standardCode === "475S" || s?.code === "SUB_ICT" || s?.standardCode === "610");
+      const hasSubMath = selectedData.some(s => s?.code === "SUB_MATHS" || s?.standardCode === "475S");
+      const hasSubIct = selectedData.some(s => s?.code === "SUB_ICT" || s?.standardCode === "610");
       
       rules.push({
         label: "General Paper (GP) Selected",
@@ -206,15 +216,15 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       });
 
       rules.push({
-        label: "At least one Subsidiary (Sub Math/ICT)",
-        met: hasSub,
+        label: "Exactly one Subsidiary (Sub Math/ICT)",
+        met: (hasSubMath || hasSubIct) && !(hasSubMath && hasSubIct),
         critical: true
       });
 
       const mainSubjects = selectedData.filter(s => s?.code !== "GP" && s?.standardCode !== "101" && s?.code !== "SUB_MATHS" && s?.standardCode !== "475S" && s?.code !== "SUB_ICT" && s?.standardCode !== "610");
       rules.push({
         label: `Main Subjects (${mainSubjects.length} - Max 3)`,
-        met: mainSubjects.length <= 3,
+        met: mainSubjects.length <= 3 && mainSubjects.length > 0,
         critical: true
       });
     }
@@ -435,12 +445,25 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         errors.push("REJECTED: General Paper (GP) is compulsory for UACE students");
       }
 
-      // Must select Either Sub Math OR Sub ICT (At least one)
+      // Must select Exactly one Subsidiary (Sub Math OR Sub ICT)
       const hasSubMath = selectedSubjectCodes.includes("SUB_MATHS") || selectedStandardCodes.includes("475S");
       const hasSubIct = selectedSubjectCodes.includes("SUB_ICT") || selectedStandardCodes.includes("610");
       
       if (!hasSubMath && !hasSubIct) {
-        errors.push("REJECTED: UACE students must select at least one subsidiary subject (Subsidiary Mathematics or Subsidiary ICT)");
+        errors.push("REJECTED: UACE students must select one subsidiary subject (Subsidiary Mathematics or Subsidiary ICT)");
+      } else if (hasSubMath && hasSubIct) {
+        errors.push("REJECTED: UACE students cannot select both Subsidiary Mathematics and Subsidiary ICT");
+      }
+
+      // Max 3 main subjects (Not GP and Not Subsidiary)
+      const mainSubjects = selectedSubjectsData.filter(s => 
+        s?.code !== "GP" && s?.standardCode !== "101" && 
+        s?.code !== "SUB_MATHS" && s?.standardCode !== "475S" && 
+        s?.code !== "SUB_ICT" && s?.standardCode !== "610"
+      );
+
+      if (mainSubjects.length > 3) {
+        errors.push(`REJECTED: UACE students can register for a maximum of 3 main subjects. You selected ${mainSubjects.length}.`);
       }
     }
 
@@ -527,7 +550,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       studentName,
       classLevel,
       stream,
-      bookletsCount,
       subjects: subjectsArray,
       totalEntries,
     });
@@ -541,7 +563,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     setRegistrationLevel("UCE");
     setClassLevel("S.1");
     setStream("");
-    setBookletsCount(0);
     setSelectedSubjects({});
     setValidationErrors([]);
     setIsAddDialogOpen(false);
@@ -695,7 +716,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     setEditStudentName(student.studentName);
     setEditClassLevel(student.classLevel);
     setEditStream(student.stream || "");
-    setEditBookletsCount(student.bookletsCount || 0);
     
     // Convert subjects to edit format
     const editSubjects: typeof editSelectedSubjects = {};
@@ -777,12 +797,25 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         errors.push("REJECTED: General Paper (GP) is compulsory for UACE students");
       }
 
-      // Must select Either Sub Math OR Sub ICT (At least one)
+      // Must select Exactly one Subsidiary (Sub Math OR Sub ICT)
       const hasSubMath = selectedSubjectCodes.includes("SUB_MATHS") || selectedStandardCodes.includes("475S");
       const hasSubIct = selectedSubjectCodes.includes("SUB_ICT") || selectedStandardCodes.includes("610");
       
       if (!hasSubMath && !hasSubIct) {
-        errors.push("REJECTED: UACE students must select at least one subsidiary subject (Subsidiary Mathematics or Subsidiary ICT)");
+        errors.push("REJECTED: UACE students must select one subsidiary subject (Subsidiary Mathematics or Subsidiary ICT)");
+      } else if (hasSubMath && hasSubIct) {
+        errors.push("REJECTED: UACE students cannot select both Subsidiary Mathematics and Subsidiary ICT");
+      }
+
+      // Max 3 main subjects (Not GP and Not Subsidiary)
+      const mainSubjects = selectedSubjectsData.filter(s => 
+        s?.code !== "GP" && s?.standardCode !== "101" && 
+        s?.code !== "SUB_MATHS" && s?.standardCode !== "475S" && 
+        s?.code !== "SUB_ICT" && s?.standardCode !== "610"
+      );
+
+      if (mainSubjects.length > 3) {
+        errors.push(`REJECTED: UACE students can register for a maximum of 3 main subjects. You selected ${mainSubjects.length}.`);
       }
     }
 
@@ -864,7 +897,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       studentName: editStudentName,
       classLevel: editClassLevel,
       stream: editStream,
-      bookletsCount: editBookletsCount,
       subjects: subjectsArray,
       totalEntries: subjectsArray.length,
     });
@@ -904,7 +936,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
       .filter((student) => {
         const matchesSearch =
           student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.registrationNumber.toLowerCase().includes(searchTerm.toLowerCase());
+          (student.registrationNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
         const matchesSchool = schoolFilter === "all" || student.schoolCode === schoolFilter;
         const matchesLevel = levelFilter === "all" || student.examLevel === levelFilter;
         
@@ -915,26 +947,12 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         }
 
         return matchesSearch && matchesSchool && matchesLevel && matchesZone;
-      })
-      .map((student, idx) => {
-        // Format: WAK/26-0001/001
-        const codePart = student.schoolCode?.split("-")[1] || "0000";
-        const serial = String(idx + 1).padStart(3, "0");
-        
-        // MASKING LOGIC:
-        // Admin always sees full number.
-        // Schools only see full number if status is 'active' OR they have an activationCode.
-        const isMasked = user?.role === "school" && 
-                        user.status !== "active" && 
-                        !user.activationCode;
-        
-        const formattedRegNo = isMasked 
-          ? `WAK/26-${codePart}/XXX`
-          : `WAK/26-${codePart}/${serial}`;
-          
-        return { ...student, registrationNumber: formattedRegNo };
       });
-  }, [scopedStudents, searchTerm, schoolFilter, levelFilter, zoneFilter, schools, user]);
+  }, [scopedStudents, searchTerm, schoolFilter, levelFilter, zoneFilter, schools]);
+
+  const hasAnyRegistrationNumber = useMemo(() => {
+    return filteredStudents.some(s => !!s.registrationNumber);
+  }, [filteredStudents]);
 
   const registrationPreview = useMemo(
     () =>
@@ -1025,11 +1043,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
   return (
     <div className="flex flex-col w-full gap-6">
-      {isFinalized && !isAdmin && (
+      {(isUceFinalized || isUaceFinalized) && !isAdmin && (
         <Alert className="bg-blue-50 border-blue-200 text-blue-800 rounded-2xl mb-2">
           <Lock className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-sm font-medium">
-            Your registration has been finalized. Original student entries are now locked. 
+            Your {isUceFinalized && isUaceFinalized ? "complete" : (isUceFinalized ? "UCE" : "UACE")} registration has been finalized. Original student entries for finalized levels are now locked. 
             To edit locked records, please contact the WAKISSHA Secretariat or your Zone Leader.
           </AlertDescription>
         </Alert>
@@ -1047,23 +1065,36 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row lg:w-auto">
-          {!isAdmin && !isFinalized && (
+          {!isAdmin && (!isUceFinalized || !isUaceFinalized) && (
             <Dialog open={isFinalizeDialogOpen} onOpenChange={setIsFinalizeDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800">
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Finalize Registration
+                  Finalize {(!isUceFinalized && !isUaceFinalized) ? "" : (isUceFinalized ? "UACE " : "UCE ")}Registration
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md rounded-3xl">
                 <DialogHeader>
                   <DialogTitle className="text-xl font-black text-slate-900">Finalize Registration</DialogTitle>
                   <DialogDescription className="text-slate-500 font-medium">
-                    Once finalized, you will no longer be able to edit or delete existing students. 
+                    Once finalized, you will no longer be able to edit or delete existing students for this level. 
                     Any students added after this will be treated as "Additional Students" with separate invoices.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-6 space-y-4">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">Select Exam Level to Finalize</Label>
+                    <Select value={finalizeLevel} onValueChange={(value: "UCE" | "UACE") => setFinalizeLevel(value)}>
+                      <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UCE" disabled={isUceFinalized} className="font-bold">UCE (O-Level) {isUceFinalized ? "(Finalized)" : ""}</SelectItem>
+                        <SelectItem value="UACE" disabled={isUaceFinalized} className="font-bold">UACE (A-Level) {isUaceFinalized ? "(Finalized)" : ""}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="space-y-3">
                     <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">Select Marking Guide Package</Label>
                     <Select value={finalizeMarkingGuide} onValueChange={(value: any) => setFinalizeMarkingGuide(value)}>
@@ -1084,8 +1115,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold"
                     onClick={() => {
                       if (user?.schoolCode) {
-                        finalizeRegistration(user.schoolCode, finalizeMarkingGuide);
-                        toast.success("Registration Finalized", {
+                        finalizeRegistration(user.schoolCode, finalizeMarkingGuide, finalizeLevel);
+                        toast.success(`${finalizeLevel} Registration Finalized`, {
                           description: "Your registration has been locked. Generating payment items..."
                         });
                         setIsFinalizeDialogOpen(false);
@@ -1093,7 +1124,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                       }
                     }}
                   >
-                    Confirm & Finalize
+                    Confirm & Finalize {finalizeLevel}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1104,7 +1135,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
             <DialogTrigger asChild>
               <Button className="w-full lg:w-auto bg-blue-600 hover:bg-blue-700">
                 <UserPlus className="h-4 w-4 mr-2" />
-                {isFinalized ? "Add Additional Student" : "Add Student"}
+                {isAllFinalized ? "Add Additional Student" : "Add Student"}
               </Button>
             </DialogTrigger>
           <DialogContent className="w-[96vw] sm:max-w-[850px] h-[90vh] max-h-[90vh] overflow-hidden p-0 border-none shadow-2xl" aria-describedby="register-description">
@@ -1115,7 +1146,9 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                   <UserPlus className="h-5 w-5" />
                 </div>
                 <div>
-                  <DialogTitle className="text-lg font-black text-slate-900">Register Student</DialogTitle>
+                  <DialogTitle className="text-lg font-black text-slate-900">
+                    {(registrationLevel === "UCE" ? isUceFinalized : isUaceFinalized) ? `Register Additional ${registrationLevel} Student` : `Register ${registrationLevel} Student`}
+                  </DialogTitle>
                   <DialogDescription id="register-description" className="sr-only">
                     Fill in the details to register a new student for examinations.
                   </DialogDescription>
@@ -1187,31 +1220,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 </Select>
               </div>
 
-              {/* Answer Booklets Calculation */}
-              <div className="space-y-1.5">
-                <Label htmlFor="booklets" className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                  Answer Booklets 
-                  <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold text-[9px] px-1.5 h-4">25,000 Each</Badge>
-                </Label>
-                <div className="flex gap-2.5 items-center">
-                  <Input
-                    id="booklets"
-                    type="number"
-                    min="0"
-                    placeholder="Qty"
-                    value={bookletsCount || ""}
-                    onChange={(e) => setBookletsCount(parseInt(e.target.value) || 0)}
-                    className="w-20 h-10 font-bold border-2 rounded-lg text-center focus:ring-blue-600 transition-all text-sm"
-                  />
-                  <div className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-lg px-3 h-10 flex items-center justify-between shadow-inner">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Amount</p>
-                    <p className="text-sm font-black text-blue-700">
-                      UGX {(bookletsCount * 25000).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               {/* School Selection */}
               {isAdmin && (
                 <div className="space-y-1.5">
@@ -1246,7 +1254,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     <p className="leading-relaxed text-[11px]">
                       {registrationLevel === "UCE" 
                         ? "7 compulsory subjects + 1 or 2 optional (Total 8 or 9)" 
-                        : "GP is compulsory + at least one Subsidiary + max 3 main subjects"}
+                        : "GP is compulsory + exactly one Subsidiary + max 3 main subjects"}
                     </p>
                   </div>
                 </div>
@@ -1260,67 +1268,76 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     <p className="text-[11px] font-bold uppercase tracking-widest">No subjects available for {registrationLevel}</p>
                   </div>
                 ) : (
-                  filteredSubjects.map((subject) => {
-                    const isSelected = !!selectedSubjects[subject.id];
-                    const isCompulsory = !subject.optional;
-                    const category = getSubjectCategory(subject.code);
-                    
-                    return (
-                      <div 
-                        key={subject.id} 
-                        className={`group relative rounded-2xl border-2 transition-all duration-300 p-4 ${
-                          isSelected 
-                            ? (category === "Arts" ? "border-amber-500 bg-white shadow-lg shadow-amber-100/30" : "border-blue-600 bg-white shadow-lg shadow-blue-100/30") 
-                            : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md"
-                        } scale-[1.0] hover:scale-[1.01]`}
-                      >
-                        <div className="flex flex-col h-full gap-3">
-                          <div className="flex items-start justify-between gap-2.5">
-                            <div className="flex flex-col gap-1 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`text-[9px] font-black font-mono px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm ${
-                                  isSelected 
-                                    ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
-                                    : "bg-slate-100 text-slate-600"
-                                }`}>
-                                  {subject.standardCode}
-                                </span>
-                                {isCompulsory ? (
-                                  <Badge className="bg-slate-900 text-white border-none text-[8px] px-1.5 h-4 font-black uppercase tracking-widest shadow-sm">
-                                    COMPULSORY
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className={`text-[8px] px-1.5 h-4 font-bold uppercase tracking-widest border-2 ${
-                                    category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
-                                  }`}>
-                                    OPTIONAL
-                                  </Badge>
-                                )}
-                              </div>
-                              <Label 
-                                htmlFor={subject.id} 
-                                className={`font-black text-[13px] leading-tight transition-colors cursor-pointer ${
-                                  isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
-                                }`}
-                              >
-                                {subject.name}
-                              </Label>
-                            </div>
+                  (() => {
+                    const selectedSubjectData = Object.keys(selectedSubjects).map(id => subjects.find(s => s.id === id));
+                    const hasSubMathSelected = selectedSubjectData.some(s => s?.code === "SUB_MATHS" || s?.standardCode === "475S");
+                    const hasSubIctSelected = selectedSubjectData.some(s => s?.code === "SUB_ICT" || s?.standardCode === "610");
 
-                            <Checkbox
-                              id={subject.id}
-                              checked={isSelected}
-                              onCheckedChange={() => toggleSubject(subject.id)}
-                              disabled={isCompulsory}
-                              className={`h-6 w-6 rounded-md border-2 transition-all duration-200 ${
-                                isSelected 
-                                  ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
-                                  : "border-slate-300 bg-white hover:border-blue-400"
-                              }`}
-                            />
-                          </div>
-                          
-                          <div className="mt-auto pt-3 border-t-2 border-slate-50">
+                    return filteredSubjects.map((subject) => {
+                      const isSelected = !!selectedSubjects[subject.id];
+                      const isCompulsory = !subject.optional;
+                      const category = getSubjectCategory(subject.code);
+                      
+                      const isSubMath = subject.code === "SUB_MATHS" || subject.standardCode === "475S";
+                      const isSubIct = subject.code === "SUB_ICT" || subject.standardCode === "610";
+                      const isSubsidiaryDisabled = (isSubMath && hasSubIctSelected) || (isSubIct && hasSubMathSelected);
+                      
+                      return (
+                        <div 
+                          key={subject.id} 
+                          className={`group relative rounded-2xl border-2 transition-all duration-300 p-4 ${
+                            isSelected 
+                              ? (category === "Arts" ? "border-amber-500 bg-white shadow-lg shadow-amber-100/30" : "border-blue-600 bg-white shadow-lg shadow-blue-100/30") 
+                              : (isSubsidiaryDisabled ? "border-slate-100 bg-slate-50/50 opacity-40 grayscale-[0.5]" : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md")
+                          } scale-[1.0] ${!isSubsidiaryDisabled ? 'hover:scale-[1.01]' : ''}`}
+                        >
+                          <div className="flex flex-col h-full gap-3">
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`text-[9px] font-black font-mono px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm ${
+                                    isSelected 
+                                      ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}>
+                                    {subject.standardCode}
+                                  </span>
+                                  {isCompulsory ? (
+                                    <Badge className="bg-slate-900 text-white border-none text-[8px] px-1.5 h-4 font-black uppercase tracking-widest shadow-sm">
+                                      COMPULSORY
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className={`text-[8px] px-1.5 h-4 font-bold uppercase tracking-widest border-2 ${
+                                      category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
+                                    }`}>
+                                      OPTIONAL
+                                    </Badge>
+                                  )}
+                                </div>
+                                <Label 
+                                  htmlFor={subject.id} 
+                                  className={`font-black text-[13px] leading-tight transition-colors ${!isSubsidiaryDisabled ? 'cursor-pointer' : 'cursor-not-allowed'} ${
+                                    isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
+                                  }`}
+                                >
+                                  {subject.name}
+                                </Label>
+                              </div>
+
+                              <Checkbox
+                                id={subject.id}
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSubject(subject.id)}
+                                disabled={isCompulsory || isSubsidiaryDisabled}
+                                className={`h-6 w-6 rounded-md border-2 transition-all duration-200 ${
+                                  isSelected 
+                                    ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
+                                    : (isSubsidiaryDisabled ? "border-slate-200 bg-slate-100 cursor-not-allowed" : "border-slate-300 bg-white hover:border-blue-400")
+                                }`}
+                              />
+                            </div>
+                            
+                            <div className="mt-auto pt-3 border-t-2 border-slate-50">
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1">
                                 <BookOpen className={`h-3 w-3 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
@@ -1398,12 +1415,13 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                               </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()
+                  )}
+                </div>
 
               {/* Total Entries Display */}
               <div className="md:col-span-2">
@@ -1421,19 +1439,44 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </div>
 
               <div className="md:col-span-2">
-                <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-                  <p className="mb-1.5 text-xs font-semibold text-slate-800">Live Preview</p>
-                  {registrationPreview.length === 0 ? (
-                    <p className="text-xs text-slate-500">No subject papers selected yet.</p>
-                  ) : (
-                    <div className="space-y-1">
-                      {registrationPreview.map((item) => (
-                        <p key={item.subjectId} className="text-[11px] text-slate-700">
-                          {item.subjectName} {"\u2192"} {item.papers.join(", ")}
-                        </p>
+                <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm space-y-3">
+                  <div>
+                    <p className="mb-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">Registration Status</p>
+                    <div className="flex flex-wrap gap-2">
+                      {getValidationStatus(registrationLevel, selectedSubjects).map((rule, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`flex items-center gap-1.5 px-2 py-1 rounded-md border-2 transition-all ${
+                            rule.met 
+                              ? "bg-green-50 border-green-100 text-green-700" 
+                              : "bg-red-50 border-red-100 text-red-600"
+                          }`}
+                        >
+                          {rule.met ? (
+                            <CheckCircle2 className="h-3 w-3" />
+                          ) : (
+                            <AlertCircle className="h-3 w-3" />
+                          )}
+                          <span className="text-[10px] font-black uppercase tracking-tight">{rule.label}</span>
+                        </div>
                       ))}
                     </div>
-                  )}
+                  </div>
+
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Preview</p>
+                    {registrationPreview.length === 0 ? (
+                      <p className="text-xs text-slate-500">No subject papers selected yet.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {registrationPreview.map((item) => (
+                          <p key={item.subjectId} className="text-[11px] font-bold text-slate-700">
+                            {item.subjectName} {"\u2192"} <span className="text-blue-600">{item.papers.join(", ")}</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1533,7 +1576,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Registration Number</TableHead>
+                    {hasAnyRegistrationNumber && <TableHead>Registration Number</TableHead>}
                     <TableHead>Student Name</TableHead>
                     <TableHead>Class</TableHead>
                     <TableHead>Exam Level</TableHead>
@@ -1545,9 +1588,15 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 <TableBody>
                   {filteredStudents.map((student) => (
                     <TableRow key={student.id}>
+                    {hasAnyRegistrationNumber && (
                       <TableCell className="font-mono text-sm text-slate-900">
-                        {student.registrationNumber}
+                        {student.registrationNumber || (
+                          <Badge variant="outline" className="text-[10px] font-bold text-orange-600 bg-orange-50 border-orange-200 uppercase tracking-tight">
+                            Pending Payment
+                          </Badge>
+                        )}
                       </TableCell>
+                    )}
                       <TableCell className="font-semibold text-slate-900">
                         <div className="flex flex-col gap-1">
                           {student.studentName}
@@ -1587,8 +1636,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                title={isFinalized && !student.isAdditional ? "Cannot edit/delete after finalization" : "Edit or delete student"}
-                                disabled={isFinalized && !student.isAdditional && !isAdmin}
+                                title={(student.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !student.isAdditional ? "Cannot edit/delete after level finalization" : "Edit or delete student"}
+                                disabled={(student.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !student.isAdditional && !isAdmin}
                               >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
@@ -1627,10 +1676,14 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
           {viewingStudent && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase">Registration Number</p>
-                  <p className="text-sm font-medium text-slate-900">{viewingStudent.registrationNumber}</p>
-                </div>
+                {viewingStudent.registrationNumber && (
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase">Registration Number</p>
+                    <p className="text-sm font-medium text-slate-900">
+                      {viewingStudent.registrationNumber}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase">Student Name</p>
                   <p className="text-sm font-medium text-slate-900">{viewingStudent.studentName}</p>
@@ -1681,10 +1734,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 <p className="text-xs font-semibold text-slate-500 uppercase">Total Entries</p>
                 <p className="text-sm font-medium text-slate-900">{viewingStudent.totalEntries}</p>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase">Answer Booklets</p>
-                <p className="text-sm font-medium text-slate-900">{viewingStudent.bookletsCount || 0} (UGX {((viewingStudent.bookletsCount || 0) * 25000).toLocaleString()})</p>
-              </div>
             </div>
           )}
           <DialogFooter>
@@ -1692,8 +1741,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               Close
             </Button>
             <Button 
-              disabled={isFinalized && !viewingStudent?.isAdditional && !isAdmin}
-              title={isFinalized && !viewingStudent?.isAdditional && !isAdmin ? "Cannot edit after finalization" : ""}
+              disabled={(viewingStudent?.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !viewingStudent?.isAdditional && !isAdmin}
+              title={(viewingStudent?.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !viewingStudent?.isAdditional && !isAdmin ? "Cannot edit after finalization" : ""}
               onClick={() => {
                 setIsViewModalOpen(false);
                 handleEditStudent(viewingStudent!);
@@ -1769,31 +1818,6 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </Select>
             </div>
 
-            {/* Answer Booklets Calculation */}
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-booklets" className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                Answer Booklets 
-                <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold text-[9px] px-1.5 h-4">25,000 Each</Badge>
-              </Label>
-              <div className="flex gap-2.5 items-center">
-                <Input
-                  id="edit-booklets"
-                  type="number"
-                  min="0"
-                  placeholder="Qty"
-                  value={editBookletsCount || ""}
-                  onChange={(e) => setEditBookletsCount(parseInt(e.target.value) || 0)}
-                  className="w-20 h-10 font-bold border-2 rounded-lg text-center focus:ring-blue-600 transition-all text-sm"
-                />
-                <div className="flex-1 bg-slate-50 border-2 border-slate-200 rounded-lg px-3 h-10 flex items-center justify-between shadow-inner">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Amount</p>
-                  <p className="text-sm font-black text-blue-700">
-                    UGX {(editBookletsCount * 25000).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {/* Subjects Selection */}
             <div className="space-y-3 md:col-span-2 pt-2">
               <div className="flex flex-col gap-2">
@@ -1821,68 +1845,77 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     <p className="text-[11px] font-bold uppercase tracking-widest">No subjects available</p>
                   </div>
                 ) : (
-                  filteredSubjectsForEdit.map((subject) => {
-                    const isSelected = !!editSelectedSubjects[subject.id];
-                    const isCompulsory = !subject.optional;
-                    const category = getSubjectCategory(subject.code);
-                    
-                    return (
-                      <div 
-                        key={subject.id} 
-                        className={`group relative rounded-2xl border-2 transition-all duration-300 p-4 ${
-                          isSelected 
-                            ? (category === "Arts" ? "border-amber-500 bg-white shadow-lg shadow-amber-100/30" : "border-blue-600 bg-white shadow-lg shadow-blue-100/30") 
-                            : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md"
-                        } scale-[1.0] hover:scale-[1.01]`}
-                      >
-                        <div className="flex flex-col h-full gap-3">
-                          <div className="flex items-start justify-between gap-2.5">
-                            <div className="flex flex-col gap-1 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`text-[9px] font-black font-mono px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm ${
-                                  isSelected 
-                                    ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
-                                    : "bg-slate-100 text-slate-600"
-                                }`}>
-                                  {subject.standardCode}
-                                </span>
-                                {isCompulsory ? (
-                                  <Badge className="bg-slate-900 text-white border-none text-[8px] px-1.5 h-4 font-black uppercase tracking-widest shadow-sm">
-                                    COMPULSORY
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className={`text-[8px] px-1.5 h-4 font-bold uppercase tracking-widest border-2 ${
-                                    category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
-                                  }`}>
-                                    OPTIONAL
-                                  </Badge>
-                                )}
-                              </div>
-                              <Label 
-                                htmlFor={`edit-${subject.id}`} 
-                                className={`font-black text-[13px] leading-tight transition-colors cursor-pointer ${
-                                  isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
-                                }`}
-                              >
-                                {subject.name}
-                              </Label>
-                            </div>
+                  (() => {
+                    const selectedSubjectData = Object.keys(editSelectedSubjects).map(id => subjects.find(s => s.id === id));
+                    const hasSubMathSelected = selectedSubjectData.some(s => s?.code === "SUB_MATHS" || s?.standardCode === "475S");
+                    const hasSubIctSelected = selectedSubjectData.some(s => s?.code === "SUB_ICT" || s?.standardCode === "610");
 
-                            <Checkbox
-                              id={`edit-${subject.id}`}
-                              checked={isSelected}
-                              onCheckedChange={() => toggleSubjectForEdit(subject.id)}
-                              disabled={isCompulsory}
-                              className={`h-6 w-6 rounded-md border-2 transition-all duration-200 ${
-                                isSelected 
-                                  ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
-                                  : "border-slate-300 bg-white hover:border-blue-400"
-                              }`}
-                            />
-                          </div>
-                          
-                          <div className="mt-auto pt-3 border-t-2 border-slate-50">
-                            <div className="flex items-center justify-between gap-2">
+                    return filteredSubjectsForEdit.map((subject) => {
+                      const isSelected = !!editSelectedSubjects[subject.id];
+                      const isCompulsory = !subject.optional;
+                      const category = getSubjectCategory(subject.code);
+                      
+                      const isSubMath = subject.code === "SUB_MATHS" || subject.standardCode === "475S";
+                      const isSubIct = subject.code === "SUB_ICT" || subject.standardCode === "610";
+                      const isSubsidiaryDisabled = (isSubMath && hasSubIctSelected) || (isSubIct && hasSubMathSelected);
+                      
+                      return (
+                        <div 
+                          key={subject.id} 
+                          className={`group relative rounded-2xl border-2 transition-all duration-300 p-4 ${
+                            isSelected 
+                              ? (category === "Arts" ? "border-amber-500 bg-white shadow-lg shadow-amber-100/30" : "border-blue-600 bg-white shadow-lg shadow-blue-100/30") 
+                              : (isSubsidiaryDisabled ? "border-slate-100 bg-slate-50/50 opacity-40 grayscale-[0.5]" : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md")
+                          } scale-[1.0] ${!isSubsidiaryDisabled ? 'hover:scale-[1.01]' : ''}`}
+                        >
+                          <div className="flex flex-col h-full gap-3">
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`text-[9px] font-black font-mono px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm ${
+                                    isSelected 
+                                      ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}>
+                                    {subject.standardCode}
+                                  </span>
+                                  {isCompulsory ? (
+                                    <Badge className="bg-slate-900 text-white border-none text-[8px] px-1.5 h-4 font-black uppercase tracking-widest shadow-sm">
+                                      COMPULSORY
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className={`text-[8px] px-1.5 h-4 font-bold uppercase tracking-widest border-2 ${
+                                      category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
+                                    }`}>
+                                      OPTIONAL
+                                    </Badge>
+                                  )}
+                                </div>
+                                <Label 
+                                  htmlFor={`edit-${subject.id}`} 
+                                  className={`font-black text-[13px] leading-tight transition-colors ${!isSubsidiaryDisabled ? 'cursor-pointer' : 'cursor-not-allowed'} ${
+                                    isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
+                                  }`}
+                                >
+                                  {subject.name}
+                                </Label>
+                              </div>
+
+                              <Checkbox
+                                id={`edit-${subject.id}`}
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSubjectForEdit(subject.id)}
+                                disabled={isCompulsory || isSubsidiaryDisabled}
+                                className={`h-6 w-6 rounded-md border-2 transition-all duration-200 ${
+                                  isSelected 
+                                    ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
+                                    : (isSubsidiaryDisabled ? "border-slate-200 bg-slate-100 cursor-not-allowed" : "border-slate-300 bg-white hover:border-blue-400")
+                                }`}
+                              />
+                            </div>
+                            
+                            <div className="mt-auto pt-3 border-t-2 border-slate-50">
+                              <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1">
                                 <BookOpen className={`h-3 w-3 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
                                 <p className={`text-[10px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
@@ -1962,9 +1995,10 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                         </div>
                       </div>
                     );
-                  })
-                  )}
-                </div>
+                  });
+                })()
+              )}
+            </div>
               </div>
 
             {/* Total Entries Display */}
@@ -1983,19 +2017,44 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
             </div>
 
             <div className="md:col-span-2">
-              <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-                <p className="mb-1.5 text-xs font-semibold text-slate-800">Live Preview</p>
-                {editRegistrationPreview.length === 0 ? (
-                  <p className="text-xs text-slate-500">No subject papers selected yet.</p>
-                ) : (
-                  <div className="space-y-1">
-                    {editRegistrationPreview.map((item) => (
-                      <p key={item.subjectId} className="text-[11px] text-slate-700">
-                        {item.subjectName} {"\u2192"} {item.papers.join(", ")}
-                      </p>
+              <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm space-y-3">
+                <div>
+                  <p className="mb-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">Registration Status</p>
+                  <div className="flex flex-wrap gap-2">
+                    {getValidationStatus((editClassLevel === "S.5" || editClassLevel === "S.6") ? "UACE" : "UCE", editSelectedSubjects).map((rule, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md border-2 transition-all ${
+                          rule.met 
+                            ? "bg-green-50 border-green-100 text-green-700" 
+                            : "bg-red-50 border-red-100 text-red-600"
+                        }`}
+                      >
+                        {rule.met ? (
+                          <CheckCircle2 className="h-3 w-3" />
+                        ) : (
+                          <AlertCircle className="h-3 w-3" />
+                        )}
+                        <span className="text-[10px] font-black uppercase tracking-tight">{rule.label}</span>
+                      </div>
                     ))}
                   </div>
-                )}
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Preview</p>
+                  {editRegistrationPreview.length === 0 ? (
+                    <p className="text-xs text-slate-500">No subject papers selected yet.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {editRegistrationPreview.map((item) => (
+                        <p key={item.subjectId} className="text-[11px] font-bold text-slate-700">
+                          {item.subjectName} {"\u2192"} <span className="text-blue-600">{item.papers.join(", ")}</span>
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

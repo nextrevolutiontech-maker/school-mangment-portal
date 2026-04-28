@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Info,
   PlusCircle,
+  ArrowRightCircle,
 } from "lucide-react";
 import {
   Card,
@@ -51,10 +52,15 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const { user, schools, students, invoices, zones, subjects, finalizeRegistration } = useAuth();
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
   const [markingGuide, setMarkingGuide] = useState<"Arts" | "Sciences" | "Both">("Arts");
-  const [bookletsCount, setBookletsCount] = useState<number>(0);
 
   const currentSchool = schools.find((school) => school.code === user?.schoolCode);
-  const isFinalized = currentSchool?.registrationFinalized ?? false;
+  const isUceFinalized = currentSchool?.uceRegistrationFinalized ?? false;
+  const isUaceFinalized = currentSchool?.uaceRegistrationFinalized ?? false;
+  const isAllFinalized = (currentSchool?.educationLevel === "UCE" && isUceFinalized) || 
+                         (currentSchool?.educationLevel === "UACE" && isUaceFinalized) ||
+                         (isUceFinalized && isUaceFinalized);
+
+  const [finalizeLevel, setFinalizeLevel] = useState<"UCE" | "UACE">("UCE");
 
   const schoolStudents = students.filter((student) => student.schoolCode === user?.schoolCode);
   const schoolInvoices = invoices.filter((inv) => inv.schoolCode === user?.schoolCode);
@@ -62,10 +68,10 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const handleFinalize = () => {
     if (!user?.schoolCode) return;
     
-    finalizeRegistration(user.schoolCode, markingGuide, bookletsCount);
+    finalizeRegistration(user.schoolCode, markingGuide, finalizeLevel);
     setIsFinalizeDialogOpen(false);
-    toast.success("Registration Finalized", {
-      description: "Student records have been locked and your initial invoice has been generated."
+    toast.success(`${finalizeLevel} Registration Finalized`, {
+      description: `${finalizeLevel} records have been locked and your invoice has been generated.`
     });
     onPageChange("payment-status");
   };
@@ -253,14 +259,14 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
           <AlertTitle className="text-orange-900 font-bold">Registration Incomplete</AlertTitle>
           <AlertDescription className="text-orange-700">
             You must finalize your student registration before an invoice can be generated and payment made.
-            <div className="mt-3">
+            <div className="mt-4">
               <Button 
-                onClick={() => onPageChange("subject-entries")}
+                onClick={() => onPageChange("students")}
                 size="sm"
-                className="bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg h-9"
+                className="bg-[#f97316] hover:bg-[#ea580c] text-white font-black rounded-full h-11 px-6 shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
               >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Complete Registration
+                <ArrowRightCircle className="h-5 w-5" />
+                <span className="text-sm">Complete Registration</span>
               </Button>
             </div>
           </AlertDescription>
@@ -632,7 +638,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
           </div>
         </CardHeader>
         <CardContent className="pt-4">
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {upcomingExams.map((exam, index) => (
               <div
                 key={index}
@@ -704,21 +710,21 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Button
           variant="outline"
-          className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
+          className="h-auto w-full items-start justify-start rounded-2xl px-4 py-4 text-left"
           onClick={() => onPageChange("add-student")}
         >
-          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-600/10 text-orange-600">
+          <div className="mr-3 shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-600/10 text-orange-600">
             <Users className="h-5 w-5" />
           </div>
-          <div>
-            <div className="font-semibold text-slate-900">
-              {isFinalized ? "Add Additional Student" : "Add Student"}
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-slate-900 truncate">
+              {isAllFinalized ? "Add Additional Student" : "Add Student"}
             </div>
-            <div className="mt-1 text-xs text-slate-500">
-              {isFinalized 
+            <div className="mt-1 text-xs text-slate-500 whitespace-normal line-clamp-2">
+              {isAllFinalized 
                 ? "Register a new candidate post-finalization" 
                 : "Register a new candidate for examination entries"}
             </div>
@@ -727,15 +733,15 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
 
         <Button
           variant="outline"
-          className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
+          className="h-auto w-full items-start justify-start rounded-2xl px-4 py-4 text-left"
           onClick={() => onPageChange("upload-pdf")}
         >
-          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+          <div className="mr-3 shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
             <Upload className="h-5 w-5" />
           </div>
-          <div>
-            <div className="font-semibold text-slate-900">Upload Signed Form</div>
-            <div className="mt-1 text-xs text-slate-500">
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-slate-900 truncate">Upload Signed Form</div>
+            <div className="mt-1 text-xs text-slate-500 whitespace-normal line-clamp-2">
               Submit the authorised registration form for review
             </div>
           </div>
@@ -743,48 +749,50 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
 
         <Button
           variant="outline"
-          className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left"
+          className="h-auto w-full items-start justify-start rounded-2xl px-4 py-4 text-left"
           onClick={() => onPageChange("reports")}
         >
-          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
+          <div className="mr-3 shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
             <CheckCircle className="h-5 w-5" />
           </div>
-          <div>
-            <div className="font-semibold text-slate-900">My Reports</div>
-            <div className="mt-1 text-xs text-slate-500">
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-slate-900 truncate">My Reports</div>
+            <div className="mt-1 text-xs text-slate-500 whitespace-normal line-clamp-2">
               Review school registration summaries and downloads
             </div>
           </div>
         </Button>
 
-        {!isFinalized ? (
+        {!isAllFinalized ? (
           <Button
             variant="default"
-            className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left bg-slate-900 hover:bg-slate-800 border-none shadow-lg shadow-slate-200"
+            className="h-auto w-full items-start justify-start rounded-2xl px-4 py-4 text-left bg-slate-900 hover:bg-slate-800 border-none shadow-lg shadow-slate-200"
             onClick={() => setIsFinalizeDialogOpen(true)}
           >
-            <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white">
+            <div className="mr-3 shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white">
               <Lock className="h-5 w-5" />
             </div>
-            <div>
-              <div className="font-semibold text-white">Finalize Registration</div>
-              <div className="mt-1 text-xs text-slate-300">
-                Lock records and generate your final invoice
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-white truncate">
+                Finalize {(!isUceFinalized && !isUaceFinalized) ? "" : (isUceFinalized ? "UACE " : "UCE ")}Registration
+              </div>
+              <div className="mt-1 text-xs text-slate-300 whitespace-normal line-clamp-2">
+                Lock records and generate your invoice
               </div>
             </div>
           </Button>
         ) : (
           <Button
             variant="outline"
-            className="h-auto items-start justify-start rounded-2xl px-4 py-4 text-left border-emerald-100 bg-emerald-50/50 cursor-default hover:bg-emerald-50/50"
+            className="h-auto w-full items-start justify-start rounded-2xl px-4 py-4 text-left border-emerald-100 bg-emerald-50/50 cursor-default hover:bg-emerald-50/50"
             disabled
           >
-            <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white">
+            <div className="mr-3 shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white">
               <CheckCircle className="h-5 w-5" />
             </div>
-            <div>
-              <div className="font-semibold text-emerald-900">Registration Finalized</div>
-              <div className="mt-1 text-xs text-emerald-600 font-medium">
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-emerald-900 truncate">Registration Finalized</div>
+              <div className="mt-1 text-xs text-emerald-600 font-medium whitespace-normal line-clamp-2">
                 Your records are locked and invoice generated
               </div>
             </div>
@@ -803,6 +811,36 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
           </DialogHeader>
           
           <div className="space-y-6 py-4">
+            <div className="space-y-4">
+              <Label className="text-sm font-bold text-slate-700">Select Exam Level to Finalize</Label>
+              <RadioGroup 
+                value={finalizeLevel} 
+                onValueChange={(value: "UCE" | "UACE") => setFinalizeLevel(value)}
+                className="grid grid-cols-2 gap-4"
+              >
+                <div>
+                  <RadioGroupItem value="UCE" id="uce" disabled={isUceFinalized} className="peer sr-only" />
+                  <Label
+                    htmlFor="uce"
+                    className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 ${isUceFinalized ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <span className="text-sm font-bold">UCE (O-Level)</span>
+                    {isUceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED</span>}
+                  </Label>
+                </div>
+                <div>
+                  <RadioGroupItem value="UACE" id="uace" disabled={isUaceFinalized} className="peer sr-only" />
+                  <Label
+                    htmlFor="uace"
+                    className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 ${isUaceFinalized ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <span className="text-sm font-bold">UACE (A-Level)</span>
+                    {isUaceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED</span>}
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             <div className="space-y-4">
               <Label className="text-sm font-bold text-slate-700">Select Marking Guide (25,000 UGX each)</Label>
               <RadioGroup 
@@ -828,25 +866,6 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
               </RadioGroup>
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="booklets" className="text-sm font-bold text-slate-700">
-                Answer Booklets (25,000 UGX per booklet)
-              </Label>
-              <div className="flex items-center gap-4">
-                <Input 
-                  id="booklets"
-                  type="number" 
-                  min="0" 
-                  value={bookletsCount} 
-                  onChange={(e) => setBookletsCount(parseInt(e.target.value) || 0)}
-                  className="max-w-[120px] rounded-xl font-bold h-12 text-lg"
-                />
-                <p className="text-sm text-slate-500 font-medium">
-                  Total: {(bookletsCount * 25000).toLocaleString()} UGX
-                </p>
-              </div>
-            </div>
-
             <Alert className="bg-blue-50 border-blue-100 text-blue-800 rounded-2xl">
               <Info className="h-4 w-4" />
               <AlertTitle className="font-bold">Important Note</AlertTitle>
@@ -862,7 +881,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
               Cancel
             </Button>
             <Button onClick={handleFinalize} className="rounded-xl font-bold bg-slate-900 hover:bg-slate-800">
-              Confirm & Finalize
+              Confirm & Finalize {finalizeLevel}
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </DialogFooter>

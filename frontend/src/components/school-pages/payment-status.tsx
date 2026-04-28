@@ -105,8 +105,6 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
     const schoolStudents = students.filter(s => s.schoolCode === user?.schoolCode && s.isAdditional);
     const fullySubmittedCount = schoolStudents.filter(student => isStudentFullyRegistered(student, subjects)).length;
 
-    const totalBooklets = schoolStudents.reduce((sum, s) => sum + (s.bookletsCount || 0), 0);
-    
     const items = [
       { 
         description: "Additional Student Fee", 
@@ -115,19 +113,12 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
         total: fullySubmittedCount * 27000,
         formula: `27,000 × ${fullySubmittedCount} = ${(fullySubmittedCount * 27000).toLocaleString()}`
       },
-      { 
-        description: "Additional Answer Booklets", 
-        quantity: totalBooklets, 
-        unitPrice: 25000, 
-        total: totalBooklets * 25000,
-        formula: `25,000 × ${totalBooklets} = ${(totalBooklets * 25000).toLocaleString()}`
-      },
     ];
 
     const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
     if (totalAmount === 0) {
-      toast.error("No additional students or booklets to invoice");
+      toast.error("No additional students to invoice");
       return;
     }
 
@@ -311,36 +302,36 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
         </p>
       </div>
 
-      <Alert variant={status.variant} className="rounded-2xl border-2 shadow-sm bg-white overflow-hidden relative group">
+      <Alert variant={status.variant} className="rounded-2xl border-2 shadow-sm bg-white overflow-hidden relative group block px-0 py-0">
         <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
           status.variant === 'success' ? 'bg-emerald-500' : 
           status.variant === 'info' ? 'bg-blue-500' : 
           'bg-orange-500'
         }`} />
-        <div className="flex items-start gap-4 pr-2">
-          <div className={`mt-1 p-2 rounded-xl ${
+        <div className="flex flex-row items-start gap-4 p-5 w-full">
+          <div className={`shrink-0 p-2.5 rounded-xl ${
             status.variant === 'success' ? 'bg-emerald-50 text-emerald-600' : 
             status.variant === 'info' ? 'bg-blue-50 text-blue-600' : 
             'bg-orange-50 text-orange-600'
           }`}>
-            <StatusIcon className="h-5 w-5" />
+            <StatusIcon className="h-6 w-6" />
           </div>
-          <div className="flex-1">
-            <AlertTitle className="text-lg font-bold text-slate-900 mb-1">{status.title}</AlertTitle>
-            <AlertDescription className="text-slate-600 font-medium leading-relaxed">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl font-bold text-slate-900 mb-1.5 tracking-tight">{status.title}</h3>
+            <p className="text-slate-600 font-medium leading-relaxed text-base">
               {status.description}
-            </AlertDescription>
+            </p>
             {(status as any).needsFinalization && (
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-5 flex flex-wrap items-center gap-4">
                 <Button 
                   onClick={() => onPageChange("subject-entries")}
-                  className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold h-11 px-6 shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold h-12 px-8 shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <PlusCircle className="mr-2 h-5 w-5" />
                   Complete Registration
                 </Button>
-                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <Info className="h-3.5 w-3.5" />
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Info className="h-4 w-4" />
                   Required to generate invoice
                 </div>
               </div>

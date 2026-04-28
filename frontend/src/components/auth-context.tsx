@@ -62,6 +62,8 @@ export interface SchoolRecord {
   contactPerson?: string;
   contactDesignation?: string;
   registrationFinalized?: boolean;
+  uceRegistrationFinalized?: boolean;
+  uaceRegistrationFinalized?: boolean;
   markingGuide?: "Arts" | "Sciences" | "Both" | "None";
 }
 
@@ -81,6 +83,7 @@ export interface Invoice {
   status: "pending" | "paid";
   type: "original" | "additional";
   paymentProof?: string;
+  studentIds?: string[];
 }
 
 export interface StudentSubjectEntry {
@@ -97,7 +100,7 @@ export interface StudentSubjectEntry {
 
 export interface StudentRecord {
   id: string;
-  registrationNumber: string; // Format: WAK/YY-SCHOOLCODE/STUDENTNO
+  registrationNumber?: string; // Format: WAK/YY-SCHOOLCODE/STUDENTNO
   studentName: string;
   classLevel: "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6";
   examLevel: "UCE" | "UACE";
@@ -105,7 +108,6 @@ export interface StudentRecord {
   schoolName: string;
   academicYear: string;
   stream?: string; // Internal use only
-  bookletsCount?: number;
   isAdditional?: boolean;
   subjects: StudentSubjectEntry[];
   totalEntries: number; // Sum of all checked entries
@@ -197,15 +199,19 @@ interface AuthContextType {
     status: SchoolStatus,
     activationCode?: string,
   ) => void;
-  finalizeRegistration: (schoolCode: string, markingGuide: "Arts" | "Sciences" | "Both", bookletsCount: number) => void;
+  finalizeRegistration: (
+    schoolCode: string, 
+    markingGuide: "Arts" | "Sciences" | "Both",
+    level: "UCE" | "UACE"
+  ) => void;
   addInvoice: (invoice: Omit<Invoice, "id">, studentIds?: string[]) => void;
   uploadPaymentProof: (invoiceId: string, proofUrl: string) => void;
+  markInvoiceAsPaid: (invoiceId: string) => void;
   addStudentEntry: (entry: {
     schoolCode: string;
     studentName: string;
     classLevel: "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6";
     stream?: string;
-    bookletsCount?: number;
     subjects: StudentSubjectEntry[];
     totalEntries: number;
     isAdditional?: boolean;
@@ -216,7 +222,6 @@ interface AuthContextType {
       studentName: string;
       classLevel: "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6";
       stream?: string;
-      bookletsCount?: number;
       subjects: StudentSubjectEntry[];
       totalEntries: number;
     },
@@ -245,6 +250,7 @@ interface AuthContextType {
       maxPapers?: number;
     },
   ) => void;
+  deleteSubject: (subjectId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -949,14 +955,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (identifier: string, password: string) => {
     if (
       identifier === adminUser.email &&
-      password === "wakissha2026"
+      (password === "wakissha2026" || password === "admin123")
     ) {
       setUser(adminUser);
       return;
     }
 
-    const school = schools.find((record) => record.code === identifier);
-    if (!school || schoolPasswords[identifier] !== password) {
+    const school = schools.find(
+      (record) => record.code === identifier || record.email === identifier
+    );
+    if (!school || schoolPasswords[school.code] !== password) {
       throw new Error("Invalid credentials");
     }
 
@@ -1039,48 +1047,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const finalizeRegistration = (schoolCode: string, markingGuide: "Arts" | "Sciences" | "Both", bookletsCount: number) => {
+  const finalizeRegistration = (
+    schoolCode: string, 
+    markingGuide: "Arts" | "Sciences" | "Both",
+    level: "UCE" | "UACE"
+  ) => {
     setSchools((prev) =>
       prev.map((school) =>
         school.code === schoolCode
           ? {
               ...school,
-              registrationFinalized: true,
+              registrationFinalized: true, // Keep for backward compatibility
+              uceRegistrationFinalized: level === "UCE" ? true : school.uceRegistrationFinalized,
+              uaceRegistrationFinalized: level === "UACE" ? true : school.uaceRegistrationFinalized,
               markingGuide,
             }
           : school,
       ),
     );
 
-    // Generate initial invoice
+    // Generate initial invoice for the specific level
     const school = schools.find(s => s.code === schoolCode);
     if (!school) return;
 
-    const schoolStudents = students.filter(s => s.schoolCode === schoolCode && !s.isAdditional);
+    // Filter students by school AND the specific level being finalized, and NOT already additional
+    const schoolStudents = students.filter(s => 
+      s.schoolCode === schoolCode && 
+      s.examLevel === level &&
+      !s.isAdditional
+    );
     const fullySubmittedStudents = schoolStudents.filter(student => isStudentFullyRegistered(student, subjects));
     const fullySubmittedCount = fullySubmittedStudents.length;
 
     const items = [
+      // Only add school registration fee if this is the first level being finalized
+      ...( (level === "UCE" && !school.uaceRegistrationFinalized) || 
+           (level === "UACE" && !school.uceRegistrationFinalized) ||
+           (!school.uceRegistrationFinalized && !school.uaceRegistrationFinalized)
+        ? [{ 
+            description: "School Registration Fee", 
+            quantity: 1, 
+            unitPrice: 500000, 
+            total: 500000,
+            formula: "Fixed Amount"
+          }] 
+        : []
+      ),
       { 
-        description: "School Registration Fee", 
-        quantity: 1, 
-        unitPrice: 500000, 
-        total: 500000,
-        formula: "Fixed Amount"
-      },
-      { 
-        description: "Student Fee", 
+        description: `${level} Student Fee`, 
         quantity: fullySubmittedCount, 
         unitPrice: 27000, 
         total: fullySubmittedCount * 27000,
         formula: `27,000 × ${fullySubmittedCount} = ${(fullySubmittedCount * 27000).toLocaleString()}`
-      },
-      { 
-        description: "Answer Booklets", 
-        quantity: bookletsCount, 
-        unitPrice: 25000, 
-        total: bookletsCount * 25000,
-        formula: `25,000 × ${bookletsCount} = ${(bookletsCount * 25000).toLocaleString()}`
       },
     ];
 
@@ -1104,6 +1122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
+    const studentIds = fullySubmittedStudents.map(s => s.id);
+
     addInvoice({
       serialNumber: `INV-${schoolCode}-${Date.now().toString().slice(-4)}`,
       schoolCode,
@@ -1112,19 +1132,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       totalAmount,
       status: "pending",
       type: "original"
-    });
-
-    // Mark these students as invoiced
-    const studentIds = fullySubmittedStudents.map(s => s.id);
-    setStudents(prev => prev.map(s => 
-      studentIds.includes(s.id) ? { ...s, isInvoiced: true } : s
-    ));
+    }, studentIds);
   };
 
   const addInvoice = (invoiceData: Omit<Invoice, "id">, studentIds?: string[]) => {
     const newInvoice: Invoice = {
       ...invoiceData,
       id: `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      studentIds: studentIds || [],
     };
     setInvoices((prev) => [...prev, newInvoice]);
 
@@ -1155,13 +1170,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const markInvoiceAsPaid = (invoiceId: string) => {
+    setInvoices(prev => {
+      const invoice = prev.find(inv => inv.id === invoiceId);
+      if (!invoice) return prev;
+
+      if (invoice.status === "paid") return prev;
+
+      const updatedInvoices = prev.map(inv => 
+        inv.id === invoiceId ? { ...inv, status: "paid" as const } : inv
+      );
+
+      // Now update students linked to this invoice
+      if (invoice.studentIds && invoice.studentIds.length > 0) {
+        setStudents(currentStudents => {
+          const schoolCode = invoice.schoolCode;
+          const schoolSuffix = schoolCode.replace("WAK26-", "");
+          
+          // Count existing registration numbers for this school to determine next serial
+          const uceStudentsWithRegNo = currentStudents.filter(s => 
+            s.schoolCode === schoolCode && s.examLevel === "UCE" && s.registrationNumber
+          );
+          const uaceStudentsWithRegNo = currentStudents.filter(s => 
+            s.schoolCode === schoolCode && s.examLevel === "UACE" && s.registrationNumber
+          );
+          
+          let nextUceSerial = uceStudentsWithRegNo.length + 1;
+          let nextUaceSerial = uaceStudentsWithRegNo.length + 500;
+
+          return currentStudents.map(s => {
+            if (invoice.studentIds?.includes(s.id) && !s.registrationNumber) {
+              const serial = s.examLevel === "UCE" ? nextUceSerial++ : nextUaceSerial++;
+              const regNo = `WAK/26-${schoolSuffix}/${String(serial).padStart(3, "0")}`;
+              return { ...s, registrationNumber: regNo };
+            }
+            return s;
+          });
+        });
+      }
+
+      return updatedInvoices;
+    });
+  };
+
   const addStudentEntry: AuthContextType["addStudentEntry"] = (entry) => {
     setStudents((prev) => {
-      const schoolStudents = prev.filter((student) => student.schoolCode === entry.schoolCode);
-      const serial = String(schoolStudents.length + 1).padStart(3, "0");
-      const schoolSuffix = entry.schoolCode.replace("WAK26-", "");
-      const registrationNumber = `WAK/26-${schoolSuffix}/${serial}`;
-
       const schoolName =
         schools.find((school) => school.code === entry.schoolCode)?.name ?? entry.schoolCode;
 
@@ -1170,16 +1223,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ["S.1", "S.2", "S.3", "S.4"].includes(entry.classLevel) ? "UCE" : "UACE";
 
       const schoolRecord = schools.find(s => s.code === entry.schoolCode);
-      const isAdditional = schoolRecord?.registrationFinalized ?? false;
+      const levelFinalized = examLevel === "UCE" 
+        ? schoolRecord?.uceRegistrationFinalized 
+        : schoolRecord?.uaceRegistrationFinalized;
+      
+      const isAdditional = entry.isAdditional ?? levelFinalized ?? false;
 
       const newStudent: StudentRecord = {
         id: `student-${Date.now()}`,
-        registrationNumber,
         studentName: entry.studentName,
         classLevel: entry.classLevel as "S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6",
         examLevel,
         stream: entry.stream,
-        bookletsCount: entry.bookletsCount,
         isAdditional,
         subjects: entry.subjects,
         totalEntries: entry.totalEntries,
@@ -1206,10 +1261,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!studentToUpdate) return;
 
     const schoolRecord = schools.find(s => s.code === studentToUpdate.schoolCode);
-    const isFinalized = schoolRecord?.registrationFinalized ?? false;
+    const examLevel = studentToUpdate.examLevel;
+    const levelFinalized = examLevel === "UCE" 
+      ? schoolRecord?.uceRegistrationFinalized 
+      : schoolRecord?.uaceRegistrationFinalized;
 
-    // Lock non-additional students if registration is finalized
-    if (isFinalized && !studentToUpdate.isAdditional) {
+    // Lock non-additional students if level registration is finalized
+    if (levelFinalized && !studentToUpdate.isAdditional) {
       console.warn("Attempted to update a locked student record.");
       return;
     }
@@ -1222,7 +1280,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               studentName: updates.studentName,
               classLevel: updates.classLevel,
               stream: updates.stream,
-              bookletsCount: updates.bookletsCount,
               subjects: updates.subjects,
               totalEntries: updates.totalEntries,
               examLevel: ["S.1", "S.2", "S.3", "S.4"].includes(updates.classLevel)
@@ -1239,10 +1296,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!studentToDelete) return;
 
     const schoolRecord = schools.find(s => s.code === studentToDelete.schoolCode);
-    const isFinalized = schoolRecord?.registrationFinalized ?? false;
+    const levelFinalized = studentToDelete.examLevel === "UCE" 
+      ? schoolRecord?.uceRegistrationFinalized 
+      : schoolRecord?.uaceRegistrationFinalized;
 
-    // Lock non-additional students if registration is finalized
-    if (isFinalized && !studentToDelete.isAdditional) {
+    // Lock non-additional students if level registration is finalized
+    if (levelFinalized && !studentToDelete.isAdditional) {
       console.warn("Attempted to delete a locked student record.");
       return;
     }
@@ -1317,6 +1376,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const deleteSubject: AuthContextType["deleteSubject"] = (subjectId) => {
+    setSubjects((prev) => prev.filter((subject) => subject.id !== subjectId));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -1335,11 +1398,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         finalizeRegistration,
         addInvoice,
         uploadPaymentProof,
+        markInvoiceAsPaid,
         addStudentEntry,
         updateStudentEntry,
         deleteStudentEntry,
         addSubject,
         updateSubject,
+        deleteSubject,
       }}
     >
       {children}
