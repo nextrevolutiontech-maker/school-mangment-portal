@@ -4,6 +4,11 @@ import {
   BookOpen,
   Download,
   MapPin,
+  Plus,
+  Pencil,
+  Trash2,
+  Save,
+  X,
 } from "lucide-react";
 import {
   Card,
@@ -23,24 +28,31 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { toast } from "sonner";
 import { useState } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useAuth, ScheduleEntry } from "../auth-context";
 
 interface TimetableProps {
   onPageChange: (page: string) => void;
-}
-
-interface ScheduleRow {
-  date: string;
-  day: string;
-  subject: string;
-  code: string;
-  paper: string;
-  level: "UCE" | "UACE";
-  period: "Morning" | "Afternoon";
-  duration: string;
 }
 
 function getPaperNumberLabel(paper: string) {
@@ -48,124 +60,8 @@ function getPaperNumberLabel(paper: string) {
   return paperNumber;
 }
 
-const uceSchedule: ScheduleRow[] = [
-  {
-    date: "2026-05-12",
-    day: "Tuesday",
-    subject: "English Language",
-    code: "112",
-    paper: "Paper 1",
-    level: "UCE",
-    period: "Morning",
-    duration: "2.5 hours",
-  },
-  {
-    date: "2026-05-14",
-    day: "Thursday",
-    subject: "Mathematics",
-    code: "456",
-    paper: "Paper 1",
-    level: "UCE",
-    period: "Morning",
-    duration: "2.5 hours",
-  },
-  {
-    date: "2026-05-18",
-    day: "Monday",
-    subject: "Biology",
-    code: "553",
-    paper: "Paper 2",
-    level: "UCE",
-    period: "Afternoon",
-    duration: "2.5 hours",
-  },
-  {
-    date: "2026-05-20",
-    day: "Wednesday",
-    subject: "History & Political Education",
-    code: "241",
-    paper: "Paper 1",
-    level: "UCE",
-    period: "Morning",
-    duration: "2.5 hours",
-  },
-  {
-    date: "2026-05-22",
-    day: "Friday",
-    subject: "Geography",
-    code: "273",
-    paper: "Paper 1",
-    level: "UCE",
-    period: "Morning",
-    duration: "2.5 hours",
-  },
-];
-
-const uaceSchedule: ScheduleRow[] = [
-  {
-    date: "2026-06-03",
-    day: "Wednesday",
-    subject: "General Paper",
-    code: "101",
-    paper: "Paper 1",
-    level: "UACE",
-    period: "Morning",
-    duration: "3 hours",
-  },
-  {
-    date: "2026-06-05",
-    day: "Friday",
-    subject: "Subsidiary Mathematics",
-    code: "475",
-    paper: "Paper 1",
-    level: "UACE",
-    period: "Morning",
-    duration: "2.5 hours",
-  },
-  {
-    date: "2026-06-09",
-    day: "Tuesday",
-    subject: "Physics",
-    code: "525",
-    paper: "Paper 2",
-    level: "UACE",
-    period: "Morning",
-    duration: "3 hours",
-  },
-  {
-    date: "2026-06-11",
-    day: "Thursday",
-    subject: "Chemistry",
-    code: "535",
-    paper: "Paper 2",
-    level: "UACE",
-    period: "Morning",
-    duration: "3 hours",
-  },
-  {
-    date: "2026-06-15",
-    day: "Monday",
-    subject: "Biology",
-    code: "545",
-    paper: "Paper 2",
-    level: "UACE",
-    period: "Morning",
-    duration: "3 hours",
-  },
-  {
-    date: "2026-06-18",
-    day: "Thursday",
-    subject: "Geography",
-    code: "230",
-    paper: "Paper 1",
-    level: "UACE",
-    period: "Afternoon",
-    duration: "3 hours",
-  },
-];
-
-function groupByDate(schedule: ScheduleRow[]) {
-  return schedule.reduce<Record<string, ScheduleRow[]>>((acc, exam) => {
+function groupByDate(schedule: ScheduleEntry[]) {
+  return schedule.reduce<Record<string, ScheduleEntry[]>>((acc, exam) => {
     if (!acc[exam.date]) {
       acc[exam.date] = [];
     }
@@ -179,12 +75,21 @@ function SchedulePanel({
   title,
   description,
   schedule,
+  onEdit,
+  onDelete,
 }: {
   title: string;
   description: string;
-  schedule: ScheduleRow[];
+  schedule: ScheduleEntry[];
+  onEdit?: (entry: ScheduleEntry) => void;
+  onDelete?: (id: string) => void;
 }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const groupedSchedule = groupByDate(schedule);
+  
+  const sortedSchedule = [...schedule].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
   const statCards = [
     {
       label: "Total Papers",
@@ -194,22 +99,22 @@ function SchedulePanel({
     },
     {
       label: "Start Date",
-      value: new Date(schedule[0].date).toLocaleDateString("en-US", {
+      value: schedule.length > 0 ? new Date(sortedSchedule[0].date).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
-      }),
+      }) : "TBA",
       className: "border-l-amber-500",
       valueClass: "text-slate-900",
     },
     {
       label: "End Date",
-      value: new Date(schedule[schedule.length - 1].date).toLocaleDateString(
+      value: schedule.length > 0 ? new Date(sortedSchedule[sortedSchedule.length - 1].date).toLocaleDateString(
         "en-US",
         {
           month: "short",
           day: "numeric",
         },
-      ),
+      ) : "TBA",
       className: "border-l-blue-500",
       valueClass: "text-slate-900",
     },
@@ -251,11 +156,12 @@ function SchedulePanel({
                     <TableHead>Code/Paper</TableHead>
                     <TableHead>Subject</TableHead>
                     <TableHead>Duration</TableHead>
+                    {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {schedule.map((exam) => (
-                    <TableRow key={`${exam.code}-${exam.date}`}>
+                  {sortedSchedule.map((exam) => (
+                    <TableRow key={exam.id}>
                       <TableCell className="font-semibold text-slate-900">
                         {exam.day},{" "}
                         {new Date(exam.date).toLocaleDateString("en-US", {
@@ -265,7 +171,9 @@ function SchedulePanel({
                         })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{exam.period}</Badge>
+                        <Badge variant="outline" className={exam.period === "Morning" ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-purple-50 text-purple-700 border-purple-100"}>
+                          {exam.period}
+                        </Badge>
                       </TableCell>
                       <TableCell className="font-mono font-bold">
                         <span className="text-black">{exam.code}</span>
@@ -277,8 +185,37 @@ function SchedulePanel({
                       <TableCell className="text-slate-500">
                         {exam.duration}
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-slate-400 hover:text-blue-600"
+                              onClick={() => onEdit?.(exam)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-slate-400 hover:text-red-600"
+                              onClick={() => onDelete?.(exam.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
+                  {sortedSchedule.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={isAdmin ? 6 : 5} className="h-24 text-center text-slate-500">
+                        No examination entries scheduled for this level yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -286,9 +223,9 @@ function SchedulePanel({
         </TabsContent>
 
         <TabsContent value="calendar" className="w-full space-y-4">
-          {Object.entries(groupedSchedule).map(([date, exams]) => (
+          {Object.entries(groupedSchedule).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime()).map(([date, exams]) => (
             <Card key={date}>
-              <CardHeader className="border-b border-slate-200">
+              <CardHeader className="border-b border-slate-200 bg-slate-50/50">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-600/15 text-orange-400">
                     <Calendar className="h-5 w-5" />
@@ -302,7 +239,7 @@ function SchedulePanel({
                         year: "numeric",
                       })}
                     </CardTitle>
-                    <CardDescription className="text-slate-500">
+                    <CardDescription className="text-slate-500 text-xs">
                       {exams.length} paper{exams.length > 1 ? "s" : ""} scheduled
                     </CardDescription>
                   </div>
@@ -311,8 +248,8 @@ function SchedulePanel({
               <CardContent className="grid gap-4 pt-6 lg:grid-cols-2">
                 {exams.map((exam) => (
                   <div
-                    key={`${exam.code}-${exam.date}`}
-                    className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4"
+                    key={exam.id}
+                    className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4 hover:border-orange-200 transition-colors group relative"
                   >
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                       <BookOpen className="h-4 w-4 text-red-400" />
@@ -327,18 +264,35 @@ function SchedulePanel({
                     <div className="space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <Clock className="h-3.5 w-3.5" />
-                        <span>{exam.period}</span>
+                        <span className="font-medium">{exam.period} Session</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3.5 w-3.5" />
                         <span>{exam.duration}</span>
                       </div>
                     </div>
+                    {isAdmin && (
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 bg-white shadow-sm border"
+                          onClick={() => onEdit?.(exam)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </CardContent>
             </Card>
           ))}
+          {schedule.length === 0 && (
+            <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed">
+              <p className="text-slate-500">No calendar entries to display.</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
@@ -346,7 +300,72 @@ function SchedulePanel({
 }
 
 export function Timetable({ onPageChange }: TimetableProps) {
+  const { user, timetable, addTimetableEntry, updateTimetableEntry, deleteTimetableEntry } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [isExporting, setIsExporting] = useState<"UCE" | "UACE" | null>(null);
+  
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<ScheduleEntry | null>(null);
+  
+  const [formData, setFormData] = useState({
+    date: "",
+    subject: "",
+    code: "",
+    paper: "Paper 1",
+    level: "UCE" as "UCE" | "UACE",
+    period: "Morning" as "Morning" | "Afternoon",
+    duration: "2.5 hours",
+  });
+
+  const uceSchedule = timetable.filter(e => e.level === "UCE");
+  const uaceSchedule = timetable.filter(e => e.level === "UACE");
+
+  const handleEdit = (entry: ScheduleEntry) => {
+    setEditingEntry(entry);
+    setFormData({
+      date: entry.date,
+      subject: entry.subject,
+      code: entry.code,
+      paper: entry.paper,
+      level: entry.level,
+      period: entry.period,
+      duration: entry.duration,
+    });
+    setIsManageDialogOpen(true);
+  };
+
+  const handleAddNew = (level: "UCE" | "UACE") => {
+    setEditingEntry(null);
+    setFormData({
+      date: "",
+      subject: "",
+      code: "",
+      paper: "Paper 1",
+      level: level,
+      period: "Morning",
+      duration: level === "UCE" ? "2.5 hours" : "3 hours",
+    });
+    setIsManageDialogOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingEntry) {
+      updateTimetableEntry(editingEntry.id, formData);
+      toast.success("Timetable entry updated");
+    } else {
+      addTimetableEntry(formData);
+      toast.success("New examination entry added");
+    }
+    setIsManageDialogOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this timetable entry?")) {
+      deleteTimetableEntry(id);
+      toast.success("Entry removed from timetable");
+    }
+  };
 
   const handleExport = async (level: "UCE" | "UACE") => {
     try {
@@ -447,7 +466,17 @@ export function Timetable({ onPageChange }: TimetableProps) {
         </TabsList>
 
         <TabsContent value="uce" className="w-full space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            {isAdmin && (
+              <Button
+                variant="default"
+                className="bg-slate-900 hover:bg-slate-800"
+                onClick={() => handleAddNew("UCE")}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add UCE Entry
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => handleExport("UCE")}
@@ -461,11 +490,23 @@ export function Timetable({ onPageChange }: TimetableProps) {
             title="UCE Timetable"
             description="Official UCE paper schedule for the current examination season."
             schedule={uceSchedule}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
           />
         </TabsContent>
 
         <TabsContent value="uace" className="w-full space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            {isAdmin && (
+              <Button
+                variant="default"
+                className="bg-slate-900 hover:bg-slate-800"
+                onClick={() => handleAddNew("UACE")}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add UACE Entry
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => handleExport("UACE")}
@@ -479,9 +520,116 @@ export function Timetable({ onPageChange }: TimetableProps) {
             title="UACE Timetable"
             description="Official UACE paper schedule with sitting times."
             schedule={uaceSchedule}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
           />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl" aria-describedby="timetable-desc">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              {editingEntry ? <Pencil className="h-5 w-5 text-blue-600" /> : <Plus className="h-5 w-5 text-green-600" />}
+              {editingEntry ? "Edit Timetable Entry" : "Add New Timetable Entry"}
+            </DialogTitle>
+            <DialogDescription id="timetable-desc">
+              Enter the examination details for {formData.level} below.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">Examination Date</Label>
+                <Input 
+                  id="date" 
+                  type="date" 
+                  required 
+                  value={formData.date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="period">Period</Label>
+                <Select 
+                  value={formData.period} 
+                  onValueChange={(val: any) => setFormData(prev => ({ ...prev, period: val }))}
+                >
+                  <SelectTrigger id="period">
+                    <SelectValue placeholder="Select period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Morning">Morning</SelectItem>
+                    <SelectItem value="Afternoon">Afternoon</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject Name</Label>
+              <Input 
+                id="subject" 
+                placeholder="e.g. Mathematics" 
+                required 
+                value={formData.subject}
+                onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">Subject Code</Label>
+                <Input 
+                  id="code" 
+                  placeholder="e.g. 456" 
+                  required 
+                  value={formData.code}
+                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="paper">Paper</Label>
+                <Select 
+                  value={formData.paper} 
+                  onValueChange={(val: any) => setFormData(prev => ({ ...prev, paper: val }))}
+                >
+                  <SelectTrigger id="paper">
+                    <SelectValue placeholder="Select paper" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Paper 1">Paper 1</SelectItem>
+                    <SelectItem value="Paper 2">Paper 2</SelectItem>
+                    <SelectItem value="Paper 3">Paper 3</SelectItem>
+                    <SelectItem value="Paper 4">Paper 4</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duration</Label>
+              <Input 
+                id="duration" 
+                placeholder="e.g. 2.5 hours" 
+                required 
+                value={formData.duration}
+                onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+              />
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsManageDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-slate-900 hover:bg-slate-800 px-8">
+                {editingEntry ? "Update Entry" : "Add to Timetable"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>

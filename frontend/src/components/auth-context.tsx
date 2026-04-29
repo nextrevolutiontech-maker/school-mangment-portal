@@ -115,6 +115,18 @@ export interface StudentRecord {
   isInvoiced?: boolean;
 }
 
+export interface ScheduleEntry {
+  id: string;
+  date: string;
+  day: string;
+  subject: string;
+  code: string;
+  paper: string;
+  level: "UCE" | "UACE";
+  period: "Morning" | "Afternoon";
+  duration: string;
+}
+
 // Helper functions for student registration validation
 export function mapSubjectCode(subjectCode: string) {
   const normalized = subjectCode.toUpperCase();
@@ -189,6 +201,7 @@ interface AuthContextType {
   zones: Zone[];
   subjects: Subject[];
   invoices: Invoice[];
+  timetable: ScheduleEntry[];
   login: (identifier: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -202,7 +215,8 @@ interface AuthContextType {
   finalizeRegistration: (
     schoolCode: string, 
     markingGuide: "Arts" | "Sciences" | "Both",
-    level: "UCE" | "UACE"
+    level: "UCE" | "UACE",
+    levelStudents: StudentRecord[]
   ) => void;
   addInvoice: (invoice: Omit<Invoice, "id">, studentIds?: string[]) => void;
   uploadPaymentProof: (invoiceId: string, proofUrl: string) => void;
@@ -251,6 +265,9 @@ interface AuthContextType {
     },
   ) => void;
   deleteSubject: (subjectId: string) => void;
+  addTimetableEntry: (entry: Omit<ScheduleEntry, "id" | "day">) => void;
+  updateTimetableEntry: (id: string, updates: Partial<Omit<ScheduleEntry, "id" | "day">>) => void;
+  deleteTimetableEntry: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -441,7 +458,7 @@ const initialSubjects: Subject[] = [
 
 const initialSchools: SchoolRecord[] = [
   {
-    id: "2",
+    id: "1",
     name: "AMITY SECONDARY SCHOOL",
     code: "WAK26-0001",
     email: "kampalasss@wakissha.ug",
@@ -454,444 +471,140 @@ const initialSchools: SchoolRecord[] = [
     academicYear: "2026",
     status: "active" as const,
     registrationDate: "2026-01-12",
-    students: 120,
-    amountPaid: "3,600,000 UGX",
-    paymentProof: "receipt-wak26-0001.pdf",
+    students: 0,
+    amountPaid: "2,550,000 UGX",
+    paymentProof: "https://placehold.co/600x800/e2e8f0/475569?text=Sample+Payment+Receipt",
     activationCode: "ACT-2026-001",
-  },
-  {
-    id: "3",
-    name: "Wakiso Hills College",
-    code: "WAK26-0002",
-    email: "wakisohills@wakissha.ug",
-    phone: "+256 700 101 002",
-    address: "Mityana Road, Wakiso",
-    district: "Wakiso",
-    zone: "BULOBA ZONE",
-    zone_id: "zone-2",
-    educationLevel: "UACE" as const,
-    academicYear: "2026",
-    status: "verified" as const,
-    registrationDate: "2026-01-18",
-    students: 98,
-    amountPaid: "2,940,000 UGX",
-    paymentProof: "receipt-wak26-0002.pdf",
-    activationCode: "ACT-2026-002",
-  },
-  {
-    id: "4",
-    name: "Entebbe High School",
-    code: "WAK26-0003",
-    email: "entebbehigh@wakissha.ug",
-    phone: "+256 700 101 003",
-    address: "Airport Road, Entebbe",
-    district: "Entebbe",
-    zone: "BWEYOGERERE ZONE",
-    zone_id: "zone-3",
-    educationLevel: "UACE" as const,
-    academicYear: "2026",
-    status: "pending" as const,
-    registrationDate: "2026-02-01",
-    students: 84,
-    amountPaid: "0 UGX",
-    paymentProof: "not-submitted.pdf",
-    activationCode: "",
-  },
-  {
-    id: "5",
-    name: "Nansana Secondary School",
-    code: "WAK26-0004",
-    email: "nansana@wakissha.ug",
-    phone: "+256 700 101 004",
-    address: "Hoima Road, Nansana",
-    district: "Wakiso",
-    zone: "ENTEBBE ZONE",
-    zone_id: "zone-4",
-    educationLevel: "UCE" as const,
-    academicYear: "2026",
-    status: "payment_submitted" as const,
-    registrationDate: "2026-02-10",
-    students: 73,
-    amountPaid: "2,190,000 UGX",
-    paymentProof: "receipt-wak26-0004.pdf",
-    activationCode: "",
-  },
+  }
 ];
 
 const schoolPasswords: Record<string, string> = {
   "WAK26-0001": "demo123",
-  "WAK26-0002": "demo123",
-  "WAK26-0003": "demo123",
-  "WAK26-0004": "demo123",
 };
 
-const initialStudents: StudentRecord[] = [
-  // WAK26-0001 (AMITY SECONDARY SCHOOL) - UCE Students
-  {
-    id: "student-1",
-    registrationNumber: "WAK/26-0001/001",
-    studentName: "John Smith",
-    examLevel: "UCE",
-    classLevel: "S.4",
-    schoolCode: "WAK26-0001",
-    schoolName: "AMITY SECONDARY SCHOOL",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-14",
-        subjectCode: "MATH",
-        subjectName: "Mathematics",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-1",
-        subjectCode: "ENG",
-        subjectName: "English",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 2,
-    registrationDate: "2026-01-15",
-  },
-  {
-    id: "student-2",
-    registrationNumber: "WAK/26-0001/002",
-    studentName: "Emma Johnson",
-    examLevel: "UCE",
-    classLevel: "S.4",
-    schoolCode: "WAK26-0001",
-    schoolName: "AMITY SECONDARY SCHOOL",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-1",
-        subjectCode: "ENG",
-        subjectName: "English",
-        paper: "Paper 2",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-14",
-        subjectCode: "MATH",
-        subjectName: "Mathematics",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-16",
-        subjectCode: "PHY",
-        subjectName: "Physics",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 3,
-    registrationDate: "2026-01-16",
-  },
-  {
-    id: "student-3",
-    registrationNumber: "WAK/26-0001/003",
-    studentName: "Alice Brown",
-    examLevel: "UCE",
-    classLevel: "S.3",
-    schoolCode: "WAK26-0001",
-    schoolName: "AMITY SECONDARY SCHOOL",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-14",
-        subjectCode: "MATH",
-        subjectName: "Mathematics",
-        paper: "Paper 2",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-1",
-        subjectCode: "ENG",
-        subjectName: "English",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 2,
-    registrationDate: "2026-01-20",
-  },
-  {
-    id: "student-4",
-    registrationNumber: "WAK/26-0001/004",
-    studentName: "David Wilson",
-    examLevel: "UCE",
-    classLevel: "S.4",
-    schoolCode: "WAK26-0001",
-    schoolName: "AMITY SECONDARY SCHOOL",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-14",
-        subjectCode: "MATH",
-        subjectName: "Mathematics",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-17",
-        subjectCode: "CHEM",
-        subjectName: "Chemistry",
-        paper: "Paper 3",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 2,
-    registrationDate: "2026-01-21",
-  },
+const initialStudents: StudentRecord[] = [];
 
-  // WAK26-0002 (Wakiso Hills College) - UACE Students
+const initialTimetable: ScheduleEntry[] = [
   {
-    id: "student-5",
-    registrationNumber: "WAK/26-0002/001",
-    studentName: "Michael Chen",
-    examLevel: "UACE",
-    classLevel: "S.6",
-    schoolCode: "WAK26-0002",
-    schoolName: "Wakiso Hills College",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-24",
-        subjectCode: "GP",
-        subjectName: "General Paper",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-14-uace",
-        subjectCode: "MATH",
-        subjectName: "Mathematics",
-        paper: "Paper 2",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 2,
-    registrationDate: "2026-01-17",
+    id: "uce-1",
+    date: "2026-05-12",
+    day: "Tuesday",
+    subject: "English Language",
+    code: "112",
+    paper: "Paper 1",
+    level: "UCE",
+    period: "Morning",
+    duration: "2.5 hours",
   },
   {
-    id: "student-6",
-    registrationNumber: "WAK/26-0002/002",
-    studentName: "Sarah Thompson",
-    examLevel: "UACE",
-    classLevel: "S.5",
-    schoolCode: "WAK26-0002",
-    schoolName: "Wakiso Hills College",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-24",
-        subjectCode: "GP",
-        subjectName: "General Paper",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-16-uace",
-        subjectCode: "PHY",
-        subjectName: "Physics",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-17-uace",
-        subjectCode: "CHEM",
-        subjectName: "Chemistry",
-        paper: "Paper 2",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 3,
-    registrationDate: "2026-01-18",
+    id: "uce-2",
+    date: "2026-05-14",
+    day: "Thursday",
+    subject: "Mathematics",
+    code: "456",
+    paper: "Paper 1",
+    level: "UCE",
+    period: "Morning",
+    duration: "2.5 hours",
   },
   {
-    id: "student-7",
-    registrationNumber: "WAK/26-0002/003",
-    studentName: "James Patterson",
-    examLevel: "UACE",
-    classLevel: "S.6",
-    schoolCode: "WAK26-0002",
-    schoolName: "Wakiso Hills College",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-24",
-        subjectCode: "GP",
-        subjectName: "General Paper",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-18-uace",
-        subjectCode: "BIO",
-        subjectName: "Biology",
-        paper: "Paper 3",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 2,
-    registrationDate: "2026-01-22",
-  },
-
-  // WAK26-0003 (Entebbe High School) - Mixed UCE & UACE Students
-  {
-    id: "student-8",
-    registrationNumber: "WAK/26-0003/001",
-    studentName: "Grace Omurungi",
-    examLevel: "UCE",
-    classLevel: "S.4",
-    schoolCode: "WAK26-0003",
-    schoolName: "Entebbe High School",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-14",
-        subjectCode: "MATH",
-        subjectName: "Mathematics",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-1",
-        subjectCode: "ENG",
-        subjectName: "English",
-        paper: "Paper 3",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 2,
-    registrationDate: "2026-01-19",
+    id: "uce-3",
+    date: "2026-05-18",
+    day: "Monday",
+    subject: "Biology",
+    code: "553",
+    paper: "Paper 2",
+    level: "UCE",
+    period: "Afternoon",
+    duration: "2.5 hours",
   },
   {
-    id: "student-9",
-    registrationNumber: "WAK/26-0003/002",
-    studentName: "Peter Okello",
-    examLevel: "UACE",
-    classLevel: "S.6",
-    schoolCode: "WAK26-0003",
-    schoolName: "Entebbe High School",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-24",
-        subjectCode: "GP",
-        subjectName: "General Paper",
-        paper: "Paper 2",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 1,
-    registrationDate: "2026-01-23",
+    id: "uce-4",
+    date: "2026-05-20",
+    day: "Wednesday",
+    subject: "History & Political Education",
+    code: "241",
+    paper: "Paper 1",
+    level: "UCE",
+    period: "Morning",
+    duration: "2.5 hours",
   },
-
-  // WAK26-0004 (Nansana Secondary School) - UCE Students
   {
-    id: "student-10",
-    registrationNumber: "WAK/26-0004/001",
-    studentName: "Sophia Nakato",
-    examLevel: "UCE",
-    classLevel: "S.4",
-    schoolCode: "WAK26-0004",
-    schoolName: "Nansana Secondary School",
-    academicYear: "2026",
-    subjects: [
-      {
-        subjectId: "subj-14",
-        subjectCode: "MATH",
-        subjectName: "Mathematics",
-        paper: "Paper 4",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-1",
-        subjectCode: "ENG",
-        subjectName: "English",
-        paper: "Paper 1",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-      {
-        subjectId: "subj-16",
-        subjectCode: "PHY",
-        subjectName: "Physics",
-        paper: "Paper 2",
-        entry1: false,
-        entry2: false,
-        entry3: false,
-        entry4: false,
-      },
-    ],
-    totalEntries: 3,
-    registrationDate: "2026-01-24",
+    id: "uce-5",
+    date: "2026-05-22",
+    day: "Friday",
+    subject: "Geography",
+    code: "273",
+    paper: "Paper 1",
+    level: "UCE",
+    period: "Morning",
+    duration: "2.5 hours",
+  },
+  {
+    id: "uace-1",
+    date: "2026-06-03",
+    day: "Wednesday",
+    subject: "General Paper",
+    code: "101",
+    paper: "Paper 1",
+    level: "UACE",
+    period: "Morning",
+    duration: "3 hours",
+  },
+  {
+    id: "uace-2",
+    date: "2026-06-05",
+    day: "Friday",
+    subject: "Subsidiary Mathematics",
+    code: "475",
+    paper: "Paper 1",
+    level: "UACE",
+    period: "Morning",
+    duration: "2.5 hours",
+  },
+  {
+    id: "uace-3",
+    date: "2026-06-09",
+    day: "Tuesday",
+    subject: "Physics",
+    code: "525",
+    paper: "Paper 2",
+    level: "UACE",
+    period: "Morning",
+    duration: "3 hours",
+  },
+  {
+    id: "uace-4",
+    date: "2026-06-11",
+    day: "Thursday",
+    subject: "Chemistry",
+    code: "535",
+    paper: "Paper 2",
+    level: "UACE",
+    period: "Morning",
+    duration: "3 hours",
+  },
+  {
+    id: "uace-5",
+    date: "2026-06-15",
+    day: "Monday",
+    subject: "Biology",
+    code: "545",
+    paper: "Paper 2",
+    level: "UACE",
+    period: "Morning",
+    duration: "3 hours",
+  },
+  {
+    id: "uace-6",
+    date: "2026-06-18",
+    day: "Thursday",
+    subject: "Geography",
+    code: "230",
+    paper: "Paper 1",
+    level: "UACE",
+    period: "Afternoon",
+    duration: "3 hours",
   },
 ];
 
@@ -922,11 +635,40 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [schools, setSchools] = useState<SchoolRecord[]>(initialSchools);
-  const [students, setStudents] = useState<StudentRecord[]>(initialStudents);
+  const [schools, setSchools] = useState<SchoolRecord[]>(() => {
+    const saved = localStorage.getItem("wakissha_schools");
+    return saved ? JSON.parse(saved) : initialSchools;
+  });
+  const [students, setStudents] = useState<StudentRecord[]>(() => {
+    const saved = localStorage.getItem("wakissha_students");
+    return saved ? JSON.parse(saved) : initialStudents;
+  });
   const [zones] = useState<Zone[]>(initialZones);
-  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
+  const [subjects, setSubjects] = useState<Subject[]>(() => {
+    const saved = localStorage.getItem("wakissha_subjects");
+    return saved ? JSON.parse(saved) : initialSubjects;
+  });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [timetable, setTimetable] = useState<ScheduleEntry[]>(() => {
+    const saved = localStorage.getItem("wakissha_timetable");
+    return saved ? JSON.parse(saved) : initialTimetable;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("wakissha_schools", JSON.stringify(schools));
+  }, [schools]);
+
+  useEffect(() => {
+    localStorage.setItem("wakissha_students", JSON.stringify(students));
+  }, [students]);
+
+  useEffect(() => {
+    localStorage.setItem("wakissha_subjects", JSON.stringify(subjects));
+  }, [subjects]);
+
+  useEffect(() => {
+    localStorage.setItem("wakissha_timetable", JSON.stringify(timetable));
+  }, [timetable]);
 
   useEffect(() => {
     // Load invoices from localStorage if needed, or initialize with empty
@@ -1050,7 +792,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const finalizeRegistration = (
     schoolCode: string, 
     markingGuide: "Arts" | "Sciences" | "Both",
-    level: "UCE" | "UACE"
+    level: "UCE" | "UACE",
+    levelStudents: StudentRecord[]
   ) => {
     setSchools((prev) =>
       prev.map((school) =>
@@ -1070,14 +813,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const school = schools.find(s => s.code === schoolCode);
     if (!school) return;
 
-    // Filter students by school AND the specific level being finalized, and NOT already additional
-    const schoolStudents = students.filter(s => 
-      s.schoolCode === schoolCode && 
-      s.examLevel === level &&
-      !s.isAdditional
-    );
-    const fullySubmittedStudents = schoolStudents.filter(student => isStudentFullyRegistered(student, subjects));
-    const fullySubmittedCount = fullySubmittedStudents.length;
+    // Use passed levelStudents for accurate count
+    const studentCount = levelStudents.length;
 
     const items = [
       // Only add school registration fee if this is the first level being finalized
@@ -1095,10 +832,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ),
       { 
         description: `${level} Student Fee`, 
-        quantity: fullySubmittedCount, 
+        quantity: studentCount, 
         unitPrice: 27000, 
-        total: fullySubmittedCount * 27000,
-        formula: `27,000 × ${fullySubmittedCount} = ${(fullySubmittedCount * 27000).toLocaleString()}`
+        total: studentCount * 27000,
+        formula: `27,000 × ${studentCount} = ${(studentCount * 27000).toLocaleString()}`
+      },
+      { 
+        description: "Answer Booklets", 
+        quantity: studentCount, 
+        unitPrice: 25000, 
+        total: studentCount * 25000,
+        formula: `25,000 × ${studentCount} = ${(studentCount * 25000).toLocaleString()}`
       },
     ];
 
@@ -1122,7 +866,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
-    const studentIds = fullySubmittedStudents.map(s => s.id);
+    const studentIds = schoolStudents.map(s => s.id);
 
     addInvoice({
       serialNumber: `INV-${schoolCode}-${Date.now().toString().slice(-4)}`,
@@ -1380,6 +1124,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSubjects((prev) => prev.filter((subject) => subject.id !== subjectId));
   };
 
+  const addTimetableEntry = (entry: Omit<ScheduleEntry, "id" | "day">) => {
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const day = days[new Date(entry.date).getDay()];
+    const newEntry: ScheduleEntry = {
+      ...entry,
+      id: `exam-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      day
+    };
+    setTimetable(prev => [...prev, newEntry]);
+  };
+
+  const updateTimetableEntry = (id: string, updates: Partial<Omit<ScheduleEntry, "id" | "day">>) => {
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    setTimetable(prev => prev.map(entry => {
+      if (entry.id === id) {
+        const updated = { ...entry, ...updates };
+        if (updates.date) {
+          updated.day = days[new Date(updates.date).getDay()];
+        }
+        return updated;
+      }
+      return entry;
+    }));
+  };
+
+  const deleteTimetableEntry = (id: string) => {
+    setTimetable(prev => prev.filter(entry => entry.id !== id));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -1389,6 +1162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         zones,
         subjects,
         invoices,
+        timetable,
         login,
         logout,
         isAuthenticated: !!user,
@@ -1405,6 +1179,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         addSubject,
         updateSubject,
         deleteSubject,
+        addTimetableEntry,
+        updateTimetableEntry,
+        deleteTimetableEntry,
       }}
     >
       {children}

@@ -1590,11 +1590,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     <TableRow key={student.id}>
                     {hasAnyRegistrationNumber && (
                       <TableCell className="font-mono text-sm text-slate-900">
-                        {student.registrationNumber || (
-                          <Badge variant="outline" className="text-[10px] font-bold text-orange-600 bg-orange-50 border-orange-200 uppercase tracking-tight">
-                            Pending Payment
-                          </Badge>
-                        )}
+                        {student.registrationNumber || "-"}
                       </TableCell>
                     )}
                       <TableCell className="font-semibold text-slate-900">

@@ -462,6 +462,8 @@ export function Reports({ onPageChange }: ReportsProps) {
   const [selectedSchoolReportLevel, setSelectedSchoolReportLevel] = useState<"UCE" | "UACE">("UCE");
   const [exportingKey, setExportingKey] = useState<string | null>(null);
   const [educationLevelFilter, setEducationLevelFilter] = useState<EducationLevelFilter>("UCE");
+  const [studentListSearch, setStudentListSearch] = useState("");
+  const [selectedZoneTabZone, setSelectedZoneTabZone] = useState("all");
 
   const subjectLookup = useMemo(
     () =>
@@ -500,16 +502,19 @@ export function Reports({ onPageChange }: ReportsProps) {
       
       if (!matchesType) return false;
 
-      // Only include fully registered students in reports
-      return isStudentFullyRegistered(student, subjects);
+      // Include all registered students in reports (matching invoice logic)
+      return true;
     });
   }, [scopedStudents, studentTypeFilter, subjects, selectedZone, scopedSchools]);
 
   useEffect(() => {
     if (user?.role === "school" && user.schoolCode) {
       setSelectedSchool(user.schoolCode);
+    } else if (isAdmin && selectedSchool === "all" && scopedSchools.length > 0) {
+      // Default to the first school for admin in single school view if none selected
+      setSelectedSchool(scopedSchools[0].code);
     }
-  }, [user?.role, user?.schoolCode]);
+  }, [user?.role, user?.schoolCode, isAdmin, scopedSchools]);
 
   const consolidatedRows = useMemo<FormRow[]>(() => {
     let filteredByZone = selectedZone === "all" 
@@ -2180,6 +2185,20 @@ export function Reports({ onPageChange }: ReportsProps) {
                 Subject-Wise
               </TabsTrigger>
             )}
+            {isAdmin && (
+              <TabsTrigger 
+                value="zone-report"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-xs md:text-sm font-bold ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm"
+              >
+                Zone Report
+              </TabsTrigger>
+            )}
+            <TabsTrigger 
+              value="student-list"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-xs md:text-sm font-bold ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm"
+            >
+              Student List
+            </TabsTrigger>
             <TabsTrigger 
               value="school-wise"
               className="inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-xs md:text-sm font-bold ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm"
@@ -2365,6 +2384,212 @@ export function Reports({ onPageChange }: ReportsProps) {
         </TabsContent>
         )}
 
+        {isAdmin && (
+          <TabsContent value="zone-report" className="mt-0 outline-none">
+            <Card className="border-none shadow-none bg-transparent">
+              <CardHeader className="px-0 pb-4">
+                <div className="flex flex-col gap-4 lg:gap-6 bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-50 pb-4">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="rounded-md border-purple-200 bg-purple-50 text-purple-700 font-bold px-2 py-0.5 text-[10px] uppercase">
+                          Zone Analytics
+                        </Badge>
+                        <CardTitle className="text-lg font-bold text-slate-900">Zone-Wise Performance Summary</CardTitle>
+                      </div>
+                      <CardDescription className="text-slate-500 max-w-md text-xs">
+                        Review school participation and candidate counts aggregated by geographic zone.
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100 flex-1">
+                      <Select value={selectedZoneTabZone} onValueChange={setSelectedZoneTabZone}>
+                        <SelectTrigger className="h-9 min-w-[150px] border-none bg-white shadow-sm rounded-lg text-xs font-semibold">
+                          <SelectValue placeholder="All Zones" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Zones</SelectItem>
+                          {uniqueZones.map((zone) => (
+                            <SelectItem key={zone} value={zone}>{zone}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={educationLevelFilter} onValueChange={(value: any) => setEducationLevelFilter(value)}>
+                        <SelectTrigger className="h-9 w-[100px] border-none bg-white shadow-sm rounded-lg text-xs font-semibold">
+                          <SelectValue placeholder="Level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="UCE">UCE</SelectItem>
+                          <SelectItem value="UACE">UACE</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="px-0">
+                <div className="w-full bg-white shadow-sm border border-slate-200 rounded-2xl overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-slate-50/80">
+                      <TableRow>
+                        <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider">Zone Name</TableHead>
+                        <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider text-center">Institutions</TableHead>
+                        <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider text-center">Total Candidates</TableHead>
+                        <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider text-center">Avg. Candidates</TableHead>
+                        <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {uniqueZones
+                        .filter(z => selectedZoneTabZone === "all" || z === selectedZoneTabZone)
+                        .map((zone) => {
+                          const zoneSchools = scopedSchools.filter(s => s.zone === zone);
+                          const zoneStudents = filteredStudents.filter(s => 
+                            zoneSchools.some(sch => sch.code === s.schoolCode) &&
+                            s.examLevel === educationLevelFilter
+                          );
+                          return (
+                            <TableRow key={zone} className="hover:bg-slate-50/50 transition-colors">
+                              <TableCell className="font-bold text-slate-900">{zone}</TableCell>
+                              <TableCell className="text-center font-medium">{zoneSchools.length}</TableCell>
+                              <TableCell className="text-center font-black text-slate-900">{zoneStudents.length}</TableCell>
+                              <TableCell className="text-center text-slate-500">
+                                {zoneSchools.length > 0 ? Math.round(zoneStudents.length / zoneSchools.length) : 0}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-purple-600 font-bold hover:text-purple-700 hover:bg-purple-50"
+                                  onClick={() => {
+                                    setSelectedZone(zone);
+                                    // Switch to consolidated tab? Or just filter?
+                                  }}
+                                >
+                                  View Schools
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        <TabsContent value="student-list" className="mt-0 outline-none">
+          <Card className="border-none shadow-none bg-transparent">
+            <CardHeader className="px-0 pb-4">
+              <div className="flex flex-col gap-4 lg:gap-6 bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-50 pb-4">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="rounded-md border-emerald-200 bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 text-[10px] uppercase">
+                        Candidate Directory
+                      </Badge>
+                      <CardTitle className="text-lg font-bold text-slate-900">Student List Report</CardTitle>
+                    </div>
+                    <CardDescription className="text-slate-500 max-w-md text-xs">
+                      Detailed fehrist of all students registered in the selected school.
+                    </CardDescription>
+                  </div>
+                  {isAdmin && (
+                    <div className="w-full sm:w-64">
+                      <Select value={selectedSchool} onValueChange={setSelectedSchool}>
+                        <SelectTrigger className="h-10 bg-slate-50 border-slate-200 rounded-xl font-bold">
+                          <SelectValue placeholder="Select School" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {scopedSchools.map(s => (
+                            <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input 
+                      placeholder="Search student name or registration number..." 
+                      value={studentListSearch}
+                      onChange={(e) => setStudentListSearch(e.target.value)}
+                      className="h-10 pl-9 bg-slate-50 border-slate-200 rounded-xl"
+                    />
+                  </div>
+                  <Select value={selectedSchoolReportLevel} onValueChange={(val: any) => setSelectedSchoolReportLevel(val)}>
+                    <SelectTrigger className="h-10 w-32 bg-slate-50 border-slate-200 rounded-xl font-bold">
+                      <SelectValue placeholder="Level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UCE">UCE</SelectItem>
+                      <SelectItem value="UACE">UACE</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-0">
+              <div className="w-full bg-white shadow-sm border border-slate-200 rounded-2xl overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-slate-50/80">
+                    <TableRow>
+                      <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider">Reg. No</TableHead>
+                      <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider">Student Name</TableHead>
+                      <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider">Exam Level</TableHead>
+                      <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider">Subjects</TableHead>
+                      <TableHead className="font-black text-slate-700 h-12 text-[10px] uppercase tracking-wider text-right">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStudents
+                      .filter(s => 
+                        (selectedSchool === "all" || s.schoolCode === selectedSchool) &&
+                        s.examLevel === selectedSchoolReportLevel &&
+                        (s.studentName.toLowerCase().includes(studentListSearch.toLowerCase()) || 
+                         (s.registrationNumber || "").toLowerCase().includes(studentListSearch.toLowerCase()))
+                      )
+                      .map((student) => (
+                        <TableRow key={student.id} className="hover:bg-slate-50/50 transition-colors">
+                          <TableCell className="font-mono text-xs font-bold text-slate-600">
+                            {student.registrationNumber || "-"}
+                          </TableCell>
+                          <TableCell className="font-bold text-slate-900">{student.studentName}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-[10px] font-bold">{student.examLevel}</Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[300px]">
+                            <p className="text-xs text-slate-500 truncate">
+                              {student.subjects.map(sub => sub.subjectName).join(", ")}
+                            </p>
+                          </TableCell>
+                          <TableCell className="text-right text-xs text-slate-400">
+                            {student.registrationDate}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    {filteredStudents.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-32 text-center text-slate-400 font-medium">
+                          No students found matching your criteria.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {isAdmin && (
         <TabsContent value="subject-wise" className="mt-0 outline-none">
           <Card className="border-none shadow-none bg-transparent">
             <CardHeader className="px-0 pb-4">
@@ -2555,6 +2780,7 @@ export function Reports({ onPageChange }: ReportsProps) {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
         <TabsContent value="school-wise" className="mt-0">
           <Card className="border-none shadow-none bg-transparent">
@@ -2705,11 +2931,13 @@ export function Reports({ onPageChange }: ReportsProps) {
               {!selectedSchoolData || !selectedSchoolProfile ? (
                 <div className="bg-white p-20 rounded-2xl border border-slate-200 border-dashed text-center">
                   <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <School className="h-8 w-8 text-slate-300" />
+                    <Search className="h-8 w-8 text-slate-300" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1">No School Selected</h3>
+                  <h3 className="text-lg font-bold text-slate-900 mb-1">No Data Found for this School</h3>
                   <p className="text-slate-500 max-w-xs mx-auto">
-                    Please select an institution from the dropdown above to view its detailed reporting dashboard.
+                    {selectedSchool === "all" 
+                      ? "Please select an institution from the dropdown above to view its detailed reporting dashboard."
+                      : "This school has not registered any students yet for the selected exam level."}
                   </p>
                 </div>
               ) : (

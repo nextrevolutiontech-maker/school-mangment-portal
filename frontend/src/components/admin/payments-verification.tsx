@@ -109,21 +109,31 @@ export function PaymentsVerification({
   ];
 
   const handleViewProof = (school: SchoolRecord) => {
-    const latestInvoiceWithProof = invoices
-      .filter(inv => inv.schoolCode === school.code && inv.paymentProof)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const schoolInvoicesWithProof = invoices
+      .filter(inv => inv.schoolCode === school.code && inv.paymentProof && inv.paymentProof !== "")
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const latestInvoiceWithProof = schoolInvoicesWithProof[0];
 
     if (latestInvoiceWithProof) {
       setPreviewInvoice(latestInvoiceWithProof);
-    } else if (school.paymentProof) {
+      if (schoolInvoicesWithProof.length > 1) {
+        toast.info(`Showing latest of ${schoolInvoicesWithProof.length} payment proofs`, {
+          description: "Multiple transactions found for this school."
+        });
+      }
+    } else if (school.paymentProof && 
+               school.paymentProof !== "" && 
+               !school.paymentProof.includes("not-submitted.pdf") && 
+               !school.paymentProof.includes("signed-form-")) {
       // Fallback for legacy data
-      toast.info("Showing direct payment proof", {
-        description: "This school has a legacy proof file."
+      toast.info("Showing school profile payment proof", {
+        description: "This proof was uploaded directly to the school profile."
       });
       window.open(school.paymentProof, "_blank");
     } else {
-      toast.error("No payment proof found", {
-        description: "This school hasn't uploaded any receipt yet."
+      toast.error("No valid payment proof found", {
+        description: "Please ask the school to re-upload their receipt."
       });
     }
   };
@@ -261,27 +271,40 @@ export function PaymentsVerification({
                     {school.amountPaid}
                   </TableCell>
                   <TableCell>
-                    {school.status === "payment_submitted" ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewProof(school)}
-                        className="font-bold border-blue-100 text-blue-600 hover:bg-blue-50"
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View File
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled
-                        className="font-bold opacity-40 grayscale"
-                      >
-                        <FileText className="h-4 w-4 mr-1" />
-                        No File
-                      </Button>
-                    )}
+                    {(() => {
+                      const schoolInvoices = invoices.filter(inv => inv.schoolCode === school.code);
+                      const hasInvoiceProof = schoolInvoices.some(inv => inv.paymentProof);
+                      const hasSchoolProof = school.paymentProof && 
+                                           school.paymentProof !== "" && 
+                                           !school.paymentProof.includes("not-submitted.pdf") &&
+                                           !school.paymentProof.includes("signed-form-");
+                      
+                      if (hasInvoiceProof || hasSchoolProof) {
+                        return (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewProof(school)}
+                            className="font-bold border-blue-100 text-blue-600 hover:bg-blue-50"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View File
+                          </Button>
+                        );
+                      }
+                      
+                      return (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          className="font-bold opacity-40 grayscale"
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          No File
+                        </Button>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>{getStatusBadge(school.status)}</TableCell>
                   <TableCell>
@@ -334,10 +357,10 @@ export function PaymentsVerification({
           }
         }}
       >
-        <DialogContent>
+        <DialogContent aria-describedby="verify-school-description">
           <DialogHeader>
             <DialogTitle>Confirm Verification</DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="verify-school-description">
               {selectedSchool
                 ? activationCode
                   ? `Payment verified for ${selectedSchool.name}. Confirm activation with generated code.`
@@ -404,14 +427,14 @@ export function PaymentsVerification({
 
       {/* Proof Preview Dialog */}
       <Dialog open={previewInvoice !== null} onOpenChange={(open) => !open && setPreviewInvoice(null)}>
-        <DialogContent className="sm:max-w-[700px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+        <DialogContent className="sm:max-w-[700px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl" aria-describedby="proof-preview-description">
           <DialogHeader className="p-6 bg-slate-900 text-white flex-row items-center justify-between">
             <div>
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 Payment Proof Verification
               </DialogTitle>
-              <DialogDescription className="text-slate-300">
+              <DialogDescription id="proof-preview-description" className="text-slate-300">
                 Reviewing receipt for Invoice: {previewInvoice?.serialNumber}
               </DialogDescription>
             </div>

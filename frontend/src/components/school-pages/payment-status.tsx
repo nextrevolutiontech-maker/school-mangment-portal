@@ -12,6 +12,7 @@ import {
   X,
   Eye,
   Info,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Card,
@@ -102,16 +103,23 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
   }, [additionalStudents, schoolInvoices]);
 
   const generateAdditionalInvoice = () => {
-    const schoolStudents = students.filter(s => s.schoolCode === user?.schoolCode && s.isAdditional);
-    const fullySubmittedCount = schoolStudents.filter(student => isStudentFullyRegistered(student, subjects)).length;
+    const schoolStudents = students.filter(s => s.schoolCode === user?.schoolCode && s.isAdditional && !s.isInvoiced);
+    const studentCount = schoolStudents.length;
 
     const items = [
       { 
         description: "Additional Student Fee", 
-        quantity: fullySubmittedCount, 
+        quantity: studentCount, 
         unitPrice: 27000, 
-        total: fullySubmittedCount * 27000,
-        formula: `27,000 × ${fullySubmittedCount} = ${(fullySubmittedCount * 27000).toLocaleString()}`
+        total: studentCount * 27000,
+        formula: `27,000 × ${studentCount} = ${(studentCount * 27000).toLocaleString()}`
+      },
+      { 
+        description: "Answer Booklets (Additional)", 
+        quantity: studentCount, 
+        unitPrice: 25000, 
+        total: studentCount * 25000,
+        formula: `25,000 × ${studentCount} = ${(studentCount * 25000).toLocaleString()}`
       },
     ];
 
@@ -122,6 +130,8 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
       return;
     }
 
+    const studentIds = schoolStudents.map(s => s.id);
+
     addInvoice({
       serialNumber: `INV-${user?.schoolCode}-ADD-${Date.now().toString().slice(-4)}`,
       schoolCode: user?.schoolCode || "",
@@ -130,7 +140,7 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
       totalAmount,
       status: "pending",
       type: "additional"
-    });
+    }, studentIds);
 
     toast.success("Additional invoice generated successfully");
   };
@@ -407,22 +417,33 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {invoice.paymentProof ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100 flex items-center gap-1">
-                              <CheckCircle className="h-3 w-3" />
-                              PROOF UPLOADED
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 text-white rounded-full text-[10px] font-black shadow-sm shadow-emerald-100">
+                                <CheckCircle className="h-3 w-3" />
+                                PROOF SUBMITTED
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => window.open(invoice.paymentProof, "_blank")}
+                                className="h-8 px-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-bold"
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                            </div>
                           ) : (
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="h-8 rounded-lg font-bold border-blue-200 text-blue-600 hover:bg-blue-50"
+                              className="h-8 rounded-lg font-bold border-blue-100 text-blue-600 hover:bg-blue-50"
                               onClick={() => {
                                 setSelectedInvoiceId(invoice.id);
                                 setIsUploadDialogOpen(true);
                               }}
                             >
-                              <Upload className="h-3 w-3 mr-1" />
-                              Upload Proof
+                              <Upload className="h-4 w-4 mr-1" />
+                              Upload Receipt
                             </Button>
                           )}
                           <Button 
@@ -482,38 +503,63 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
           <CardHeader>
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <Upload className="h-5 w-5 text-blue-600" />
-              Proof of Payment
+              Upload Payment Proof
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div 
-              className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer"
-              onClick={() => onPageChange("upload-pdf")}
+              className="border-2 border-dashed border-blue-200 bg-blue-50/30 rounded-2xl p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer group"
+              onClick={() => {
+                const firstUnpaid = schoolInvoices.find(inv => !inv.paymentProof);
+                if (firstUnpaid) {
+                  setSelectedInvoiceId(firstUnpaid.id);
+                  setIsUploadDialogOpen(true);
+                } else if (schoolInvoices.length > 0) {
+                  setSelectedInvoiceId(schoolInvoices[0].id);
+                  setIsUploadDialogOpen(true);
+                }
+              }}
             >
-              <div className="mx-auto w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                <Upload className="h-6 w-6 text-blue-600" />
+              <div className="mx-auto w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center mb-4 shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
+                <Upload className="h-7 w-7" />
               </div>
-              <p className="font-bold text-slate-700">Click to upload receipt</p>
-              <p className="text-xs text-slate-400 mt-1">PDF, JPG or PNG (Max 5MB)</p>
+              <p className="font-bold text-slate-900 text-lg">Click to upload receipt</p>
+              
+              <div className="mt-5 space-y-3">
+                <div className="flex items-start gap-3 text-left bg-white/80 p-3 rounded-xl border border-blue-100 shadow-sm">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    <strong>Recommended:</strong> Scanning your bank slip is better for clear quality and faster verification.
+                  </p>
+                </div>
+                <div className="flex items-start gap-3 text-left bg-white/80 p-3 rounded-xl border border-blue-100 shadow-sm">
+                  <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    <strong>Mobile Users:</strong> If taking a photo, ensure the picture is bright, flat, and all text is <strong>readable</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-[10px] font-bold text-slate-400 mt-5 uppercase tracking-widest">PDF, JPG or PNG (Max 5MB)</p>
             </div>
             {paymentStatus === "payment_submitted" && (
-              <Badge className="w-full justify-center py-2 bg-blue-50 text-blue-700 border-blue-100 font-bold">
-                <Clock className="mr-2 h-4 w-4" />
-                RECEIPT UNDER REVIEW
-              </Badge>
+              <div className="flex items-center justify-center gap-2 py-3 bg-amber-50 text-amber-700 border border-amber-100 rounded-xl font-bold text-xs uppercase tracking-wider">
+                <Clock className="h-4 w-4 animate-pulse" />
+                Receipt Under Review
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
 
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+        <DialogContent className="sm:max-w-[500px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl" aria-describedby="upload-proof-description">
           <DialogHeader className="p-6 bg-slate-900 text-white">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Upload className="h-5 w-5" />
               Upload Payment Proof
             </DialogTitle>
-            <DialogDescription className="text-slate-300">
+            <DialogDescription id="upload-proof-description" className="text-slate-300">
               Upload your bank deposit slip or electronic transfer receipt.
             </DialogDescription>
           </DialogHeader>

@@ -8,8 +8,10 @@ import { Alert, AlertDescription } from "../ui/alert";
 import { useAuth } from "../auth-context";
 import wakisshaLogo from "../../assets/logo.png";
 import loginImage from "../../assets/login.jpeg";
+import { RegisterSchool } from "./register-school";
 
 export function Login() {
+  const [view, setView] = useState<"login" | "register">("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +72,7 @@ export function Login() {
           <div className="space-y-10">
             <div className="space-y-4">
               <h1 className="text-4xl font-extrabold leading-tight font-['Sora'] tracking-tight text-white">
-                Welcome back to your <br />
+                {view === "login" ? "Welcome back to your" : "Start your journey with"} <br />
                 <span className="text-teal-300">Examination Workspace</span>
               </h1>
               <p className="text-base text-white/90 max-w-md font-medium leading-relaxed">
@@ -114,144 +116,138 @@ export function Login() {
         </div>
       </div>
 
-      {/* Right Section - Login Form */}
+      {/* Right Section - Forms */}
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-between p-6 lg:p-12 bg-white relative overflow-hidden">
         {/* Decorative background elements for Right Panel */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-teal-50/30 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-50/20 rounded-full blur-[100px] -ml-48 -mb-48 pointer-events-none" />
 
         {/* Mobile Logo Only */}
-        <div className="lg:hidden flex items-center justify-center gap-3 mb-4 relative z-10">
+        <div className="lg:hidden flex items-center justify-center gap-3 mb-4 relative z-10 pt-2">
           <div className="bg-white p-2 rounded-xl shadow-lg ring-1 ring-gray-100">
             <img src={wakisshaLogo} alt="Logo" className="w-8 h-8 object-contain" />
           </div>
           <h1 className="text-xl font-black tracking-tight text-gray-900 font-['Sora']">WAKISSHA</h1>
         </div>
 
-        {/* Main Content Area - Centered Card */}
-        <div className="max-w-[440px] w-full mx-auto flex-1 flex flex-col justify-center space-y-4 relative z-10 min-h-0">
-          <div className="w-full">
-            <div className="text-center mb-4">
-              <h2 className="text-2xl font-black text-gray-900 font-['Sora'] tracking-tight mb-1">
-                Secure Login
-              </h2>
-              <p className="text-gray-600 font-semibold text-[13px]">
-                Enter your credentials to access the portal
-              </p>
-            </div>
-
-            <Card className="border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] rounded-[32px] bg-white overflow-hidden ring-1 ring-gray-200/60">
-              <CardContent className="p-6 lg:p-8">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="identifier" className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.18em] ml-1">
-                      School Code or Email
-                    </Label>
-                    <div className="relative group">
-                      <Input
-                        id="identifier"
-                        type="text"
-                        placeholder="e.g. WAK-001 or admin@wakissha.ug"
-                        value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
-                        required
-                        className="h-11 border-gray-200 rounded-2xl bg-gray-50/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 transition-all duration-300 placeholder:text-gray-400 font-medium pl-5 text-gray-900 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between ml-1">
-                      <Label htmlFor="password" className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.18em]">
-                        Password
-                      </Label>
-                      <button type="button" className="text-[10px] font-bold text-teal-700 hover:text-teal-800 transition-colors">
-                        Forgot?
-                      </button>
-                    </div>
-                    <div className="relative group">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="h-11 border-gray-200 rounded-2xl bg-gray-50/50 pr-14 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 transition-all duration-300 placeholder:text-gray-400 font-medium pl-5 text-gray-900 text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-teal-600 transition-colors p-1"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {error && (
-                    <Alert variant="destructive" className="rounded-2xl border-red-50 bg-red-50/50 py-2">
-                      <AlertDescription className="text-[11px] font-semibold text-red-600 text-center">
-                        {error}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <Button
-                    type="submit"
-                    className="w-full h-11 bg-teal-600 hover:bg-teal-700 text-white font-bold tracking-wide rounded-2xl shadow-lg shadow-teal-600/20 transition-all duration-300 active:scale-[0.98] font-['Sora'] text-sm mt-1"
-                    disabled={isLoading}
+        {view === "login" ? (
+          <div className="max-w-[440px] w-full mx-auto flex flex-col justify-center space-y-4 relative z-10 py-4 flex-1">
+            <div className="w-full">
+              <div className="text-center mb-4">
+                <div className="inline-flex items-center justify-center p-1 bg-slate-100 rounded-2xl mb-4">
+                  <button className="px-6 py-2 bg-white text-teal-600 shadow-sm rounded-xl text-xs font-black uppercase tracking-wider">
+                    School Login
+                  </button>
+                  <button 
+                    type="button"
+                    className="px-6 py-2 text-slate-500 hover:text-slate-900 transition-colors text-xs font-bold uppercase tracking-wider"
+                    onClick={() => setView("register")}
                   >
-                    {isLoading ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Verifying...</span>
-                      </div>
-                    ) : (
-                      "Sign In to Portal"
-                    )}
-                  </Button>
-                </form>
-
-                {/* Quick Access Section */}
-                <div className="space-y-3 pt-1 mt-3">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-100" />
-                    </div>
-                    <div className="relative flex justify-center text-[9px] uppercase tracking-[0.25em] font-black">
-                      <span className="bg-white px-4 text-gray-400">Quick Access</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <button 
-                      onClick={() => {
-                        setIdentifier("admin@wakissha.ug");
-                        setPassword("admin123");
-                      }}
-                      className="h-10 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-teal-500/30 transition-all duration-300 group"
-                    >
-                      <span className="text-[11px] font-bold text-gray-600 group-hover:text-teal-700">Admin</span>
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setIdentifier("WAK26-0001");
-                        setPassword("demo123");
-                      }}
-                      className="h-10 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-teal-500/30 transition-all duration-300 group"
-                    >
-                      <span className="text-[11px] font-bold text-gray-600 group-hover:text-teal-700">School</span>
-                    </button>
-                  </div>
+                    Register School
+                  </button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                <h2 className="text-3xl font-black text-gray-900 font-['Sora'] tracking-tight mb-1">
+                  Welcome Back
+                </h2>
+                <p className="text-gray-500 font-medium text-sm">
+                  Enter your credentials to access your school portal
+                </p>
+              </div>
 
-        {/* Footer Below Login Card */}
-        <div className="w-full text-center space-y-1 pb-4 pt-2 relative z-10">
+              <Card className="border-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] rounded-[32px] bg-white overflow-hidden ring-1 ring-gray-200/60">
+                <CardContent className="p-6 lg:p-8">
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="identifier" className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">
+                        School Code or Email
+                      </Label>
+                      <div className="relative group">
+                        <Input
+                          id="identifier"
+                          type="text"
+                          placeholder="e.g. WAK26-0001"
+                          value={identifier}
+                          onChange={(e) => setIdentifier(e.target.value)}
+                          required
+                          className="h-11 border-slate-200 rounded-2xl bg-slate-50/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 transition-all duration-300 placeholder:text-slate-400 font-bold pl-5 text-slate-900 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between ml-1">
+                        <Label htmlFor="password" className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                          Password
+                        </Label>
+                        <button type="button" className="text-[11px] font-black text-teal-600 hover:text-teal-700 transition-colors">
+                          Forgot Password?
+                        </button>
+                      </div>
+                      <div className="relative group">
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          className="h-11 border-slate-200 rounded-2xl bg-slate-50/50 pr-14 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 transition-all duration-300 placeholder:text-slate-400 font-bold pl-5 text-slate-900 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600 transition-colors p-1"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {error && (
+                      <Alert variant="destructive" className="rounded-2xl border-red-50 bg-red-50/50 py-2">
+                        <AlertDescription className="text-[11px] font-bold text-red-600 text-center">
+                          {error}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full h-11 bg-teal-600 hover:bg-teal-700 text-white font-black tracking-wide rounded-2xl shadow-xl shadow-teal-600/20 transition-all duration-300 active:scale-[0.98] font-['Sora'] text-sm"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Verifying...</span>
+                        </div>
+                      ) : (
+                        "Sign In to Portal"
+                      )}
+                    </Button>
+                  </form>
+
+                  <div className="mt-6 pt-6 border-t border-slate-100 text-center">
+                    <p className="text-sm font-medium text-slate-500">
+                      Don't have an account yet?{" "}
+                      <button 
+                        onClick={() => setView("register")}
+                        className="text-teal-600 font-black hover:underline underline-offset-4"
+                      >
+                        Register your school
+                      </button>
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : (
+          <RegisterSchool onBackToLogin={() => setView("login")} />
+        )}
+
+        {/* Footer */}
+        <div className="w-full text-center space-y-1 pb-4 pt-2 relative z-10 mt-auto">
           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">
             © 2026 WAKISSHA • ALL RIGHTS RESERVED
           </p>

@@ -65,9 +65,9 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
     );
   }, [students, user, paymentLevel, isLevelFinalized]);
 
-  const fullySubmittedCount = useMemo(() => {
-    return schoolStudents.filter(student => isStudentFullyRegistered(student, subjects)).length;
-  }, [schoolStudents, subjects]);
+  const studentCount = useMemo(() => {
+    return schoolStudents.length;
+  }, [schoolStudents]);
 
   const markingGuideTotalCount = (markingGuides.arts ? 1 : 0) + (markingGuides.sciences ? 1 : 0);
 
@@ -78,21 +78,24 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
   const pricing = {
     registration: 500000,
     student: 27000,
+    booklets: 25000,
     markingGuide: 25000,
   };
 
   const totals = useMemo(() => {
     const registrationTotal = (!hasAnyLevelFinalized && !isLevelFinalized && !hasRegistrationInvoice) ? pricing.registration : 0;
-    const studentTotal = fullySubmittedCount * pricing.student;
+    const studentTotal = studentCount * pricing.student;
+    const bookletsTotal = studentCount * pricing.booklets;
     const markingGuideTotal = markingGuideTotalCount * pricing.markingGuide;
 
     return {
       registration: registrationTotal,
       student: studentTotal,
+      booklets: bookletsTotal,
       markingGuide: markingGuideTotal,
-      grandTotal: registrationTotal + studentTotal + markingGuideTotal
+      grandTotal: registrationTotal + studentTotal + bookletsTotal + markingGuideTotal
     };
-  }, [fullySubmittedCount, markingGuideTotalCount, isLevelFinalized, hasAnyLevelFinalized, hasRegistrationInvoice]);
+  }, [studentCount, markingGuideTotalCount, isLevelFinalized, hasAnyLevelFinalized, hasRegistrationInvoice]);
 
   const handleGenerateInvoice = () => {
     if (markingGuideTotalCount === 0) {
@@ -118,10 +121,17 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
       },
       { 
         description: `${isLevelFinalized ? "Additional " : ""}${paymentLevel} Student Fee`, 
-        quantity: fullySubmittedCount, 
+        quantity: studentCount, 
         unitPrice: pricing.student, 
         total: totals.student,
-        formula: `${pricing.student.toLocaleString()} × ${fullySubmittedCount} = ${totals.student.toLocaleString()}`
+        formula: `${pricing.student.toLocaleString()} × ${studentCount} = ${totals.student.toLocaleString()}`
+      },
+      { 
+        description: "Answer Booklets", 
+        quantity: studentCount, 
+        unitPrice: pricing.booklets, 
+        total: totals.booklets,
+        formula: `${pricing.booklets.toLocaleString()} × ${studentCount} = ${totals.booklets.toLocaleString()}`
       },
       { 
         description: `Marking Guide (${selectedGuides.join(" & ")})`, 
@@ -132,9 +142,7 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
       },
     ].filter(item => item.total > 0 || (!isLevelFinalized && !hasAnyLevelFinalized && !hasRegistrationInvoice && item.description.includes("Registration")));
 
-    const studentIds = schoolStudents
-      .filter(student => isStudentFullyRegistered(student, subjects))
-      .map(s => s.id);
+    const studentIds = schoolStudents.map(s => s.id);
 
     addInvoice({
       serialNumber: `INV-${user?.schoolCode}-${Date.now().toString().slice(-4)}`,
@@ -255,7 +263,7 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 </div>
                 <div>
                   <p className="font-bold text-slate-900">{isLevelFinalized ? "Additional " : ""}{paymentLevel} Student Fee</p>
-                  <p className="text-xs text-slate-500">{pricing.student.toLocaleString()} × {fullySubmittedCount} candidates</p>
+                  <p className="text-xs text-slate-500">{pricing.student.toLocaleString()} × {studentCount} candidates</p>
                 </div>
               </div>
               <div className="text-right">
@@ -264,7 +272,7 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
               </div>
             </div>
 
-              {fullySubmittedCount === 0 && (
+              {studentCount === 0 && (
                 <Alert variant="warning" className="bg-amber-50 border-amber-200 text-amber-800 rounded-xl">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs font-medium">
@@ -340,9 +348,16 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 <div className="flex justify-between text-sm">
                   <div className="flex flex-col">
                     <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Student Fee</span>
-                    <span className="text-[11px] text-slate-400 font-bold italic">{pricing.student.toLocaleString()} × {fullySubmittedCount}</span>
+                    <span className="text-[11px] text-slate-400 font-bold italic">{pricing.student.toLocaleString()} × {studentCount}</span>
                   </div>
                   <span className="font-bold text-slate-900">{totals.student.toLocaleString()} UGX</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <div className="flex flex-col">
+                    <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Answer Booklets</span>
+                    <span className="text-[11px] text-slate-400 font-bold italic">{pricing.booklets.toLocaleString()} × {studentCount}</span>
+                  </div>
+                  <span className="font-bold text-slate-900">{totals.booklets.toLocaleString()} UGX</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <div className="flex flex-col">

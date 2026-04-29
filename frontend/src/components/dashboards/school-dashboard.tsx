@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   BookOpen,
   CheckCircle,
@@ -14,9 +14,11 @@ import {
   FileText,
   Lock,
   ChevronRight,
+  ChevronLeft,
   Info,
   PlusCircle,
   ArrowRightCircle,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Card,
@@ -31,6 +33,7 @@ import { Progress } from "../ui/progress";
 import { useAuth, isStudentFullyRegistered } from "../auth-context";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { generateWPF_PDF } from "../../utils/wpf-pdf";
+import { generateOfficialSummaryPDF } from "../../utils/summary-pdf";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +45,7 @@ import {
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Checkbox } from "../ui/checkbox";
 import { toast } from "sonner";
 
 interface SchoolDashboardProps {
@@ -51,6 +55,8 @@ interface SchoolDashboardProps {
 export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const { user, schools, students, invoices, zones, subjects, finalizeRegistration } = useAuth();
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
+  const [finalizeStep, setFinalizeStep] = useState(1);
+  const [isVerified, setIsVerified] = useState(false);
   const [markingGuide, setMarkingGuide] = useState<"Arts" | "Sciences" | "Both">("Arts");
 
   const currentSchool = schools.find((school) => school.code === user?.schoolCode);
@@ -63,19 +69,15 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const [finalizeLevel, setFinalizeLevel] = useState<"UCE" | "UACE">("UCE");
 
   const schoolStudents = students.filter((student) => student.schoolCode === user?.schoolCode);
-  const schoolInvoices = invoices.filter((inv) => inv.schoolCode === user?.schoolCode);
+  const uceStudents = schoolStudents.filter((student) => student.examLevel === "UCE").length;
+  const uaceStudents = schoolStudents.filter((student) => student.examLevel === "UACE").length;
 
-  const handleFinalize = () => {
-    if (!user?.schoolCode) return;
-    
-    finalizeRegistration(user.schoolCode, markingGuide, finalizeLevel);
-    setIsFinalizeDialogOpen(false);
-    toast.success(`${finalizeLevel} Registration Finalized`, {
-      description: `${finalizeLevel} records have been locked and your invoice has been generated.`
-    });
-    onPageChange("payment-status");
-  };
-  const schoolZone = zones.find(z => z.id === currentSchool?.zone_id || z.name === currentSchool?.zone);
+  const showAdditionalLabel = (currentSchool?.educationLevel === "UCE" && isUceFinalized && uceStudents > 0) || 
+                             (currentSchool?.educationLevel === "UACE" && isUaceFinalized && uaceStudents > 0) ||
+                             (isUceFinalized && uceStudents > 0 && isUaceFinalized && uaceStudents > 0);
+
+  const schoolInvoices = invoices.filter((inv) => inv.schoolCode === user?.schoolCode);
+  const schoolSubjectsCount = new Set(schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))).size;
 
   const originalInvoiced = schoolInvoices
     .filter((inv) => inv.type === "original")
@@ -85,15 +87,55 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
     .filter((inv) => inv.type === "additional")
     .reduce((sum, inv) => sum + inv.totalAmount, 0);
 
-  const totalInvoiced = schoolInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+  const totalInvoiced = originalInvoiced + additionalInvoiced;
   const totalPaid = schoolInvoices
     .filter((inv) => inv.status === "paid")
     .reduce((sum, inv) => sum + inv.totalAmount, 0);
   const outstandingBalance = totalInvoiced - totalPaid;
 
-  const uceStudents = schoolStudents.filter((student) => student.examLevel === "UCE").length;
-  const uaceStudents = schoolStudents.filter((student) => student.examLevel === "UACE").length;
-  const schoolSubjectsCount = new Set(schoolStudents.flatMap((student) => student.subjects.map((s) => s.subjectCode))).size;
+  const schoolZone = zones.find(z => z.id === currentSchool?.zone_id || z.name === currentSchool?.zone);
+
+  const levelStudents = useMemo(() => {
+    return schoolStudents.filter(s => s.examLevel === finalizeLevel && !s.isAdditional);
+  }, [schoolStudents, finalizeLevel]);
+
+  const levelStats = useMemo(() => {
+    return {
+      totalStudents: levelStudents.length,
+      subjectsRegistered: new Set(levelStudents.flatMap(s => s.subjects.map(sub => sub.subjectCode))).size,
+      totalEntries: levelStudents.reduce((sum, s) => sum + s.totalEntries, 0),
+      paymentStatus: "Pending Verification"
+    };
+  }, [levelStudents]);
+
+  const handleDownloadSummary = () => {
+    if (!currentSchool) return;
+    generateOfficialSummaryPDF(
+      {
+        name: currentSchool.name,
+        code: currentSchool.code,
+        district: currentSchool.district,
+        academicYear: currentSchool.academicYear,
+      },
+      levelStats
+    );
+    toast.success("Summary Form Downloaded", {
+      description: "Please review, sign, and stamp this form."
+    });
+  };
+
+  const handleFinalize = () => {
+    if (!user?.schoolCode) return;
+    
+    finalizeRegistration(user.schoolCode, markingGuide, finalizeLevel, levelStudents);
+    setIsFinalizeDialogOpen(false);
+    setFinalizeStep(1);
+    setIsVerified(false);
+    toast.success(`${finalizeLevel} Registration Finalized`, {
+      description: `${finalizeLevel} records have been locked and your invoice has been generated.`
+    });
+    onPageChange("payment-status");
+  };
 
   const stats = [
     {
@@ -202,23 +244,21 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const completionPercentage = (completedSteps / completionSteps.length) * 100;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 anim-fade-up">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 anim-fade-up">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between anim-fade-up-delay">
+        <div className="space-y-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
             School Workspace
           </p>
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-shimmer">School Dashboard</h1>
-            <p className="max-w-2xl text-slate-500">
-              Welcome back, {user?.name}. Track registration progress, subject
-              entries, payment status, and your examination timetable from one
-              place.
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">School Dashboard</h1>
+            <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
+              Welcome back, {user?.name}. Track registration progress and entries in real-time.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition-all hover:shadow-md">
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
             {currentSchool?.schoolLogo ? (
               <img
                 src={currentSchool.schoolLogo}
@@ -226,52 +266,53 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex flex-col items-center gap-1 text-slate-400">
-                <ImageIcon className="h-5 w-5" />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">
-                  Logo
-                </span>
-              </div>
+              <ImageIcon className="h-5 w-5 text-slate-300" />
             )}
           </div>
-          <div className="text-sm">
-            <p className="font-semibold text-slate-900">
+          <div className="pr-4">
+            <p className="text-sm font-black text-slate-900 leading-tight">
               {currentSchool?.name ?? user?.name}
             </p>
-            <p className="text-slate-500">
-              Academic year:{" "}
-              <span className="font-semibold text-slate-900">
-                {user?.academicYear ?? "2026"}
-              </span>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+              Academic year: <span className="text-slate-600">{user?.academicYear ?? "2026"}</span>
             </p>
-            {!currentSchool?.schoolLogo && (
-              <p className="text-xs text-slate-400">
-                Upload a school logo to personalise this dashboard.
-              </p>
-            )}
           </div>
         </div>
       </div>
 
-      {schoolInvoices.length === 0 ? (
-        <Alert variant="warning" className="border-orange-200 bg-orange-50/50">
-          <Info className="h-4 w-4 text-orange-600" />
-          <AlertTitle className="text-orange-900 font-bold">Registration Incomplete</AlertTitle>
-          <AlertDescription className="text-orange-700">
-            You must finalize your student registration before an invoice can be generated and payment made.
-            <div className="mt-4">
+      {/* Registration Incomplete Alert - Enhanced with persistent orange button */}
+      {user?.status !== "active" && (
+        <Alert variant="warning" className="border-orange-200 bg-orange-50/50 shadow-sm">
+          <Info className="h-5 w-5 text-orange-600" />
+          <AlertTitle className="text-orange-900 font-bold text-base">Registration Action Required</AlertTitle>
+          <AlertDescription className="text-orange-700 mt-1">
+            {schoolInvoices.length === 0 
+              ? "You must finalize your student registration to generate an invoice and proceed with payment."
+              : "Please complete your payment and upload the signed form to activate your portal fully."}
+            <div className="mt-4 flex flex-wrap gap-3">
               <Button 
-                onClick={() => onPageChange("students")}
-                size="sm"
-                className="bg-[#f97316] hover:bg-[#ea580c] text-white font-black rounded-full h-11 px-6 shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+                onClick={() => onPageChange(schoolInvoices.length === 0 ? "students" : "payment-status")}
+                className="bg-[#f97316] hover:bg-[#ea580c] text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
               >
                 <ArrowRightCircle className="h-5 w-5" />
                 <span className="text-sm">Complete Registration</span>
               </Button>
+              {schoolInvoices.length > 0 && (
+                <Button 
+                  variant="outline"
+                  onClick={() => onPageChange("reports")}
+                  className="border-orange-200 text-orange-700 hover:bg-orange-100 rounded-xl h-11 px-6"
+                >
+                  View My Reports
+                </Button>
+              )}
             </div>
           </AlertDescription>
         </Alert>
-      ) : (
+      )}
+
+      {/* Legacy Alert - kept only if status is pending/verified but not active */}
+      {user?.status !== "active" && user?.status !== "pending" && schoolInvoices.length > 0 && (
         <>
           {user?.status === "pending" && (
             <Alert variant="warning">
@@ -294,41 +335,43 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
               </AlertDescription>
             </Alert>
           )}
-
-          {user?.status === "active" && (
-            <Alert variant="success">
-              <CheckCircle className="h-4 w-4" />
-              <AlertTitle>Portal Fully Active</AlertTitle>
-              <AlertDescription>
-                Your registration is complete and all school portal features are
-                available.
-              </AlertDescription>
-            </Alert>
-          )}
         </>
       )}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      {user?.status === "active" && (
+        <Alert variant="success" className="bg-emerald-50 border-emerald-100">
+          <CheckCircle className="h-4 w-4 text-emerald-600" />
+          <AlertTitle className="text-emerald-900 font-bold">Portal Fully Active</AlertTitle>
+          <AlertDescription className="text-emerald-700">
+            Your registration is complete and all school portal features are
+            available.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
-            <Card key={stat.title} className={`h-full border-l-4 ${stat.borderClass}`}>
-              <CardContent className="pt-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <p className="text-sm font-medium text-slate-500">
+            <Card key={stat.title} className={`h-full border-l-4 ${stat.borderClass} transition-all duration-200 hover:shadow-md`}>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
                       {stat.title}
                     </p>
-                    <div className="space-y-1">
-                      <p className="text-2xl font-bold text-slate-900">
+                    <div className="flex flex-col">
+                      <p className="text-2xl font-black text-slate-900 leading-tight">
                         {stat.value}
                       </p>
-                      <p className="text-sm text-slate-500">{stat.subtitle}</p>
+                      <p className="text-[10px] font-medium text-slate-400 mt-0.5">
+                        {stat.subtitle}
+                      </p>
                     </div>
                   </div>
                   <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-2xl ${stat.iconClass}`}
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${stat.iconClass}`}
                   >
                     <Icon className="h-5 w-5" />
                   </div>
@@ -688,8 +731,8 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
 
           <Card className="w-full border-l-4 border-l-amber-500">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-bold text-slate-900">Secretariat Contact</CardTitle>
-              <CardDescription>Zone administration support</CardDescription>
+              <CardTitle className="text-lg font-bold text-slate-900">WAKISSHA SECRETARIAT</CardTitle>
+              <CardDescription>Portal support</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
@@ -721,10 +764,10 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-slate-900 truncate">
-              {isAllFinalized ? "Add Additional Student" : "Add Student"}
+              {showAdditionalLabel ? "Add Additional Student" : "Add Student"}
             </div>
             <div className="mt-1 text-xs text-slate-500 whitespace-normal line-clamp-2">
-              {isAllFinalized 
+              {showAdditionalLabel 
                 ? "Register a new candidate post-finalization" 
                 : "Register a new candidate for examination entries"}
             </div>
@@ -800,90 +843,201 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         )}
       </div>
 
-      <Dialog open={isFinalizeDialogOpen} onOpenChange={setIsFinalizeDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] rounded-3xl" aria-describedby="finalize-description">
+      <Dialog open={isFinalizeDialogOpen} onOpenChange={(open) => {
+        setIsFinalizeDialogOpen(open);
+        if (!open) {
+          setFinalizeStep(1);
+          setIsVerified(false);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[600px] rounded-3xl" aria-describedby="finalize-description">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-slate-900">Finalize Registration</DialogTitle>
-            <DialogDescription id="finalize-description" className="text-slate-500">
-              Please provide the following information to generate your final invoice.
-              This action will lock current student records.
-            </DialogDescription>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-2xl bg-orange-600/10 flex items-center justify-center text-orange-600">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-bold text-slate-900">Finalize Registration</DialogTitle>
+                <DialogDescription id="finalize-description" className="text-slate-500">
+                  Step {finalizeStep} of 3: {finalizeStep === 1 ? "Configuration" : finalizeStep === 2 ? "Verification" : "Confirmation"}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           
           <div className="space-y-6 py-4">
-            <div className="space-y-4">
-              <Label className="text-sm font-bold text-slate-700">Select Exam Level to Finalize</Label>
-              <RadioGroup 
-                value={finalizeLevel} 
-                onValueChange={(value: "UCE" | "UACE") => setFinalizeLevel(value)}
-                className="grid grid-cols-2 gap-4"
-              >
-                <div>
-                  <RadioGroupItem value="UCE" id="uce" disabled={isUceFinalized} className="peer sr-only" />
-                  <Label
-                    htmlFor="uce"
-                    className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 ${isUceFinalized ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"}`}
+            {finalizeStep === 1 && (
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold text-slate-700">Select Exam Level to Finalize</Label>
+                  <RadioGroup 
+                    value={finalizeLevel} 
+                    onValueChange={(value: "UCE" | "UACE") => setFinalizeLevel(value)}
+                    className="grid grid-cols-2 gap-4"
                   >
-                    <span className="text-sm font-bold">UCE (O-Level)</span>
-                    {isUceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED</span>}
+                    <div>
+                      <RadioGroupItem value="UCE" id="uce" disabled={isUceFinalized} className="peer sr-only" />
+                      <Label
+                        htmlFor="uce"
+                        className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 ${isUceFinalized ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        <span className="text-sm font-bold">UCE (O-Level)</span>
+                        {isUceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED</span>}
+                      </Label>
+                    </div>
+                    <div>
+                      <RadioGroupItem value="UACE" id="uace" disabled={isUaceFinalized} className="peer sr-only" />
+                      <Label
+                        htmlFor="uace"
+                        className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 ${isUaceFinalized ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        <span className="text-sm font-bold">UACE (A-Level)</span>
+                        {isUaceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED</span>}
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold text-slate-700">Select Marking Guide (25,000 UGX each)</Label>
+                  <RadioGroup 
+                    value={markingGuide} 
+                    onValueChange={(value: "Arts" | "Sciences" | "Both") => setMarkingGuide(value)}
+                    className="grid grid-cols-1 gap-3"
+                  >
+                    <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                      <RadioGroupItem value="Arts" id="arts" />
+                      <Label htmlFor="arts" className="flex-1 font-semibold cursor-pointer">Arts Only</Label>
+                      <Badge variant="secondary">25,000 UGX</Badge>
+                    </div>
+                    <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                      <RadioGroupItem value="Sciences" id="sciences" />
+                      <Label htmlFor="sciences" className="flex-1 font-semibold cursor-pointer">Sciences Only</Label>
+                      <Badge variant="secondary">25,000 UGX</Badge>
+                    </div>
+                    <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                      <RadioGroupItem value="Both" id="both" />
+                      <Label htmlFor="both" className="flex-1 font-semibold cursor-pointer">Both (Arts & Sciences)</Label>
+                      <Badge variant="secondary">50,000 UGX</Badge>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </div>
+            )}
+
+            {finalizeStep === 2 && (
+              <div className="space-y-6">
+                <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
+                  <div className="bg-slate-900 px-4 py-3 text-white">
+                    <p className="text-sm font-bold flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Summary of Entries: {finalizeLevel}
+                    </p>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    <div className="flex justify-between px-4 py-3 text-sm">
+                      <span className="text-slate-500 font-medium">Total Enrolled Students</span>
+                      <span className="font-bold text-slate-900">{levelStats.totalStudents}</span>
+                    </div>
+                    <div className="flex justify-between px-4 py-3 text-sm">
+                      <span className="text-slate-500 font-medium">Subjects Registered</span>
+                      <span className="font-bold text-slate-900">{levelStats.subjectsRegistered}</span>
+                    </div>
+                    <div className="flex justify-between px-4 py-3 text-sm">
+                      <span className="text-slate-500 font-medium">Total Entries</span>
+                      <span className="font-bold text-slate-900">{levelStats.totalEntries}</span>
+                    </div>
+                    <div className="flex justify-between px-4 py-3 text-sm">
+                      <span className="text-slate-500 font-medium">Payment Status</span>
+                      <span className="font-bold text-orange-600 uppercase tracking-wider text-xs">Awaiting Finalization</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-4 p-6 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                  <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                    <Download className="h-6 w-6" />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-bold text-slate-900">Generate Official Summary Form</p>
+                    <p className="text-xs text-slate-500 mt-1 max-w-[300px]">
+                      Download and review the official WAKISSHA summary form for your school records.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleDownloadSummary}
+                    variant="outline" 
+                    className="rounded-xl font-bold border-blue-200 text-blue-600 hover:bg-blue-50"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Download Official Summary (PDF)
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {finalizeStep === 3 && (
+              <div className="space-y-6">
+                <Alert className="bg-amber-50 border-amber-100 text-amber-800 rounded-2xl">
+                  <AlertTriangle className="h-5 w-5" />
+                  <AlertTitle className="font-bold text-lg">Final Verification Required</AlertTitle>
+                  <AlertDescription className="text-sm leading-relaxed">
+                    By finalizing, you confirm that all student details and subject entries for <strong>{finalizeLevel}</strong> are correct. 
+                    Once finalized, these records will be locked and an invoice will be generated.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="flex items-start space-x-3 p-5 rounded-2xl border-2 border-slate-900 bg-slate-50">
+                  <Checkbox 
+                    id="verify-checkbox" 
+                    checked={isVerified} 
+                    onCheckedChange={(checked) => setIsVerified(checked as boolean)}
+                    className="mt-1 h-5 w-5 border-slate-900 data-[state=checked]:bg-slate-900"
+                  />
+                  <Label htmlFor="verify-checkbox" className="text-sm font-bold text-slate-900 leading-snug cursor-pointer">
+                    I have reviewed the summary form and verified that all {levelStats.totalStudents} student records are accurate. I am ready to generate the invoice.
                   </Label>
                 </div>
-                <div>
-                  <RadioGroupItem value="UACE" id="uace" disabled={isUaceFinalized} className="peer sr-only" />
-                  <Label
-                    htmlFor="uace"
-                    className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 ${isUaceFinalized ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"}`}
-                  >
-                    <span className="text-sm font-bold">UACE (A-Level)</span>
-                    {isUaceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED</span>}
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div className="space-y-4">
-              <Label className="text-sm font-bold text-slate-700">Select Marking Guide (25,000 UGX each)</Label>
-              <RadioGroup 
-                value={markingGuide} 
-                onValueChange={(value: "Arts" | "Sciences" | "Both") => setMarkingGuide(value)}
-                className="grid grid-cols-1 gap-3"
-              >
-                <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <RadioGroupItem value="Arts" id="arts" />
-                  <Label htmlFor="arts" className="flex-1 font-semibold cursor-pointer">Arts Only</Label>
-                  <Badge variant="secondary">25,000 UGX</Badge>
-                </div>
-                <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <RadioGroupItem value="Sciences" id="sciences" />
-                  <Label htmlFor="sciences" className="flex-1 font-semibold cursor-pointer">Sciences Only</Label>
-                  <Badge variant="secondary">25,000 UGX</Badge>
-                </div>
-                <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <RadioGroupItem value="Both" id="both" />
-                  <Label htmlFor="both" className="flex-1 font-semibold cursor-pointer">Both (Arts & Sciences)</Label>
-                  <Badge variant="secondary">50,000 UGX</Badge>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <Alert className="bg-blue-50 border-blue-100 text-blue-800 rounded-2xl">
-              <Info className="h-4 w-4" />
-              <AlertTitle className="font-bold">Important Note</AlertTitle>
-              <AlertDescription className="text-xs">
-                Once finalized, you can only add "Additional Students" which will generate 
-                separate invoices and reports.
-              </AlertDescription>
-            </Alert>
+              </div>
+            )}
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setIsFinalizeDialogOpen(false)} className="rounded-xl font-bold">
-              Cancel
-            </Button>
-            <Button onClick={handleFinalize} className="rounded-xl font-bold bg-slate-900 hover:bg-slate-800">
-              Confirm & Finalize {finalizeLevel}
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
+          <DialogFooter className="gap-2 sm:gap-0 border-t pt-6">
+            <div className="flex w-full justify-between items-center">
+              {finalizeStep > 1 ? (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setFinalizeStep(prev => prev - 1)} 
+                  className="rounded-xl font-bold text-slate-500 hover:text-slate-900"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+              ) : (
+                <Button variant="ghost" onClick={() => setIsFinalizeDialogOpen(false)} className="rounded-xl font-bold text-slate-500">
+                  Cancel
+                </Button>
+              )}
+
+              {finalizeStep < 3 ? (
+                <Button 
+                  onClick={() => setFinalizeStep(prev => prev + 1)} 
+                  className="rounded-xl font-bold bg-slate-900 hover:bg-slate-800 px-8"
+                >
+                  Next Step
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleFinalize} 
+                  disabled={!isVerified}
+                  className="rounded-xl font-bold bg-green-600 hover:bg-green-700 px-8 shadow-lg shadow-green-100 disabled:opacity-50"
+                >
+                  Finalize & Generate Invoice
+                  <CheckCircle className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
