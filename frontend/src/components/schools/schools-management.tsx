@@ -206,16 +206,16 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
   ];
 
   return (
-    <div className="flex flex-col w-full gap-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600">
-            School Administration
+    <div className="flex flex-col w-full gap-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            SCHOOL ADMINISTRATION
           </p>
-          <h1 className="text-3xl font-bold text-slate-900">
+          <h1 className="text-2xl font-bold text-slate-900">
             Schools Management
           </h1>
-          <p className="max-w-3xl text-slate-500">
+          <p className="max-w-3xl text-sm text-slate-500">
             Track registration, payment verification, and activation progress
             for member schools across all WAKISSHA zones.
           </p>
@@ -223,21 +223,21 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
 
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="h-11 px-6 rounded-lg font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-100 flex items-center justify-center gap-2 transition-all hover:translate-y-[-1px]">
-              <Plus className="h-4 w-4" />
+            <Button className="h-9 px-4 rounded-lg font-semibold">
+              <Plus className="h-4 w-4 mr-2" />
               Add School
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto sm:p-8">
-            <DialogHeader className="mb-6">
-              <DialogTitle className="text-2xl font-bold text-slate-900">Register New School</DialogTitle>
-              <DialogDescription className="text-slate-500 mt-1">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-xl font-bold text-slate-900">Register New School</DialogTitle>
+              <DialogDescription className="text-slate-500 mt-1 text-sm">
                 Add a new school to the WAKISSHA portal. A school code will be
                 generated automatically.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="name" className="text-sm font-semibold text-slate-700">School Name *</Label>
                 <Input
                   id="name"
@@ -246,11 +246,11 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   onChange={(event) =>
                     setNewSchool({ ...newSchool, name: event.target.value })
                   }
-                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="h-9 border-slate-200"
                   autoFocus
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-sm font-semibold text-slate-700">Email Address *</Label>
                 <Input
                   id="email"
@@ -260,10 +260,10 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   onChange={(event) =>
                     setNewSchool({ ...newSchool, email: event.target.value })
                   }
-                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="h-9 border-slate-200"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="phone" className="text-sm font-semibold text-slate-700">Phone Number *</Label>
                 <Input
                   id="phone"
@@ -272,10 +272,10 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   onChange={(event) =>
                     setNewSchool({ ...newSchool, phone: event.target.value })
                   }
-                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="h-9 border-slate-200"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="address" className="text-sm font-semibold text-slate-700">Address *</Label>
                 <Input
                   id="address"
@@ -284,10 +284,10 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   onChange={(event) =>
                     setNewSchool({ ...newSchool, address: event.target.value })
                   }
-                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="h-9 border-slate-200"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="educationLevel" className="text-sm font-semibold text-slate-700">Education Level *</Label>
                 <Select
                   value={newSchool.educationLevel}
@@ -295,26 +295,26 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                     setNewSchool({ ...newSchool, educationLevel: value })
                   }
                 >
-                  <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                  <SelectTrigger className="h-9 border-slate-200">
                     <SelectValue placeholder="Select level" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200">
+                  <SelectContent className="border-slate-200">
                     <SelectItem value="UCE">UCE (O' Level)</SelectItem>
                     <SelectItem value="UACE">UACE (A' Level)</SelectItem>
                     <SelectItem value="BOTH">Both (UCE & UACE)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="zone" className="text-sm font-semibold text-slate-700">Zone *</Label>
                 <Select value={newSchool.zone_id} onValueChange={(value) =>
                     setNewSchool({ ...newSchool, zone_id: value })
                   }
                 >
-                  <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white">
+                  <SelectTrigger className="h-9 border-slate-200">
                     <SelectValue placeholder="Select zone" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200">
+                  <SelectContent className="border-slate-200">
                     <SelectItem value="unknown">I don't know (Admin will allocate)</SelectItem>
                     {zones.map((zone) => (
                       <SelectItem key={zone.id} value={zone.id}>
@@ -323,15 +323,15 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-slate-500 leading-relaxed italic">
+                <p className="text-[11px] text-slate-500 leading-relaxed">
                   If a school does not know its zone, select 'I don't know'. WAKISSHA admin will allocate the correct zone.
                 </p>
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="schoolLogo" className="text-sm font-semibold text-slate-700">School Logo (Optional)</Label>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 h-11 px-3 rounded-xl border border-slate-200 bg-white">
+                    <div className="flex items-center gap-3 h-9 px-3 rounded-lg border border-slate-200">
                       <Input
                         id="schoolLogo"
                         type="file"
@@ -340,12 +340,12 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                         className="flex-1 border-0 bg-transparent p-0 h-auto focus-visible:ring-0 cursor-pointer text-sm"
                       />
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-2 italic">
+                    <p className="text-[11px] text-slate-500 mt-1">
                       PNG, JPEG or WebP. Max 2MB.
                     </p>
                   </div>
                   {logoPreview && (
-                    <div className="flex items-center justify-center w-20 h-20 border border-slate-200 rounded-xl bg-slate-50 overflow-hidden shadow-sm">
+                    <div className="flex items-center justify-center w-16 h-16 border border-slate-200 rounded-lg bg-slate-50 overflow-hidden">
                       <img
                         src={logoPreview}
                         alt="Logo preview"
@@ -355,7 +355,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   )}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="contactPerson" className="text-sm font-semibold text-slate-700">Contact Person (Optional)</Label>
                 <Input
                   id="contactPerson"
@@ -367,10 +367,10 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                       contactPerson: event.target.value,
                     })
                   }
-                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500 bg-white"
+                  className="h-9 border-slate-200"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="contactPhone" className="text-sm font-semibold text-slate-700">Contact Person Phone (Optional)</Label>
                 <Input
                   id="contactPhone"
@@ -382,10 +382,10 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                       contactPhone: event.target.value,
                     })
                   }
-                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500 bg-white"
+                  className="h-9 border-slate-200"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="contactDesignation" className="text-sm font-semibold text-slate-700">Contact Designation (Optional)</Label>
                 <Input
                   id="contactDesignation"
@@ -397,24 +397,24 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                       contactDesignation: event.target.value,
                     })
                   }
-                  className="h-11 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500 bg-white"
+                  className="h-9 border-slate-200"
                 />
               </div>
               <div className="md:col-span-2">
-                <p className="text-xs text-slate-500 leading-relaxed italic">
+                <p className="text-xs text-slate-500 leading-relaxed">
                   After designation, please add mobile contact for the contact person WAKISSHA will be contacting
                 </p>
               </div>
             </div>
-            <DialogFooter className="mt-8 gap-3 sm:gap-0">
+            <DialogFooter className="mt-6 gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   setIsAddDialogOpen(false);
                   setLogoPreview("");
                   setLogoFile(null);
                 }}
-                className="h-11 rounded-xl px-6 font-semibold"
+                className="h-9 px-4 font-medium"
               >
                 Cancel
               </Button>
@@ -428,7 +428,7 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
                   !newSchool.educationLevel ||
                   !newSchool.zone_id
                 }
-                className="h-11 rounded-xl px-8 font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200"
+                className="h-9 px-6 font-semibold"
               >
                 Add School
               </Button>
@@ -437,17 +437,15 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 w-full">
-        {stats.map((stat, index) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 w-full">
+        {stats.map((stat) => (
           <Card 
             key={stat.label} 
-            className={`border-l-2 ${stat.className} rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.04)] border-y-slate-100 border-r-slate-100 h-[80px] flex items-center transition-all hover:shadow-md ${
-              index === stats.length - 1 && stats.length % 2 !== 0 ? "col-span-2" : ""
-            }`}
+            className="border-slate-200 shadow-sm"
           >
-            <CardContent className="p-4 w-full">
-              <p className="text-sm font-medium text-slate-500 leading-none">{stat.label}</p>
-              <p className={`mt-1.5 text-[22px] font-bold leading-none ${stat.valueClass}`}>
+            <CardContent className="p-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{stat.label}</p>
+              <p className="text-lg font-bold text-slate-900 mt-1">
                 {stat.value}
               </p>
             </CardContent>
@@ -455,23 +453,23 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
         ))}
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 lg:flex-row">
+      <Card className="border-slate-200 shadow-sm">
+        <CardContent className="pt-4">
+          <div className="flex flex-col gap-2 lg:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 placeholder="Search by school name, code, or district..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="pl-10"
+                className="pl-10 border-slate-200"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full lg:w-[240px]">
+              <SelectTrigger className="w-full lg:w-[200px] border-slate-200">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="border-slate-200">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="payment_submitted">Payment Submitted</SelectItem>
@@ -483,102 +481,101 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="border-b border-slate-200">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle className="text-slate-900">Registered Schools</CardTitle>
-              <CardDescription className="text-slate-500">
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader className="border-b border-slate-200 pb-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-0.5">
+              <CardTitle className="text-slate-900 text-base font-semibold">Registered Schools</CardTitle>
+              <CardDescription className="text-slate-500 text-sm">
                 {filteredSchools.length} school
                 {filteredSchools.length !== 1 ? "s" : ""} found
               </CardDescription>
             </div>
-            <Button variant="outline" onClick={() => onPageChange("students")}>
-              <School className="h-4 w-4" />
+            <Button variant="ghost" size="sm" onClick={() => onPageChange("students")}>
+              <School className="h-4 w-4 mr-1.5" />
               View Student Entries
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>School Name</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>District / Zone</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Students</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Activation Info</TableHead>
-                <TableHead>Registration Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSchools.map((school) => (
-                <TableRow key={school.id}>
-                  <TableCell className="font-semibold text-slate-900">
-                    {school.name}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{school.code}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="text-slate-900">{school.district}</div>
-                      <div className="text-slate-500">{school.zone}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="text-slate-900">{school.email}</div>
-                      <div className="text-slate-500">{school.phone}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{school.students}</TableCell>
-                  <TableCell>{getStatusBadge(school.status)}</TableCell>
-                  <TableCell>
-                    {school.status === "active" && school.activationCode ? (
-                      <div className="flex items-center gap-2 text-sm text-slate-900">
-                        <ShieldCheck className="h-4 w-4 text-green-400" />
-                        {school.activationCode}
-                      </div>
-                    ) : (
-                      <span className="text-sm text-slate-500">Not active yet</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-slate-500">
-                    {new Date(school.registrationDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={school.status}
-                      onValueChange={(value) =>
-                        handleStatusChange(school.code, value as SchoolStatus)
-                      }
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="payment_submitted">
-                          Payment Submitted
-                        </SelectItem>
-                        <SelectItem value="verified">Verified</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
+        <CardContent className="pt-4">
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow className="hover:bg-slate-50">
+                  <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">School Name</TableHead>
+                  <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Code</TableHead>
+                  <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">District / Zone</TableHead>
+                  <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Contact</TableHead>
+                  <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide text-right">Students</TableHead>
+                  <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Status</TableHead>
+                  <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Activation Info</TableHead>
+                  <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Registration Date</TableHead>
+                  <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredSchools.map((school) => (
+                  <TableRow key={school.id} className="hover:bg-slate-50/80">
+                    <TableCell className="font-semibold text-slate-900 text-sm">
+                      {school.name}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-xs">{school.code}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm space-y-0.5">
+                        <div className="text-slate-900">{school.district}</div>
+                        <div className="text-slate-500">{school.zone}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm space-y-0.5">
+                        <div className="text-slate-900 truncate max-w-[160px]">{school.email}</div>
+                        <div className="text-slate-500">{school.phone}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-slate-900 text-sm tabular-nums">{school.students}</TableCell>
+                    <TableCell>{getStatusBadge(school.status)}</TableCell>
+                    <TableCell>
+                      {school.status === "active" && school.activationCode ? (
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                          <span className="font-mono text-slate-700">{school.activationCode}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-500">Not active yet</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-slate-600 text-sm">
+                      {new Date(school.registrationDate).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Select
+                        value={school.status}
+                        onValueChange={(value) =>
+                          handleStatusChange(school.code, value as SchoolStatus)
+                        }
+                      >
+                        <SelectTrigger className="w-[160px] h-8 border-slate-200 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="border-slate-200">
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="payment_submitted">
+                            Payment Submitted
+                          </SelectItem>
+                          <SelectItem value="verified">Verified</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-
-

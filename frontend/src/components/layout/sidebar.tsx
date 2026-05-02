@@ -193,8 +193,8 @@ export function Sidebar({
                   isCollapsed ? "justify-center px-0" : "justify-start px-4"
                 } ${
                   isActive
-                    ? "bg-primary text-white shadow-sm hover:bg-blue-700"
-                    : "text-slate-500 hover:bg-blue-50 hover:text-primary"
+                    ? "bg-slate-900 text-white shadow-sm hover:bg-slate-800 hover:text-white"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
                 onClick={() => handleNavigation(item.id)}
               >

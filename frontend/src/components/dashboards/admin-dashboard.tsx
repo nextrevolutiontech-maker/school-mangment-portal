@@ -37,42 +37,39 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
     {
       title: "Total Schools",
       value: String(schools.length),
-      change: `${schools.filter((school) => school.status === "active").length} active`,
+      change: `${schools.filter((school) => school.status === "active").length} active schools`,
       icon: School,
-      color: "bg-red-50",
-      border: "border-l-red-500",
-      iconColor: "text-red-600",
+      borderClass: "border-l-red-600",
+      iconClass: "bg-orange-600/10 text-orange-600",
     },
     {
       title: "Total Students",
       value: String(students.length),
-      change: "Registered",
+      change: "Live from frontend state",
       icon: Users,
-      color: "bg-amber-50",
-      border: "border-l-amber-500",
-      iconColor: "text-amber-600",
+      borderClass: "border-l-amber-500",
+      iconClass:
+        "bg-amber-500/10 text-amber-600",
     },
     {
       title: "Pending Payments",
       value: String(schools.filter((school) => school.status === "payment_submitted").length),
-      change: "For review",
+      change: "Require verification",
       icon: BookOpen,
-      color: "bg-blue-50",
-      border: "border-l-blue-500",
-      iconColor: "text-blue-600",
+      borderClass: "border-l-blue-500",
+      iconClass: "bg-blue-500/10 text-blue-600",
     },
     {
       title: "Verified Schools",
       value: String(schools.filter((school) => school.status === "verified").length),
-      change: "Approved",
+      change: "Ready for activation",
       icon: AlertCircle,
-      color: "bg-emerald-50",
-      border: "border-l-emerald-500",
-      iconColor: "text-emerald-600",
+      borderClass: "border-l-emerald-500",
+      iconClass: "bg-emerald-500/10 text-emerald-600",
     },
   ];
 
-  const recentSubmissions = schools.slice(0, 6).map((school) => ({
+  const recentSubmissions = schools.map((school) => ({
     id: school.id,
     school: school.name,
     code: school.code,
@@ -86,90 +83,85 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
     {
       label: "Add School",
       icon: Plus,
-      description: "Register new school",
+      description: "Register a new school in the portal",
       page: "schools",
     },
     {
       label: "Open Reports",
       icon: FileText,
-      description: "View consolidated reports",
+      description: "Review consolidated exam registrations",
       page: "reports",
     },
     {
       label: "Manage Timetable",
       icon: Calendar,
-      description: "Exam schedule",
+      description: "Inspect the latest examination schedule",
       page: "timetable",
     },
   ];
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { bg: string; text: string; border: string }> = {
-      active: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
-      verified: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-100" },
-      pending: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
-      payment_submitted: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-100" },
-      rejected: { bg: "bg-red-50", text: "text-red-700", border: "border-red-100" },
-    };
-
-    const style = variants[status] || variants.pending;
+    const variants = {
+      verified: "info",
+      pending: "warning",
+      rejected: "destructive",
+    } as const;
 
     return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${style.bg} ${style.text} ${style.border} border`}>
-        {status.replace('_', ' ')}
-      </span>
+      <Badge variant={variants[status as keyof typeof variants] || "secondary"}>
+        {status}
+      </Badge>
     );
   };
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto px-6 py-8">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-10">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-400 mb-3">
-            ADMINISTRATOR OVERVIEW
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 anim-fade-up">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between anim-fade-up-delay">
+        <div className="space-y-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+            Administrator Overview
           </p>
-          <h1 className="text-3xl font-black text-slate-900 leading-tight mb-2">
-            Organisation Admin Dashboard
-          </h1>
-          <p className="text-slate-500 text-sm max-w-xl">
-            Monitor school registrations, payment verification, and
-            examination readiness across the WAKISSHA network.
-          </p>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">
+              Organisation Admin Dashboard
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
+              Monitor school registrations, payment verification, and
+              examination readiness across the WAKISSHA network.
+            </p>
+          </div>
         </div>
-
-        <div className="mt-6 md:mt-0 flex items-center gap-3 bg-slate-100 px-5 py-3 rounded-full">
-          <Calendar className="w-4 h-4 text-slate-500" />
-          <span className="text-sm font-bold text-slate-700">
-            Registration window: <span className="text-slate-900">April 2026</span>
-          </span>
+        <div className="bg-slate-900 text-white shadow-lg shadow-slate-200 rounded-2xl px-5 py-2.5 text-xs font-bold flex items-center gap-2">
+          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+          <span>Registration window: <span className="text-primary-foreground">April 2026</span></span>
         </div>
       </div>
 
-      {/* Stats Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
+
           return (
-            <Card 
-              key={stat.title} 
-              className={`border-0 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${stat.border} border-l-4`}
-            >
-              <CardContent className="p-6">
+            <Card key={stat.title} className={`h-full border-l-4 ${stat.borderClass} transition-all duration-200 hover:shadow-md`}>
+              <CardContent className="p-5">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
                       {stat.title}
                     </p>
-                    <p className="text-3xl font-black text-slate-900 mb-1">
-                      {stat.value}
-                    </p>
-                    <p className="text-xs font-semibold text-slate-400">
-                      {stat.change}
-                    </p>
+                    <div className="flex flex-col">
+                      <p className="text-2xl font-black text-slate-900">
+                        {stat.value}
+                      </p>
+                      <p className="text-[10px] font-medium text-slate-400">
+                        {stat.change}
+                      </p>
+                    </div>
                   </div>
-                  <div className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center ${stat.iconColor}`}>
-                    <Icon className="w-6 h-6" />
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${stat.iconClass}`}
+                  >
+                    <Icon className="h-5 w-5" />
                   </div>
                 </div>
               </CardContent>
@@ -178,103 +170,85 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
         })}
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Recent Submissions & Status */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-0 border-b border-slate-100 mb-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <CardTitle className="text-lg font-bold text-slate-900">Recent Submissions</CardTitle>
-                  <CardDescription className="text-slate-500 text-sm mt-1">
-                    Latest school registration activities
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="ghost"
-                  className="text-sm font-bold text-slate-700 hover:text-slate-900"
-                  onClick={() => onPageChange("students")}
-                >
-                  View All
-                  <ArrowUpRight className="ml-2 w-4 h-4" />
-                </Button>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="xl:col-span-2 flex flex-col gap-4">
+          <Card className="w-full">
+            <CardHeader className="flex flex-col gap-4 border-b border-slate-200 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle className="text-slate-900">Recent Submissions</CardTitle>
+                <CardDescription className="text-slate-500">
+                  Latest student registration submissions from schools
+                </CardDescription>
               </div>
+              <Button
+                variant="outline"
+                className="w-full md:w-auto"
+                onClick={() => onPageChange("students")}
+              >
+                View All Entries
+                <ArrowUpRight className="ml-2 h-4 w-4" />
+              </Button>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-b-0">
-                      <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-3">
-                        School
-                      </TableHead>
-                      <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-3">
-                        Code
-                      </TableHead>
-                      <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-3">
-                        Students
-                      </TableHead>
-                      <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-3">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-3 text-right">
-                        Date
-                      </TableHead>
+            <CardContent className="pt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>School</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Students</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentSubmissions.map((submission) => (
+                    <TableRow key={submission.id}>
+                      <TableCell className="font-semibold text-slate-900">
+                        {submission.school}
+                      </TableCell>
+                      <TableCell className="text-slate-500">
+                        {submission.code}
+                      </TableCell>
+                      <TableCell>{submission.students}</TableCell>
+                      <TableCell className="font-semibold text-slate-900">
+                        {submission.amount}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(submission.status)}</TableCell>
+                      <TableCell className="text-slate-500">
+                        {new Date(submission.date).toLocaleDateString()}
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentSubmissions.map((submission) => (
-                      <TableRow key={submission.id} className="border-b border-slate-50 hover:bg-slate-50/50">
-                        <TableCell className="py-4">
-                          <div className="font-bold text-slate-900 text-sm">{submission.school}</div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="text-slate-500 font-mono text-xs">{submission.code}</div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <div className="text-slate-700 font-bold text-sm">{submission.students}</div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          {getStatusBadge(submission.status)}
-                        </TableCell>
-                        <TableCell className="py-4 text-right">
-                          <div className="text-slate-500 text-xs font-medium">
-                            {new Date(submission.date).toLocaleDateString()}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-bold text-slate-900">Status Distribution</CardTitle>
-              <CardDescription className="text-slate-500 text-sm">
-                Overview of school registration stages
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle className="text-slate-900">Status Distribution</CardTitle>
+              <CardDescription className="text-slate-500">
+                Visual snapshot of school lifecycle stages
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-4">
               {[
                 { label: "Pending", value: schools.filter((s) => s.status === "pending").length, color: "bg-amber-500" },
                 { label: "Payment Submitted", value: schools.filter((s) => s.status === "payment_submitted").length, color: "bg-orange-500" },
                 { label: "Verified", value: schools.filter((s) => s.status === "verified").length, color: "bg-blue-500" },
-                { label: "Active", value: schools.filter((s) => s.status === "active").length, color: "bg-emerald-500" },
+                { label: "Active", value: schools.filter((s) => s.status === "active").length, color: "bg-green-500" },
               ].map((item) => {
                 const max = Math.max(1, schools.length);
                 const width = `${(item.value / max) * 100}%`;
                 return (
-                  <div key={item.label} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-600">{item.label}</span>
-                      <span className="text-sm font-black text-slate-900">{item.value}</span>
+                  <div key={item.label} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500">{item.label}</span>
+                      <span className="font-semibold text-slate-900">{item.value}</span>
                     </div>
-                    <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                      <div className={`h-full rounded-full ${item.color} transition-all duration-700`} style={{ width }} />
+                    <div className="h-2 rounded-full bg-slate-100">
+                      <div className={`h-2 rounded-full ${item.color}`} style={{ width }} />
                     </div>
                   </div>
                 );
@@ -283,31 +257,35 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
           </Card>
         </div>
 
-        {/* Right Column - Quick Actions & System Info */}
-        <div className="space-y-6">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-bold text-slate-900">Quick Actions</CardTitle>
-              <CardDescription className="text-slate-500 text-sm">
-                Common administration tasks
+        <div className="flex flex-col gap-4">
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle className="text-slate-900">Quick Actions</CardTitle>
+              <CardDescription className="text-slate-500">
+                Common administrative tasks
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               {quickActions.map((action) => {
                 const Icon = action.icon;
+
                 return (
                   <Button
                     key={action.label}
-                    variant="ghost"
-                    className="w-full justify-start h-auto p-4 rounded-2xl hover:bg-slate-50 text-left group"
+                    variant="outline"
+                    className="h-auto w-full justify-start rounded-2xl px-4 py-3 text-left hover:bg-slate-50 border-slate-200"
                     onClick={() => onPageChange(action.page)}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 group-hover:text-slate-900 group-hover:bg-slate-200 mr-3">
-                      <Icon className="w-5 h-5" />
+                    <div className="mr-3 flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600/10 text-blue-700">
+                      <Icon className="h-4 w-4" />
                     </div>
-                    <div className="flex-1">
-                      <div className="font-bold text-slate-900 text-sm">{action.label}</div>
-                      <div className="text-xs text-slate-500">{action.description}</div>
+                    <div className="space-y-0.5">
+                      <div className="font-semibold text-slate-900 text-sm">
+                        {action.label}
+                      </div>
+                      <div className="text-[10px] text-slate-500 leading-tight">
+                        {action.description}
+                      </div>
                     </div>
                   </Button>
                 );
@@ -315,57 +293,47 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-900 to-slate-800 text-white">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-bold text-white">System Overview</CardTitle>
-              <CardDescription className="text-slate-400 text-sm">
-                Registration period details
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle className="text-slate-900">System Overview</CardTitle>
+              <CardDescription className="text-slate-500">
+                Registration period status
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                <div className="flex items-center justify-between">
+            <CardContent className="space-y-2">
+              <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-3">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       Registration Period
                     </p>
-                    <p className="text-base font-bold text-white">
+                    <p className="mt-0.5 text-base font-bold text-slate-900">
                       April 2026
                     </p>
                   </div>
-                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-400/30 border">Active</Badge>
+                  <Badge className="bg-emerald-500 hover:bg-emerald-500">Active</Badge>
                 </div>
               </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                <div className="flex items-center justify-between">
+              <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-3">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-                      Deadline
-                    </p>
-                    <p className="text-base font-bold text-white">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Deadline</p>
+                    <p className="mt-0.5 text-base font-bold text-slate-900">
                       April 30, 2026
                     </p>
                   </div>
-                  <Badge className="bg-amber-500/20 text-amber-300 border-amber-400/30 border">
-                    0 days left
-                  </Badge>
+                  <Badge variant="warning">17 days left</Badge>
                 </div>
               </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                <div className="flex items-center justify-between">
+              <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-3">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-                      Completion
-                    </p>
-                    <p className="text-base font-bold text-white">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Completion Rate</p>
+                    <p className="mt-0.5 text-base font-bold text-slate-900">
                       75%
                     </p>
                   </div>
-                  <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30 border">
-                    18/24 schools
-                  </Badge>
+                  <Badge variant="secondary">18/24 schools</Badge>
                 </div>
               </div>
             </CardContent>
@@ -375,3 +343,5 @@ export function AdminDashboard({ onPageChange }: AdminDashboardProps) {
     </div>
   );
 }
+
+

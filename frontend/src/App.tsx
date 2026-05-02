@@ -125,21 +125,21 @@ function AppContent() {
         onMobileClose={() => setIsSidebarOpen(false)}
       />
       <div className="flex-1 h-full min-w-0 max-w-full flex flex-col overflow-y-auto overflow-x-hidden">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/90 backdrop-blur">
-          <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+          <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
             <div className="flex items-center gap-3">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                className="md:hidden"
+                className="md:hidden border-slate-200"
                 onClick={() => setIsSidebarOpen(true)}
                 aria-label="Open sidebar"
               >
                 <Menu className="h-4 w-4" />
               </Button>
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900">
                   WAKISSHA
                 </p>
                 <p className="text-xs text-slate-500">
@@ -148,10 +148,10 @@ function AppContent() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                <Avatar className="h-9 w-9 ring-1 ring-blue-100">
+              <div className="hidden sm:flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/50 px-3 py-2 shadow-sm">
+                <Avatar className="h-9 w-9 ring-1 ring-slate-200">
                   <AvatarImage src={user?.avatar} alt={user?.name} />
-                  <AvatarFallback className="bg-blue-100 text-blue-700">
+                  <AvatarFallback className="bg-slate-100 text-slate-700">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>

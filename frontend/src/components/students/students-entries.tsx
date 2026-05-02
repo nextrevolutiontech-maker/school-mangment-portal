@@ -1494,41 +1494,41 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     </div>
 
     {/* Students Table */}
-      <Card>
-        <CardHeader className="border-b border-slate-200">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle className="text-slate-900">Registered Students</CardTitle>
-                  <div className="flex items-center gap-8 mt-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">School</p>
-                      <p className="text-sm font-bold text-slate-800 truncate max-w-[200px]">
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader className="border-b border-slate-200 pb-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-slate-900 text-base font-semibold">Registered Students</CardTitle>
+                  <div className="flex items-center gap-4 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-0.5">School</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate max-w-[200px]">
                         {user?.role === "school" ? user.name : (scopedSchools.find(s => s.code === schoolFilter)?.name || "All Schools")}
                       </p>
                     </div>
-                    <div className="h-10 w-px bg-slate-200"></div>
+                    <div className="h-6 w-px bg-slate-200"></div>
                     <div>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total Registered</p>
-                      <p className="text-lg font-black text-orange-600 leading-none">{filteredStudents.length}</p>
+                      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-0.5">Total Registered</p>
+                      <p className="text-lg font-bold text-slate-900 leading-none">{filteredStudents.length}</p>
                     </div>
                   </div>
                 </div>
             <div className="flex flex-col gap-2 lg:flex-row">
-              <div className="relative flex-1">
+              <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   placeholder="Search by name or registration..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 border-slate-200 focus:border-slate-400"
                 />
               </div>
               {isAdmin && (
                 <Select value={zoneFilter} onValueChange={setZoneFilter}>
-                  <SelectTrigger className="w-full lg:w-[150px]">
+                  <SelectTrigger className="w-full lg:w-[150px] border-slate-200">
                     <SelectValue placeholder="Filter by zone" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="border-slate-200">
                     <SelectItem value="all">All Zones</SelectItem>
                     {uniqueZones.map((zone) => (
                       <SelectItem key={zone} value={zone}>
@@ -1539,10 +1539,10 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 </Select>
               )}
               <Select value={levelFilter} onValueChange={(value: any) => setLevelFilter(value)}>
-                <SelectTrigger className="w-full lg:w-[150px]">
+                <SelectTrigger className="w-full lg:w-[150px] border-slate-200">
                   <SelectValue placeholder="Filter by level" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="border-slate-200">
                   <SelectItem value="all">All Levels</SelectItem>
                   <SelectItem value="UCE">UCE</SelectItem>
                   <SelectItem value="UACE">UACE</SelectItem>
@@ -1550,10 +1550,10 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </Select>
               {isAdmin && scopedSchools.length > 1 && (
                 <Select value={schoolFilter} onValueChange={setSchoolFilter}>
-                  <SelectTrigger className="w-full lg:w-[200px]">
+                  <SelectTrigger className="w-full lg:w-[200px] border-slate-200">
                     <SelectValue placeholder="Filter by school" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="border-slate-200">
                     <SelectItem value="all">All Schools</SelectItem>
                     {zoneFilteredSchools.map((school) => (
                       <SelectItem key={school.code} value={school.code}>
@@ -1566,84 +1566,86 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="pt-4">
           {filteredStudents.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-slate-500">No students registered yet</p>
+            <div className="text-center py-8">
+              <p className="text-slate-500 text-sm">No students registered yet</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    {hasAnyRegistrationNumber && <TableHead>Registration Number</TableHead>}
-                    <TableHead>Student Name</TableHead>
-                    <TableHead>Class</TableHead>
-                    <TableHead>Exam Level</TableHead>
-                    <TableHead>Subjects</TableHead>
-                    <TableHead>Total Entries</TableHead>
-                    <TableHead>Actions</TableHead>
+                <TableHeader className="bg-slate-50">
+                  <TableRow className="hover:bg-slate-50">
+                    {hasAnyRegistrationNumber && <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Registration Number</TableHead>}
+                    <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Student Name</TableHead>
+                    <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Class</TableHead>
+                    <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide">Exam Level</TableHead>
+                    <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide text-right">Subjects</TableHead>
+                    <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide text-right">Total Entries</TableHead>
+                    <TableHead className="text-slate-600 font-semibold text-xs uppercase tracking-wide text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredStudents.map((student) => (
-                    <TableRow key={student.id}>
+                    <TableRow key={student.id} className="hover:bg-slate-50/80">
                     {hasAnyRegistrationNumber && (
-                      <TableCell className="font-mono text-sm text-slate-900">
+                      <TableCell className="font-mono text-sm text-slate-600">
                         {student.registrationNumber || "-"}
                       </TableCell>
                     )}
-                      <TableCell className="font-semibold text-slate-900">
-                        <div className="flex flex-col gap-1">
+                      <TableCell className="font-semibold text-slate-900 text-sm">
+                        <div className="flex flex-col gap-0.5">
                           {student.studentName}
                           {student.isAdditional && (
-                            <Badge variant="outline" className="w-fit text-[10px] bg-orange-50 text-orange-600 border-orange-200 font-black uppercase tracking-widest">
+                            <Badge variant="outline" className="w-fit text-[10px] bg-slate-50 text-slate-700 border-slate-200 font-semibold uppercase tracking-wide">
                               Additional Student
                             </Badge>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{student.classLevel}</Badge>
+                        <Badge variant="secondary" className="text-xs">{student.classLevel}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={student.examLevel === "UCE" ? "secondary" : "default"}>
+                        <Badge variant={student.examLevel === "UCE" ? "info" : "default"} className="text-xs">
                           {student.examLevel}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {getUniqueSubjectCount(student)} subject{getUniqueSubjectCount(student) !== 1 ? "s" : ""}
+                      <TableCell className="text-sm text-slate-600 text-right tabular-nums">
+                        {getUniqueSubjectCount(student)}
                       </TableCell>
-                      <TableCell className="font-semibold text-slate-900">
+                      <TableCell className="font-semibold text-slate-900 text-sm text-right tabular-nums">
                         {student.totalEntries}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                             onClick={() => handleViewStudent(student)}
                             title="View student details"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3.5 w-3.5" />
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                                 title={(student.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !student.isAdditional ? "Cannot edit/delete after level finalization" : "Edit or delete student"}
                                 disabled={(student.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !student.isAdditional && !isAdmin}
                               >
-                                <MoreVertical className="h-4 w-4" />
+                                <MoreVertical className="h-3.5 w-3.5" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditStudent(student)}>
+                            <DropdownMenuContent align="end" className="border-slate-200">
+                              <DropdownMenuItem onClick={() => handleEditStudent(student)} className="text-sm">
                                 <Edit2 className="h-4 w-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeleteStudent(student)} className="text-orange-600">
+                              <DropdownMenuItem onClick={() => handleDeleteStudent(student)} className="text-orange-600 text-sm">
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
                               </DropdownMenuItem>
