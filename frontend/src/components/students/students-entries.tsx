@@ -35,7 +35,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { Badge } from "../ui/badge";
-import { Search, UserPlus, AlertCircle, Info, Edit2, Trash2, MoreVertical, Eye, BookOpen, Sparkles, Lock, CheckCircle2 } from "lucide-react";
+import { Search, UserPlus, AlertCircle, Info, Edit2, Trash2, MoreVertical, Eye, BookOpen, Sparkles, Lock, CheckCircle2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "../ui/alert";
 import { useAuth, CLASS_LEVELS, CLASS_LEVELS_ARRAY } from "../auth-context";
@@ -46,6 +46,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { SummaryDialog } from "./summary-of-entries";
 
 interface StudentsEntriesProps {
   onPageChange: (page: string) => void;
@@ -140,8 +141,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
   // Form state
   const [studentName, setStudentName] = useState("");
+  const [studentSurname, setStudentSurname] = useState("");
+  const [studentFirstName, setStudentFirstName] = useState("");
+  const [studentOtherNames, setStudentOtherNames] = useState("");
   const [registrationLevel, setRegistrationLevel] = useState<"UCE" | "UACE">("UCE");
-  const [classLevel, setClassLevel] = useState<"S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6">("S.1");
+  const [classLevel, setClassLevel] = useState<"S.1" | "S.2" | "S.3" | "S.4" | "S.5" | "S.6">("S.4");
   const [stream, setStream] = useState<"Arts" | "Sciences" | "">("");
   const [schoolCode, setSchoolCode] = useState(user?.role === "school" ? user.schoolCode ?? "WAK26-0001" : "WAK26-0001");
   const [selectedSubjects, setSelectedSubjects] = useState<{
@@ -151,6 +155,15 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   }>({});
 
   const availableClassLevels = registrationLevel === "UCE" ? CLASS_LEVELS.UCE : CLASS_LEVELS.UACE;
+
+  // Update studentName whenever name fields when editing
+  useEffect(() => {
+    if (registrationLevel === "UCE") {
+      setClassLevel("S.4");
+    } else {
+      setClassLevel("S.6");
+    }
+  }, [registrationLevel]);
 
   // Filter subjects by selected level
   const filteredSubjects = useMemo(() => {
@@ -409,7 +422,16 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   const handleAddStudent = () => {
     const errors: string[] = [];
 
-    if (!studentName.trim()) errors.push("Student name is required");
+    if (!studentSurname.trim()) errors.push("Student surname is required");
+    if (!studentFirstName.trim()) errors.push("Student first name is required");
+    
+    // Strict class level validation for Phase 1
+    if (registrationLevel === "UCE" && classLevel !== "S.4") {
+      errors.push("REJECTED: UCE students can only register in S.4");
+    }
+    if (registrationLevel === "UACE" && classLevel !== "S.6") {
+      errors.push("REJECTED: UACE students can only register in S.6");
+    }
     
     const selectedSubjectIds = Object.keys(selectedSubjects);
     const selectedSubjectsData = selectedSubjectIds.map(id => subjects.find(s => s.id === id));
@@ -560,8 +582,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
     // Reset form
     setStudentName("");
+    setStudentSurname("");
+    setStudentFirstName("");
+    setStudentOtherNames("");
     setRegistrationLevel("UCE");
-    setClassLevel("S.1");
+    setClassLevel("S.4");
     setStream("");
     setSelectedSubjects({});
     setValidationErrors([]);
@@ -760,6 +785,14 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
     const errors: string[] = [];
     if (!editStudentName.trim()) errors.push("Student name is required");
+    
+    // Strict class level validation for Phase 1
+    if (editClassLevel === "S.1" || editClassLevel === "S.2" || editClassLevel === "S.3") {
+      errors.push("REJECTED: UCE students can only register in S.4");
+    }
+    if (editClassLevel === "S.5") {
+      errors.push("REJECTED: UACE students can only register in S.6");
+    }
     
     const selectedSubjectIds = Object.keys(editSelectedSubjects);
     const selectedSubjectsData = selectedSubjectIds.map(id => subjects.find(s => s.id === id));
@@ -1052,19 +1085,20 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
           </AlertDescription>
         </Alert>
       )}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-500">
             Student Registration
           </p>
-          <h1 className="text-3xl font-bold text-slate-900">Student Entries</h1>
-          <p className="max-w-3xl text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900">Student Entries</h1>
+          <p className="max-w-3xl text-slate-500 text-sm">
             Register students, select exam level, choose subjects, and specify
             entry numbers for the examination session.
           </p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row lg:w-auto">
+          <SummaryDialog />
           {!isAdmin && (!isUceFinalized || !isUaceFinalized) && (
             <Dialog open={isFinalizeDialogOpen} onOpenChange={setIsFinalizeDialogOpen}>
               <DialogTrigger asChild>
@@ -1139,8 +1173,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </Button>
             </DialogTrigger>
           <DialogContent className="w-[96vw] sm:max-w-[850px] h-[90vh] max-h-[90vh] overflow-hidden p-0 border-none shadow-2xl" aria-describedby="register-description">
-            <div className="h-full overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 bg-slate-50/50">
-            <DialogHeader className="mb-4">
+            <div className="h-full overflow-y-auto px-3 py-3 sm:px-4 sm:py-4 bg-slate-50/50">
+            <DialogHeader className="mb-3">
               <div className="flex items-center gap-2.5 mb-1">
                 <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-lg shadow-blue-200">
                   <UserPlus className="h-5 w-5" />
@@ -1170,67 +1204,109 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </Alert>
             )}
 
-            <div className="grid gap-4 md:grid-cols-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              {/* Student Name */}
-              <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="student-name" className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                  Student Full Name <span className="text-blue-600">*</span>
+            <div className="grid gap-2 md:grid-cols-3 bg-white rounded-2xl border border-slate-200 p-3 shadow-sm">
+              {/* Student Name fields */}
+              <div className="space-y-0.5">
+                <Label htmlFor="student-surname" className="text-[9px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                  Surname <span className="text-blue-600">*</span>
                 </Label>
-                <div className="relative">
-                  <Input
-                    id="student-name"
-                    placeholder="e.g. NAMUTEBI SHAKIRAH"
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value.toUpperCase())}
-                    className="h-10 text-sm font-bold border-2 focus-visible:ring-blue-600 rounded-lg transition-all"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Sparkles className="h-4 w-4 text-blue-400 opacity-50" />
-                  </div>
-                </div>
+                <Input
+                  id="student-surname"
+                  placeholder="NAMUTEBI"
+                  value={studentSurname}
+                  onChange={(e) => {
+                    const surname = e.target.value.toUpperCase();
+                    setStudentSurname(surname);
+                    setStudentName([surname, studentFirstName, studentOtherNames].filter(Boolean).join(" "));
+                  }}
+                  className="h-8 text-[11px] font-semibold border border-slate-300 rounded-md transition-all"
+                />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="exam-level" className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Exam Level <span className="text-blue-600">*</span></Label>
+              <div className="space-y-0.5">
+                <Label htmlFor="student-firstname" className="text-[9px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                  First Name <span className="text-blue-600">*</span>
+                </Label>
+                <Input
+                  id="student-firstname"
+                  placeholder="SHAKIRAH"
+                  value={studentFirstName}
+                  onChange={(e) => {
+                    const firstName = e.target.value.toUpperCase();
+                    setStudentFirstName(firstName);
+                    setStudentName([studentSurname, firstName, studentOtherNames].filter(Boolean).join(" "));
+                  }}
+                  className="h-8 text-[11px] font-semibold border border-slate-300 rounded-md transition-all"
+                />
+              </div>
+
+              <div className="space-y-0.5">
+                <Label htmlFor="student-othernames" className="text-[9px] font-bold text-slate-700 uppercase tracking-wider">
+                  Other Names
+                </Label>
+                <Input
+                  id="student-othernames"
+                  placeholder="NAKKASUJJA"
+                  value={studentOtherNames}
+                  onChange={(e) => {
+                    const otherNames = e.target.value.toUpperCase();
+                    setStudentOtherNames(otherNames);
+                    setStudentName([studentSurname, studentFirstName, otherNames].filter(Boolean).join(" "));
+                  }}
+                  className="h-8 text-[11px] font-semibold border border-slate-300 rounded-md transition-all"
+                />
+              </div>
+
+              <div className="space-y-0.5">
+                <Label htmlFor="exam-level" className="text-[9px] font-bold text-slate-700 uppercase tracking-widest">Exam Level <span className="text-blue-600">*</span></Label>
                 <Select value={registrationLevel} onValueChange={(value: "UCE" | "UACE") => setRegistrationLevel(value)}>
-                  <SelectTrigger id="exam-level" className="h-10 text-sm font-bold border-2 rounded-lg">
+                  <SelectTrigger id="exam-level" className="h-8 text-[11px] font-bold border border-slate-300 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                  <SelectContent className="rounded-lg border-2">
-                    <SelectItem value="UCE" className="font-bold py-2">UCE (O-Level)</SelectItem>
-                    <SelectItem value="UACE" className="font-bold py-2">UACE (A-Level)</SelectItem>
+                  <SelectContent className="rounded-lg border border-slate-200">
+                    <SelectItem value="UCE" className="font-bold py-1.5 text-[11px]">UCE (O-Level)</SelectItem>
+                    <SelectItem value="UACE" className="font-bold py-1.5 text-[11px]">UACE (A-Level)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Class Level */}
-              <div className="space-y-1.5">
-                <Label htmlFor="class-level" className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
+              <div className="space-y-0.5">
+                <Label htmlFor="class-level" className="text-[9px] font-bold text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
                 <Select value={classLevel} onValueChange={(value: any) => setClassLevel(value)}>
-                  <SelectTrigger className="h-10 text-sm font-bold border-2 rounded-lg">
+                  <SelectTrigger className="h-8 text-[11px] font-bold border border-slate-300 rounded-md">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-lg border-2">
-                    {availableClassLevels.map((level) => (
-                      <SelectItem key={level} value={level} className="font-bold py-2">
-                        {level}
-                      </SelectItem>
-                    ))}
+                  <SelectContent className="rounded-lg border border-slate-200">
+                    {availableClassLevels.map((level) => {
+                      const isActive = (registrationLevel === "UCE" && level === "S.4") || 
+                                       (registrationLevel === "UACE" && level === "S.6");
+                      return (
+                        <SelectItem 
+                          key={level} 
+                          value={level} 
+                          className="font-bold py-1.5 text-[11px]"
+                          disabled={!isActive}
+                        >
+                          {level}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
 
               {/* School Selection */}
               {isAdmin && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="school" className="text-[11px] font-black text-slate-700 uppercase tracking-widest">School <span className="text-blue-600">*</span></Label>
+                <div className="space-y-0.5">
+                  <Label htmlFor="school" className="text-[9px] font-bold text-slate-700 uppercase tracking-widest">School <span className="text-blue-600">*</span></Label>
                   <Select value={schoolCode} onValueChange={setSchoolCode}>
-                    <SelectTrigger className="h-10 text-sm font-bold border-2 rounded-lg">
+                    <SelectTrigger className="h-8 text-[11px] font-bold border border-slate-300 rounded-md">
                     <SelectValue />
                   </SelectTrigger>
-                    <SelectContent className="rounded-lg border-2">
+                    <SelectContent className="rounded-lg border border-slate-200">
                       {zoneFilteredSchools.map((school) => (
-                        <SelectItem key={school.code} value={school.code} className="font-bold py-2">
+                        <SelectItem key={school.code} value={school.code} className="font-bold py-1.5 text-[11px]">
                           {school.name} ({school.code})
                         </SelectItem>
                       ))}
@@ -1240,32 +1316,29 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               )}
 
               {/* Subject Selection */}
-              <div className="space-y-3 md:col-span-2 pt-2">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                      <BookOpen className="h-3.5 w-3.5 text-blue-600" />
-                      Select Subjects <span className="text-blue-600">*</span>
-                    </Label>
-                  </div>
-
-                  <div className="text-xs font-bold text-blue-800 bg-blue-50 border-2 border-blue-200 rounded-xl px-4 py-2.5 flex items-start gap-2.5 shadow-sm">
-                    <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <p className="leading-relaxed text-[11px]">
+              <div className="space-y-1.5 md:col-span-3 pt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-1.5">
+                    <BookOpen className="h-3 w-3 text-blue-600" />
+                    Select Subjects <span className="text-blue-600">*</span>
+                  </Label>
+                  <div className="text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                    <Info className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                    <p className="leading-tight text-[9px]">
                       {registrationLevel === "UCE" 
-                        ? "7 compulsory subjects + 1 or 2 optional (Total 8 or 9)" 
-                        : "GP is compulsory + exactly one Subsidiary + max 3 main subjects"}
+                        ? "7 compulsory + 1-2 optional (Total 8-9)" 
+                        : "GP + 1 Subsidiary + max 3 main"}
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Subject List with Paper Selection */}
-              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[42vh] overflow-y-auto border-2 border-slate-200 rounded-[1.5rem] p-4 bg-slate-50 shadow-inner">
+              <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[50vh] overflow-y-auto border border-slate-200 rounded-xl p-2.5 bg-slate-50 shadow-inner">
                 {filteredSubjects.length === 0 ? (
-                  <div className="col-span-full py-10 flex flex-col items-center justify-center text-slate-400 gap-2.5 bg-white rounded-2xl border-2 border-dashed border-slate-200">
-                    <BookOpen className="h-8 w-8 opacity-20" />
-                    <p className="text-[11px] font-bold uppercase tracking-widest">No subjects available for {registrationLevel}</p>
+                  <div className="col-span-full py-8 flex flex-col items-center justify-center text-slate-400 gap-2 bg-white rounded-xl border border-dashed border-slate-200">
+                    <BookOpen className="h-7 w-7 opacity-20" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest">No subjects available for {registrationLevel}</p>
                   </div>
                 ) : (
                   (() => {
@@ -1285,17 +1358,17 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                       return (
                         <div 
                           key={subject.id} 
-                          className={`group relative rounded-2xl border-2 transition-all duration-300 p-4 ${
+                          className={`group relative rounded-xl border transition-all duration-200 p-2.5 ${
                             isSelected 
-                              ? (category === "Arts" ? "border-amber-500 bg-white shadow-lg shadow-amber-100/30" : "border-blue-600 bg-white shadow-lg shadow-blue-100/30") 
-                              : (isSubsidiaryDisabled ? "border-slate-100 bg-slate-50/50 opacity-40 grayscale-[0.5]" : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md")
-                          } scale-[1.0] ${!isSubsidiaryDisabled ? 'hover:scale-[1.01]' : ''}`}
+                              ? (category === "Arts" ? "border-amber-500 bg-white shadow-md shadow-amber-100/30" : "border-blue-600 bg-white shadow-md shadow-blue-100/30") 
+                              : (isSubsidiaryDisabled ? "border-slate-100 bg-slate-50/50 opacity-40 grayscale-[0.5]" : "border-slate-200 bg-white hover:border-slate-300 shadow-sm")
+                          }`}
                         >
-                          <div className="flex flex-col h-full gap-3">
-                            <div className="flex items-start justify-between gap-2.5">
-                              <div className="flex flex-col gap-1 min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className={`text-[9px] font-black font-mono px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm ${
+                          <div className="flex flex-col h-full gap-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex flex-col gap-0.5 min-w-0">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span className={`text-[8px] font-black font-mono px-1 py-0.5 rounded uppercase tracking-tighter ${
                                     isSelected 
                                       ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
                                       : "bg-slate-100 text-slate-600"
@@ -1303,12 +1376,12 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                     {subject.standardCode}
                                   </span>
                                   {isCompulsory ? (
-                                    <Badge className="bg-slate-900 text-white border-none text-[8px] px-1.5 h-4 font-black uppercase tracking-widest shadow-sm">
+                                    <Badge className="bg-slate-900 text-white border-none text-[7px] px-1 h-3.5 font-black uppercase tracking-widest">
                                       COMPULSORY
                                     </Badge>
                                   ) : (
-                                    <Badge variant="outline" className={`text-[8px] px-1.5 h-4 font-bold uppercase tracking-widest border-2 ${
-                                      category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
+                                    <Badge variant="outline" className={`text-[7px] px-1 h-3.5 font-bold uppercase tracking-widest border ${
+                                      category === "Arts" ? "text-amber-600 border-amber-200 bg-amber-50/50" : "text-blue-600 border-blue-200 bg-blue-50/50"
                                     }`}>
                                       OPTIONAL
                                     </Badge>
@@ -1316,7 +1389,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                 </div>
                                 <Label 
                                   htmlFor={subject.id} 
-                                  className={`font-black text-[13px] leading-tight transition-colors ${!isSubsidiaryDisabled ? 'cursor-pointer' : 'cursor-not-allowed'} ${
+                                  className={`font-black text-[11px] leading-tight transition-colors ${!isSubsidiaryDisabled ? 'cursor-pointer' : 'cursor-not-allowed'} ${
                                     isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
                                   }`}
                                 >
@@ -1329,25 +1402,25 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                 checked={isSelected}
                                 onCheckedChange={() => toggleSubject(subject.id)}
                                 disabled={isCompulsory || isSubsidiaryDisabled}
-                                className={`h-6 w-6 rounded-md border-2 transition-all duration-200 ${
+                                className={`h-5 w-5 rounded border transition-all duration-200 ${
                                   isSelected 
-                                    ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
+                                    ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white" : "bg-blue-600 border-blue-600 text-white") 
                                     : (isSubsidiaryDisabled ? "border-slate-200 bg-slate-100 cursor-not-allowed" : "border-slate-300 bg-white hover:border-blue-400")
                                 }`}
                               />
                             </div>
                             
-                            <div className="mt-auto pt-3 border-t-2 border-slate-50">
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="mt-auto pt-2 border-t border-slate-100">
+                            <div className="flex items-center justify-between gap-1.5">
                               <div className="flex items-center gap-1">
-                                <BookOpen className={`h-3 w-3 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
-                                <p className={`text-[10px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
+                                <BookOpen className={`h-2.5 w-2.5 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
+                                <p className={`text-[9px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
                                   {subject.papers.length} {subject.papers.length === 1 ? 'Paper' : 'Papers'}
                                 </p>
                               </div>
                               
                               {isSelected && (
-                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[9px] px-1.5 h-5 font-black rounded-md`}>
+                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[8px] px-1.5 h-4 font-black rounded`}>
                                   {selectedSubjects[subject.id].selectedPapers.length} Selected
                                 </Badge>
                               )}
@@ -1355,9 +1428,9 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
                             {/* Dynamic Paper Selection Logic */}
                             {isSelected && subject.papers.length > 0 && (
-                              <div className={`mt-2.5 space-y-1.5 p-2.5 rounded-xl border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
-                                <div className="flex items-center justify-between mb-0.5">
-                                  <Label className={`text-[8px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
+                              <div className={`mt-2 space-y-1 p-2 rounded-lg border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
+                                <div className="flex items-center justify-between">
+                                  <Label className={`text-[7px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
                                     Select Papers:
                                   </Label>
                                   {(subject.minPapers || subject.maxPapers) && (
@@ -1366,7 +1439,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                                <div className="flex flex-wrap gap-x-2 gap-y-1">
                                   {(() => {
                                     const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
                                                             ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
@@ -1379,13 +1452,13 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                       return (
                                         <label 
                                           key={p.id} 
-                                          className={`flex items-center gap-1.5 text-[10px] font-bold cursor-pointer group/paper ${(p.isCompulsory && !isSpecialSubject) || isPaperFixed ? 'cursor-default opacity-80' : ''}`}
+                                          className={`flex items-center gap-1 text-[9px] font-bold cursor-pointer group/paper ${(p.isCompulsory && !isSpecialSubject) || isPaperFixed ? 'cursor-default opacity-80' : ''}`}
                                         >
                                           <div className="relative flex items-center">
                                             <input 
                                               type={isSpecialSubject && (paperNum === 2 || paperNum === 3) ? "radio" : "checkbox"}
                                               name={isSpecialSubject && (paperNum === 2 || paperNum === 3) ? `subject-${subject.id}-paper23` : undefined}
-                                              className={`h-3 w-3 rounded border-2 transition-all ${
+                                              className={`h-2.5 w-2.5 rounded border transition-all ${
                                                 category === "Arts" 
                                                   ? "border-amber-300 text-amber-600 focus:ring-amber-500" 
                                                   : "border-blue-300 text-blue-600 focus:ring-blue-500"
@@ -1396,16 +1469,16 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                             />
                                             {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && (
                                               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <div className="h-1 w-1 rounded-full bg-slate-400" />
+                                                <div className="h-0.5 w-0.5 rounded-full bg-slate-400" />
                                               </div>
                                             )}
                                           </div>
-                                          <span className={`transition-colors uppercase tracking-wider text-[9px] ${
+                                          <span className={`transition-colors uppercase tracking-wider text-[8px] ${
                                             isPaperSelected 
                                               ? (category === "Arts" ? "text-amber-800" : "text-blue-800") 
                                               : "text-slate-400 group-hover/paper:text-slate-600"
                                           }`}>
-                                            {p.name} {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && <span className="text-[7px] opacity-60">(Fixed)</span>}
+                                            {p.name} {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && <span className="text-[6px] opacity-60">(Fixed)</span>}
                                           </span>
                                         </label>
                                       );
@@ -1424,53 +1497,53 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 </div>
 
               {/* Total Entries Display */}
-              <div className="md:col-span-2">
-                <div className="rounded-xl border-2 border-blue-500 bg-blue-50 px-5 py-3 shadow-sm">
-                  <p className="text-sm font-bold text-blue-900 flex items-center justify-center gap-6">
-                    <span className="flex items-center gap-2">
-                      Subjects Selected: <span className="text-lg font-black text-blue-600 tracking-tighter">{Object.keys(selectedSubjects).length}</span>
-                  </span>
-                  <span className="h-6 w-px bg-blue-200"></span>
-                  <span className="flex items-center gap-2">
-                    Total Entries: <span className="text-lg font-black text-blue-600 tracking-tighter">{calculateTotalEntries(selectedSubjects)}</span>
-                  </span>
+              <div className="md:col-span-3">
+                <div className="rounded-lg border border-blue-400 bg-blue-50 px-4 py-2 shadow-sm">
+                  <p className="text-[11px] font-bold text-blue-900 flex items-center justify-center gap-4">
+                    <span className="flex items-center gap-1.5">
+                      Subjects Selected: <span className="text-base font-black text-blue-600 tracking-tighter">{Object.keys(selectedSubjects).length}</span>
+                    </span>
+                    <span className="h-4 w-px bg-blue-300"></span>
+                    <span className="flex items-center gap-1.5">
+                      Total Entries: <span className="text-base font-black text-blue-600 tracking-tighter">{calculateTotalEntries(selectedSubjects)}</span>
+                    </span>
                   </p>
                 </div>
               </div>
 
-              <div className="md:col-span-2">
-                <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm space-y-3">
+              <div className="md:col-span-3">
+                <div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm space-y-2">
                   <div>
-                    <p className="mb-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">Registration Status</p>
-                    <div className="flex flex-wrap gap-2">
+                    <p className="mb-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Registration Status</p>
+                    <div className="flex flex-wrap gap-1.5">
                       {getValidationStatus(registrationLevel, selectedSubjects).map((rule, idx) => (
                         <div 
                           key={idx} 
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded-md border-2 transition-all ${
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border transition-all ${
                             rule.met 
-                              ? "bg-green-50 border-green-100 text-green-700" 
-                              : "bg-red-50 border-red-100 text-red-600"
+                              ? "bg-green-50 border-green-200 text-green-700" 
+                              : "bg-red-50 border-red-200 text-red-600"
                           }`}
                         >
                           {rule.met ? (
-                            <CheckCircle2 className="h-3 w-3" />
+                            <CheckCircle2 className="h-2.5 w-2.5" />
                           ) : (
-                            <AlertCircle className="h-3 w-3" />
+                            <AlertCircle className="h-2.5 w-2.5" />
                           )}
-                          <span className="text-[10px] font-black uppercase tracking-tight">{rule.label}</span>
+                          <span className="text-[8px] font-black uppercase tracking-tight">{rule.label}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <p className="mb-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Preview</p>
+                    <p className="mb-1 text-[9px] font-black text-slate-500 uppercase tracking-widest">Live Preview</p>
                     {registrationPreview.length === 0 ? (
-                      <p className="text-xs text-slate-500">No subject papers selected yet.</p>
+                      <p className="text-[10px] text-slate-500">No subject papers selected yet.</p>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1">
                         {registrationPreview.map((item) => (
-                          <p key={item.subjectId} className="text-[11px] font-bold text-slate-700">
+                          <p key={item.subjectId} className="text-[10px] font-bold text-slate-700">
                             {item.subjectName} {"\u2192"} <span className="text-blue-600">{item.papers.join(", ")}</span>
                           </p>
                         ))}
@@ -1784,31 +1857,31 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
             </Alert>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+          <div className="grid gap-2 md:grid-cols-3 bg-white rounded-2xl border border-slate-200 p-3 shadow-sm">
             {/* Student Name */}
-            <div className="space-y-1.5 md:col-span-2">
-              <Label htmlFor="edit-student-name" className="text-[11px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+            <div className="space-y-0.5 md:col-span-3">
+              <Label htmlFor="edit-student-name" className="text-[9px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-1">
                 Student Full Name <span className="text-blue-600">*</span>
               </Label>
               <Input
                 id="student-name"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value.toUpperCase())}
+                value={editStudentName}
+                onChange={(e) => setEditStudentName(e.target.value.toUpperCase())}
                 placeholder="e.g. NAMUTEBI SHAKIRAH"
-                className="h-10 text-sm font-bold border-2 focus-visible:ring-blue-600 rounded-lg transition-all"
+                className="h-8 text-[11px] font-bold border border-slate-300 rounded-md transition-all"
               />
             </div>
 
             {/* Class Level */}
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
+            <div className="space-y-0.5 md:col-span-2">
+              <Label className="text-[9px] font-black text-slate-700 uppercase tracking-widest">Class Level <span className="text-blue-600">*</span></Label>
               <Select value={editClassLevel} onValueChange={(value: any) => setEditClassLevel(value)}>
-                <SelectTrigger className="h-10 text-sm font-bold border-2 rounded-lg">
+                <SelectTrigger className="h-8 text-[11px] font-bold border border-slate-300 rounded-md">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-lg border-2">
+                <SelectContent className="rounded-lg border border-slate-200">
                   {CLASS_LEVELS_ARRAY.map((level) => (
-                    <SelectItem key={level} value={level} className="font-bold py-2">
+                    <SelectItem key={level} value={level} className="font-bold py-1.5 text-[11px]">
                       {level}
                     </SelectItem>
                   ))}
@@ -1817,30 +1890,27 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
             </div>
 
             {/* Subjects Selection */}
-            <div className="space-y-3 md:col-span-2 pt-2">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <BookOpen className="h-3.5 w-3.5 text-blue-600" />
-                    Select Subjects <span className="text-blue-600">*</span>
-                  </Label>
-                </div>
-                
-                <div className="text-xs font-bold text-blue-800 bg-blue-50 border-2 border-blue-200 rounded-xl px-4 py-2.5 flex items-start gap-2.5 shadow-sm">
-                  <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                  <p className="leading-relaxed text-[11px]">
+            <div className="space-y-1.5 md:col-span-3 pt-1">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-1.5">
+                  <BookOpen className="h-3 w-3 text-blue-600" />
+                  Select Subjects <span className="text-blue-600">*</span>
+                </Label>
+                <div className="text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                  <Info className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                  <p className="leading-tight text-[9px]">
                     {(editClassLevel === "S.5" || editClassLevel === "S.6")
-                      ? "GP is compulsory + at least one Subsidiary + max 3 main subjects"
-                      : "7 compulsory subjects + 1 or 2 optional (Total 8 or 9)"}
+                      ? "GP + 1 Subsidiary + max 3 main"
+                      : "7 compulsory + 1-2 optional (Total 8-9)"}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[42vh] overflow-y-auto border-2 border-slate-200 rounded-[1.5rem] p-4 bg-slate-50 shadow-inner">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[50vh] overflow-y-auto border border-slate-200 rounded-xl p-2.5 bg-slate-50 shadow-inner">
                 {filteredSubjectsForEdit.length === 0 ? (
-                  <div className="col-span-full py-10 flex flex-col items-center justify-center text-slate-400 gap-2.5 bg-white rounded-2xl border-2 border-dashed border-slate-200">
-                    <BookOpen className="h-8 w-8 opacity-20" />
-                    <p className="text-[11px] font-bold uppercase tracking-widest">No subjects available</p>
+                  <div className="col-span-full py-8 flex flex-col items-center justify-center text-slate-400 gap-2 bg-white rounded-xl border border-dashed border-slate-200">
+                    <BookOpen className="h-7 w-7 opacity-20" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest">No subjects available</p>
                   </div>
                 ) : (
                   (() => {
@@ -1860,17 +1930,17 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                       return (
                         <div 
                           key={subject.id} 
-                          className={`group relative rounded-2xl border-2 transition-all duration-300 p-4 ${
+                          className={`group relative rounded-xl border transition-all duration-200 p-2.5 ${
                             isSelected 
-                              ? (category === "Arts" ? "border-amber-500 bg-white shadow-lg shadow-amber-100/30" : "border-blue-600 bg-white shadow-lg shadow-blue-100/30") 
-                              : (isSubsidiaryDisabled ? "border-slate-100 bg-slate-50/50 opacity-40 grayscale-[0.5]" : "border-slate-200 bg-white hover:border-slate-300 shadow-sm hover:shadow-md")
-                          } scale-[1.0] ${!isSubsidiaryDisabled ? 'hover:scale-[1.01]' : ''}`}
+                              ? (category === "Arts" ? "border-amber-500 bg-white shadow-md shadow-amber-100/30" : "border-blue-600 bg-white shadow-md shadow-blue-100/30") 
+                              : (isSubsidiaryDisabled ? "border-slate-100 bg-slate-50/50 opacity-40 grayscale-[0.5]" : "border-slate-200 bg-white hover:border-slate-300 shadow-sm")
+                          }`}
                         >
-                          <div className="flex flex-col h-full gap-3">
-                            <div className="flex items-start justify-between gap-2.5">
-                              <div className="flex flex-col gap-1 min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className={`text-[9px] font-black font-mono px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm ${
+                          <div className="flex flex-col h-full gap-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex flex-col gap-0.5 min-w-0">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span className={`text-[8px] font-black font-mono px-1 py-0.5 rounded uppercase tracking-tighter ${
                                     isSelected 
                                       ? (category === "Arts" ? "bg-amber-600 text-white" : "bg-blue-600 text-white") 
                                       : "bg-slate-100 text-slate-600"
@@ -1878,12 +1948,12 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                     {subject.standardCode}
                                   </span>
                                   {isCompulsory ? (
-                                    <Badge className="bg-slate-900 text-white border-none text-[8px] px-1.5 h-4 font-black uppercase tracking-widest shadow-sm">
+                                    <Badge className="bg-slate-900 text-white border-none text-[7px] px-1 h-3.5 font-black uppercase tracking-widest">
                                       COMPULSORY
                                     </Badge>
                                   ) : (
-                                    <Badge variant="outline" className={`text-[8px] px-1.5 h-4 font-bold uppercase tracking-widest border-2 ${
-                                      category === "Arts" ? "text-amber-600 border-amber-100 bg-amber-50/50" : "text-blue-600 border-blue-100 bg-blue-50/50"
+                                    <Badge variant="outline" className={`text-[7px] px-1 h-3.5 font-bold uppercase tracking-widest border ${
+                                      category === "Arts" ? "text-amber-600 border-amber-200 bg-amber-50/50" : "text-blue-600 border-blue-200 bg-blue-50/50"
                                     }`}>
                                       OPTIONAL
                                     </Badge>
@@ -1891,7 +1961,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                 </div>
                                 <Label 
                                   htmlFor={`edit-${subject.id}`} 
-                                  className={`font-black text-[13px] leading-tight transition-colors ${!isSubsidiaryDisabled ? 'cursor-pointer' : 'cursor-not-allowed'} ${
+                                  className={`font-black text-[11px] leading-tight transition-colors ${!isSubsidiaryDisabled ? 'cursor-pointer' : 'cursor-not-allowed'} ${
                                     isSelected ? (category === "Arts" ? "text-amber-900" : "text-blue-900") : "text-slate-800"
                                   }`}
                                 >
@@ -1904,25 +1974,25 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                 checked={isSelected}
                                 onCheckedChange={() => toggleSubjectForEdit(subject.id)}
                                 disabled={isCompulsory || isSubsidiaryDisabled}
-                                className={`h-6 w-6 rounded-md border-2 transition-all duration-200 ${
+                                className={`h-5 w-5 rounded border transition-all duration-200 ${
                                   isSelected 
-                                    ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-200" : "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200") 
+                                    ? (category === "Arts" ? "bg-amber-600 border-amber-600 text-white" : "bg-blue-600 border-blue-600 text-white") 
                                     : (isSubsidiaryDisabled ? "border-slate-200 bg-slate-100 cursor-not-allowed" : "border-slate-300 bg-white hover:border-blue-400")
                                 }`}
                               />
                             </div>
                             
-                            <div className="mt-auto pt-3 border-t-2 border-slate-50">
-                              <div className="flex items-center justify-between gap-2">
+                            <div className="mt-auto pt-2 border-t border-slate-100">
+                              <div className="flex items-center justify-between gap-1.5">
                               <div className="flex items-center gap-1">
-                                <BookOpen className={`h-3 w-3 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
-                                <p className={`text-[10px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
+                                <BookOpen className={`h-2.5 w-2.5 ${isSelected ? (category === "Arts" ? "text-amber-500" : "text-blue-500") : "text-slate-300"}`} />
+                                <p className={`text-[9px] font-bold leading-none ${isSelected ? (category === "Arts" ? "text-amber-800" : "text-blue-800") : "text-slate-500"}`}>
                                   {subject.papers.length} {subject.papers.length === 1 ? 'Paper' : 'Papers'}
                                 </p>
                               </div>
                               
                               {isSelected && (
-                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[9px] px-1.5 h-5 font-black rounded-md`}>
+                                <Badge className={`${category === "Arts" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"} border-none text-[8px] px-1.5 h-4 font-black rounded`}>
                                   {editSelectedSubjects[subject.id].selectedPapers.length} Selected
                                 </Badge>
                               )}
@@ -1930,9 +2000,9 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
                             {/* Dynamic Paper Selection Logic for Edit Modal */}
                             {isSelected && subject.papers.length > 0 && (
-                              <div className={`mt-2.5 space-y-1.5 p-2.5 rounded-xl border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
-                                <div className="flex items-center justify-between mb-0.5">
-                                  <Label className={`text-[8px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
+                              <div className={`mt-2 space-y-1 p-2 rounded-lg border ${category === "Arts" ? "bg-amber-50/50 border-amber-100" : "bg-blue-50/50 border-blue-100"}`}>
+                                <div className="flex items-center justify-between">
+                                  <Label className={`text-[7px] font-black uppercase tracking-widest block ${category === "Arts" ? "text-amber-600" : "text-blue-600"}`}>
                                     Select Papers:
                                   </Label>
                                   {(subject.minPapers || subject.maxPapers) && (
@@ -1941,7 +2011,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                                <div className="flex flex-wrap gap-x-2 gap-y-1">
                                   {(() => {
                                     const isSpecialSubject = ["PHYSICS", "CHEMISTRY", "BIOLOGY"].includes(subject.name.toUpperCase()) || 
                                                             ["PHY", "CHEM", "BIO"].includes(subject.code?.toUpperCase() || "");
@@ -1954,13 +2024,13 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                       return (
                                         <label 
                                           key={p.id} 
-                                          className={`flex items-center gap-1.5 text-[10px] font-bold cursor-pointer group/paper ${(p.isCompulsory && !isSpecialSubject) || isPaperFixed ? 'cursor-default opacity-80' : ''}`}
+                                          className={`flex items-center gap-1 text-[9px] font-bold cursor-pointer group/paper ${(p.isCompulsory && !isSpecialSubject) || isPaperFixed ? 'cursor-default opacity-80' : ''}`}
                                         >
                                           <div className="relative flex items-center">
                                             <input 
                                               type={isSpecialSubject && (paperNum === 2 || paperNum === 3) ? "radio" : "checkbox"}
                                               name={isSpecialSubject && (paperNum === 2 || paperNum === 3) ? `edit-subject-${subject.id}-paper23` : undefined}
-                                              className={`h-3 w-3 rounded border-2 transition-all ${
+                                              className={`h-2.5 w-2.5 rounded border transition-all ${
                                                 category === "Arts" 
                                                   ? "border-amber-300 text-amber-600 focus:ring-amber-500" 
                                                   : "border-blue-300 text-blue-600 focus:ring-blue-500"
@@ -1971,16 +2041,16 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                             />
                                             {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && (
                                               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <div className="h-1 w-1 rounded-full bg-slate-400" />
+                                                <div className="h-0.5 w-0.5 rounded-full bg-slate-400" />
                                               </div>
                                             )}
                                           </div>
-                                          <span className={`transition-colors uppercase tracking-wider text-[9px] ${
+                                          <span className={`transition-colors uppercase tracking-wider text-[8px] ${
                                             isPaperSelected 
                                               ? (category === "Arts" ? "text-amber-800" : "text-blue-800") 
                                               : "text-slate-400 group-hover/paper:text-slate-600"
                                           }`}>
-                                            {p.name} {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && <span className="text-[7px] opacity-60">(Fixed)</span>}
+                                            {p.name} {((p.isCompulsory && !isSpecialSubject) || isPaperFixed) && <span className="text-[6px] opacity-60">(Fixed)</span>}
                                           </span>
                                         </label>
                                       );
@@ -2000,53 +2070,53 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               </div>
 
             {/* Total Entries Display */}
-            <div className="md:col-span-2">
-              <div className="rounded-xl border-2 border-blue-500 bg-blue-50 px-5 py-3 shadow-sm">
-                <p className="text-sm font-bold text-blue-900 flex items-center justify-center gap-6">
-                  <span className="flex items-center gap-2">
-                    Subjects Selected: <span className="text-lg font-black text-blue-600 tracking-tighter">{Object.keys(editSelectedSubjects).length}</span>
+            <div className="md:col-span-3">
+              <div className="rounded-lg border border-blue-400 bg-blue-50 px-4 py-2 shadow-sm">
+                <p className="text-[11px] font-bold text-blue-900 flex items-center justify-center gap-4">
+                  <span className="flex items-center gap-1.5">
+                    Subjects Selected: <span className="text-base font-black text-blue-600 tracking-tighter">{Object.keys(editSelectedSubjects).length}</span>
                   </span>
-                  <span className="h-6 w-px bg-blue-200"></span>
-                  <span className="flex items-center gap-2">
-                    Total Entries: <span className="text-lg font-black text-blue-600 tracking-tighter">{calculateTotalEntries(editSelectedSubjects)}</span>
+                  <span className="h-4 w-px bg-blue-300"></span>
+                  <span className="flex items-center gap-1.5">
+                    Total Entries: <span className="text-base font-black text-blue-600 tracking-tighter">{calculateTotalEntries(editSelectedSubjects)}</span>
                   </span>
                 </p>
               </div>
             </div>
 
-            <div className="md:col-span-2">
-              <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm space-y-3">
+            <div className="md:col-span-3">
+              <div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm space-y-2">
                 <div>
-                  <p className="mb-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">Registration Status</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="mb-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Registration Status</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {getValidationStatus((editClassLevel === "S.5" || editClassLevel === "S.6") ? "UACE" : "UCE", editSelectedSubjects).map((rule, idx) => (
                       <div 
                         key={idx} 
-                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md border-2 transition-all ${
+                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border transition-all ${
                           rule.met 
-                            ? "bg-green-50 border-green-100 text-green-700" 
-                            : "bg-red-50 border-red-100 text-red-600"
+                            ? "bg-green-50 border-green-200 text-green-700" 
+                            : "bg-red-50 border-red-200 text-red-600"
                         }`}
                       >
                         {rule.met ? (
-                          <CheckCircle2 className="h-3 w-3" />
+                          <CheckCircle2 className="h-2.5 w-2.5" />
                         ) : (
-                          <AlertCircle className="h-3 w-3" />
+                          <AlertCircle className="h-2.5 w-2.5" />
                         )}
-                        <span className="text-[10px] font-black uppercase tracking-tight">{rule.label}</span>
+                        <span className="text-[8px] font-black uppercase tracking-tight">{rule.label}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <p className="mb-1.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Preview</p>
+                  <p className="mb-1 text-[9px] font-black text-slate-500 uppercase tracking-widest">Live Preview</p>
                   {editRegistrationPreview.length === 0 ? (
-                    <p className="text-xs text-slate-500">No subject papers selected yet.</p>
+                    <p className="text-[10px] text-slate-500">No subject papers selected yet.</p>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1">
                       {editRegistrationPreview.map((item) => (
-                        <p key={item.subjectId} className="text-[11px] font-bold text-slate-700">
+                        <p key={item.subjectId} className="text-[10px] font-bold text-slate-700">
                           {item.subjectName} {"\u2192"} <span className="text-blue-600">{item.papers.join(", ")}</span>
                         </p>
                       ))}

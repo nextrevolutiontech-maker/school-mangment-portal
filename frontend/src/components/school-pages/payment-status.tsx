@@ -51,6 +51,7 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentSchool = useMemo(() => {
@@ -152,39 +153,45 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
       const pageWidth = pdf.internal.pageSize.getWidth();
       let yPos = 20;
 
-      // Header
-      pdf.setFontSize(22);
-      pdf.setTextColor(0, 0, 0);
+      // Header with professional styling
+      pdf.setFontSize(24);
+      pdf.setTextColor(30, 41, 59);
+      pdf.setFont(undefined, "bold");
       pdf.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, yPos, { align: "center" });
-      yPos += 10;
+      yPos += 12;
       
-      pdf.setFontSize(16);
+      pdf.setFontSize(18);
+      pdf.setTextColor(71, 85, 105);
+      pdf.setFont(undefined, "normal");
       pdf.text("PAYMENT INVOICE", pageWidth / 2, yPos, { align: "center" });
-      yPos += 15;
+      yPos += 18;
 
-      // Invoice info
-      pdf.setFontSize(11);
-      pdf.setTextColor(100);
+      // Invoice info with better spacing
+      pdf.setFontSize(10);
+      pdf.setTextColor(107, 114, 128);
+      pdf.setFont(undefined, "normal");
       pdf.text(`Invoice Serial: ${invoice.serialNumber}`, 15, yPos);
       pdf.text(`Date: ${invoice.date}`, pageWidth - 15, yPos, { align: "right" });
-      yPos += 10;
+      yPos += 12;
 
-      // School info
-      pdf.setTextColor(0);
+      // School info with improved typography
+      pdf.setTextColor(30, 41, 59);
       pdf.setFont(undefined, "bold");
+      pdf.setFontSize(11);
       pdf.text("BILL TO:", 15, yPos);
-      yPos += 6;
+      yPos += 8;
       pdf.setFont(undefined, "normal");
+      pdf.setFontSize(10);
       pdf.text(`${user?.name}`, 15, yPos);
-      yPos += 5;
+      yPos += 6;
       pdf.text(`School Code: ${user?.schoolCode}`, 15, yPos);
-      yPos += 5;
+      yPos += 6;
       pdf.text(`Zone: ${currentSchool?.zone || "N/A"}`, 15, yPos);
-      yPos += 15;
+      yPos += 18;
 
-      // Items Table
+      // Items Table with professional styling
       autoTable(pdf, {
-        head: [["Description", "Formula", "Quantity", "Unit Price", "Total"]],
+        head: [["DESCRIPTION", "FORMULA", "QTY", "UNIT PRICE", "TOTAL"]],
         body: invoice.items.map(item => [
           item.description,
           (item as any).formula || "-",
@@ -194,43 +201,79 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
         ]),
         startY: yPos,
         margin: { left: 15, right: 15 },
-        headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: "bold" },
+        headStyles: { 
+          fillColor: [30, 41, 59], 
+          textColor: [255, 255, 255], 
+          fontStyle: "bold",
+          fontSize: 10,
+          cellPadding: 8
+        },
+        bodyStyles: {
+          fontSize: 9,
+          cellPadding: 6,
+          lineColor: [220, 220, 220],
+          lineWidth: 0.1
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        },
         columnStyles: {
-          0: { cellWidth: "auto" },
-          1: { halign: "center" },
-          2: { halign: "center" },
-          3: { halign: "right" },
-          4: { halign: "right" }
+          0: { cellWidth: "auto", fontStyle: "normal" },
+          1: { halign: "center", fontStyle: "italic" },
+          2: { halign: "center", cellWidth: 30 },
+          3: { halign: "right", cellWidth: 50 },
+          4: { halign: "right", cellWidth: 50, fontStyle: "bold" }
         }
       });
 
-      yPos = (pdf as any).lastAutoTable.finalY + 10;
+      yPos = (pdf as any).lastAutoTable.finalY + 15;
 
-      // Total
-      pdf.setFontSize(14);
+      // Total with enhanced styling
+      pdf.setFillColor(30, 41, 59);
+      pdf.rect(pageWidth - 100, yPos - 8, 85, 12, "F");
+      pdf.setFontSize(12);
       pdf.setFont(undefined, "bold");
-      pdf.text(`TOTAL AMOUNT: ${formatUGX(invoice.totalAmount)}`, pageWidth - 15, yPos, { align: "right" });
-      yPos += 20;
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`TOTAL: ${formatUGX(invoice.totalAmount)}`, pageWidth - 15, yPos, { align: "right" });
+      yPos += 25;
 
-      // Bank Details
+      // Bank Details with professional formatting
+      pdf.setTextColor(30, 41, 59);
       pdf.setFontSize(11);
-      pdf.text("BANK PAYMENT DETAILS:", 15, yPos);
-      yPos += 7;
+      pdf.setFont(undefined, "bold");
+      pdf.text("BANK PAYMENT DETAILS", 15, yPos);
+      yPos += 8;
+      
+      // Bank details box
+      pdf.setDrawColor(200, 200, 200);
+      pdf.setLineWidth(0.5);
+      pdf.rect(15, yPos - 2, pageWidth - 30, 45);
+      
       pdf.setFont(undefined, "normal");
       pdf.setFontSize(10);
-      pdf.text("Bank Name: CENTENARY BANK", 15, yPos);
-      yPos += 5;
-      pdf.text("Account Name: WAKISSHA JOINT MOCK", 15, yPos);
-      yPos += 5;
-      pdf.text("Account Number: 3100054321", 15, yPos);
-      yPos += 5;
-      pdf.text(`Reference: ${invoice.serialNumber}`, 15, yPos);
+      pdf.setTextColor(60, 60, 60);
+      pdf.text("Bank Name: CENTENARY BANK", 20, yPos);
+      yPos += 6;
+      pdf.text("Account Name: WAKISSHA JOINT MOCK", 20, yPos);
+      yPos += 6;
+      pdf.text("Account Number: 3100054321", 20, yPos);
+      yPos += 6;
+      pdf.text(`Reference: ${invoice.serialNumber}`, 20, yPos);
+      yPos += 8;
+      pdf.setFont(undefined, "italic");
+      pdf.setFontSize(9);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text("Please use the invoice serial as reference when making payment", 20, yPos);
       yPos += 20;
 
-      // Signature section
+      // Signature section with better spacing
+      pdf.setFont(undefined, "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(30, 41, 59);
       pdf.text("__________________________", 15, yPos);
       pdf.text("__________________________", pageWidth - 15, yPos, { align: "right" });
-      yPos += 5;
+      yPos += 6;
+      pdf.setFont(undefined, "bold");
       pdf.text("School Headteacher / Bursar", 15, yPos);
       pdf.text("WAKISSHA Secretariat", pageWidth - 15, yPos, { align: "right" });
 
@@ -449,6 +492,15 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                           <Button 
                             variant="ghost" 
                             size="sm" 
+                            className="h-8 px-2 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 font-bold"
+                            onClick={() => setViewingInvoice(invoice)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
                             className="h-8 w-8 p-0" 
                             onClick={() => downloadInvoicePDF(invoice)}
                             title="Print / Download PDF"
@@ -620,6 +672,129 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                 onClick={submitProof}
               >
                 Submit Receipt
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice Detail View Dialog */}
+      <Dialog open={viewingInvoice !== null} onOpenChange={(open) => !open && setViewingInvoice(null)}>
+        <DialogContent className="sm:max-w-[700px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl" aria-describedby="invoice-detail-description">
+          <DialogHeader className="p-6 bg-slate-900 text-white flex-row items-center justify-between">
+            <div>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Invoice Details
+              </DialogTitle>
+              <DialogDescription id="invoice-detail-description" className="text-slate-300">
+                {viewingInvoice?.serialNumber} — {viewingInvoice?.type.toUpperCase()} INVOICE
+              </DialogDescription>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setViewingInvoice(null)} className="text-white hover:bg-white/10">
+              <X className="h-5 w-5" />
+            </Button>
+          </DialogHeader>
+          <div className="p-6 space-y-5 bg-slate-50">
+            {/* Invoice Meta */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-white border border-slate-200">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Invoice Serial</p>
+                <p className="text-lg font-black text-slate-900 font-mono">{viewingInvoice?.serialNumber}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-white border border-slate-200">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date Issued</p>
+                <p className="text-lg font-black text-slate-900">{viewingInvoice?.date}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-white border border-slate-200">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Invoice Type</p>
+                <Badge variant="outline" className={viewingInvoice?.type === "original" ? "bg-blue-50 text-blue-700 border-blue-100 font-bold" : "bg-orange-50 text-orange-700 border-orange-100 font-bold"}>
+                  {viewingInvoice?.type.toUpperCase()}
+                </Badge>
+              </div>
+              <div className="p-4 rounded-xl bg-white border border-slate-200">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment Status</p>
+                <Badge variant={viewingInvoice?.status === "paid" ? "success" : "warning"} className="font-bold">
+                  {viewingInvoice?.status.toUpperCase()}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Bill To */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">BILL TO</p>
+              <p className="font-bold text-slate-900">{user?.name}</p>
+              <p className="text-sm text-slate-500">School Code: {user?.schoolCode} | Zone: {currentSchool?.zone || "N/A"}</p>
+            </div>
+
+            {/* Items Table */}
+            <div className="rounded-xl bg-white border border-slate-200 overflow-hidden">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-800 text-white text-xs font-black uppercase tracking-widest">
+                    <th className="px-4 py-3">Description</th>
+                    <th className="px-4 py-3 text-center">Qty</th>
+                    <th className="px-4 py-3 text-right">Unit Price</th>
+                    <th className="px-4 py-3 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {viewingInvoice?.items.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-bold text-slate-900 text-sm">{item.description}</p>
+                        {item.formula && <p className="text-[11px] text-slate-400 font-medium">{item.formula}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-center font-bold text-slate-700">{item.quantity}</td>
+                      <td className="px-4 py-3 text-right font-medium text-slate-600">{formatUGX(item.unitPrice)}</td>
+                      <td className="px-4 py-3 text-right font-black text-slate-900">{formatUGX(item.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-50 border-t-2 border-slate-200">
+                    <td colSpan={3} className="px-4 py-3 text-right font-black text-slate-900 uppercase tracking-wider">Total Amount</td>
+                    <td className="px-4 py-3 text-right font-black text-lg text-orange-600">{formatUGX(viewingInvoice?.totalAmount || 0)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Bank Details */}
+            <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+              <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">BANK PAYMENT DETAILS</p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-slate-500 font-medium">Bank:</span> <span className="font-bold text-slate-900">CENTENARY BANK</span></div>
+                <div><span className="text-slate-500 font-medium">Account:</span> <span className="font-bold text-slate-900">WAKISSHA JOINT MOCK</span></div>
+                <div><span className="text-slate-500 font-medium">Acc No:</span> <span className="font-mono font-bold text-slate-900">3100054321</span></div>
+                <div><span className="text-slate-500 font-medium">Reference:</span> <span className="font-mono font-bold text-slate-900">{viewingInvoice?.serialNumber}</span></div>
+              </div>
+            </div>
+
+            {/* Payment Proof Status */}
+            {viewingInvoice?.paymentProof && (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+                <div>
+                  <p className="font-bold text-emerald-800 text-sm">Payment Proof Submitted</p>
+                  <p className="text-xs text-emerald-600">Your receipt has been uploaded and is pending admin verification.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold" onClick={() => setViewingInvoice(null)}>
+                Close
+              </Button>
+              <Button 
+                className="flex-1 h-12 rounded-xl font-bold bg-slate-900 hover:bg-slate-800"
+                onClick={() => {
+                  if (viewingInvoice) downloadInvoicePDF(viewingInvoice);
+                }}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
               </Button>
             </div>
           </div>

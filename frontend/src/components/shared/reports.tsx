@@ -731,26 +731,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       className: "border-l-green-500",
       valueClass: "text-slate-900",
     },
-  ] : [
-    {
-      label: "Total Candidates",
-      value: filteredStudents.length,
-      className: "border-l-blue-600",
-      valueClass: "text-slate-900",
-    },
-    {
-      label: "Subjects Registered",
-      value: new Set(filteredStudents.flatMap(s => s.subjects?.map(subj => mapSubjectCode(subj.subjectCode)) ?? [])).size,
-      className: "border-l-orange-500",
-      valueClass: "text-slate-900",
-    },
-    {
-      label: "Total Papers",
-      value: filteredStudents.reduce((acc, s) => acc + (s.subjects?.length ?? 0), 0),
-      className: "border-l-indigo-500",
-      valueClass: "text-slate-900",
-    },
-  ];
+  ] : [];
 
   const buildExportKey = (format: "pdf" | "excel", reportType: string) =>
     `${reportType}-${format}`;
@@ -1204,54 +1185,58 @@ export function Reports({ onPageChange }: ReportsProps) {
 
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 10;
-      let y = 10;
+      const margin = 2;
+      let y = 8;
 
       // Calculations
       const totalStudentsCount = summaryStudents.length;
 
-      // Title
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(12);
+      // Title (Times font, bold)
+      pdf.setFont("times", "bold");
+      pdf.setFontSize(6.8);
       pdf.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, y, { align: "center" });
-      y += 5;
+      y += 3;
 
       // Subtitle
-      pdf.setFontSize(10);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(`SUMMARY OF ENTRIES ${level}: YEAR 2026   TOTAL CANDIDATES: ${totalStudentsCount}`, margin, y);
-      y += 5;
+      pdf.setFont("times", "normal");
+      pdf.setFontSize(6.6);
+      pdf.text(
+        `SUMMARY OF ENTRIES ${level}: YEAR 2026        TOTAL CANDIDATES: ${totalStudentsCount}`,
+        margin,
+        y
+      );
+      y += 3;
 
-      // School Info Lines
-      const schoolName = headerSchool?.name || "............................................................................";
-      const schoolCode = headerSchool?.code || "..........";
+      // School Info Lines (official format)
+      const schoolName = headerSchool?.name || ".................................................................................";
+      const schoolCode = headerSchool?.code || ".......";
       pdf.text(`NAME OF SCHOOL: ${schoolName}   REF No. ${schoolCode}`, margin, y);
-      y += 5;
+      y += 3;
 
-      const district = headerSchool?.district || "...........................";
-      const zone = headerSchool?.zone || "...........................";
-      const telephone = headerSchool?.telephone || headerSchool?.phone || "...........................";
+      const district = headerSchool?.district || "......................";
+      const zone = headerSchool?.zone || ".........................";
+      const telephone = headerSchool?.telephone || headerSchool?.phone || "............................";
       pdf.text(`DISTRICT: ${district}   ZONE: ${zone}   TELEPHONE: ${telephone}`, margin, y);
-      y += 5;
+      y += 3;
 
-      pdf.text("NAME & SIGN OF HEAD: ...................................................................................................", margin, y);
-      y += 5;
+      pdf.text("NAME & SIGN OF HEAD: .....................................................................................", margin, y);
+      y += 3;
 
-      const email = headerSchool?.contactEmail || headerSchool?.email || "............................................................................";
+      const email = headerSchool?.contactEmail || headerSchool?.email || "..............................................................................";
       pdf.text(`CONTACT E-MAIL ADDRESS: ${email}`, margin, y);
-      y += 6;
+      y += 3.5;
 
-      // Subject Table Header Label
-      pdf.setFont("helvetica", "bold");
-      pdf.text("SUBJECT ENTRIES SUMMARY", margin, y);
-      y += 1;
-
-      // Prepare Table Data
+      // Prepare Table Data (use same official format as appendix)
       const appendixRows = level === "UCE" ? appendixUCE : appendixUACE;
       const tableData = appendixRows.map((subj) => {
         if (subj.section) {
           return [
-            { content: subj.section, colSpan: 2, styles: { fontStyle: "bold", halign: "left" } },
+            "",
+            subj.section,
+            "",
+            "",
+            "",
+            "",
             ""
           ];
         }
@@ -1263,8 +1248,13 @@ export function Reports({ onPageChange }: ReportsProps) {
         const entries = subjectStudents.length;
         
         return [
-          `${subj.code} ${subj.name}`,
-          entries > 0 ? String(entries) : "-"
+          subj.code,
+          subj.name,
+          String(entries),
+          "",
+          "",
+          "",
+          ""
         ];
       });
 
@@ -1278,39 +1268,65 @@ export function Reports({ onPageChange }: ReportsProps) {
       }, 0);
 
       tableData.push([
-        { content: "TOTAL CANDIDATES PER SUBJECT", styles: { fontStyle: "bold", halign: "right" } },
-        { content: String(totalSubjectEntries), styles: { fontStyle: "bold", halign: "center" } }
+        "",
+        "TOTAL CANDIDATES",
+        String(totalSubjectEntries),
+        "",
+        "",
+        "",
+        ""
       ]);
+
+      // Subject Table Header Label
+      pdf.setFont("times", "bold");
+      pdf.setFontSize(11);
+      pdf.text("SUBJECT", 12, y);
+      pdf.text("P      A      P      E      R      S", 70, y);
+      y += 1.5;
 
       autoTable(pdf, {
         startY: y,
         margin: { left: margin, right: margin },
-        head: [["CODE NAME", "Total number of candidates registering that subject"]],
+        tableWidth: pageWidth - margin * 2,
+        head: [["CODE", "NAME", "ENTRIES", "1", "2", "3", "4"]],
         body: tableData,
         theme: "grid",
         styles: {
-          fontSize: 8,
-          cellPadding: 1,
-          lineWidth: 0.2,
+          font: "times",
+          fontSize: 6.3,
+          lineWidth: 0.25,
           lineColor: [0, 0, 0],
           textColor: [0, 0, 0],
+          cellPadding: { top: 0.8, right: 1, bottom: 0.8, left: 1 },
         },
         headStyles: {
           fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          lineWidth: 0.25,
+          lineColor: [0, 0, 0],
           fontStyle: "bold",
-          halign: "center",
         },
         columnStyles: {
-          0: { cellWidth: 100, halign: "left" },
-          1: { cellWidth: 90, halign: "center" },
+          0: { cellWidth: 14, halign: "left", fontStyle: "bold" },
+          1: { cellWidth: 65 },
+          2: { cellWidth: 18, halign: "center", fontStyle: "bold" },
+          3: { cellWidth: 16, halign: "center" },
+          4: { cellWidth: 16, halign: "center" },
+          5: { cellWidth: 16, halign: "center" },
+          6: { cellWidth: 16, halign: "center" },
+        },
+        didParseCell: (hookData) => {
+          const row = appendixRows[hookData.row.index];
+          if (hookData.section === "body" && row?.section) {
+            hookData.cell.styles.fontStyle = "bold";
+            if (hookData.column.index !== 1) hookData.cell.text = [""];
+          }
+          // Style totals row
+          if (hookData.row.index === tableData.length - 1) {
+            hookData.cell.styles.fontStyle = "bold";
+          }
         },
       });
-
-      y = (pdf as any).lastAutoTable.finalY + 10;
-
-      pdf.setFont("helvetica", "bold");
-      pdf.text("CHECKED BY", margin, y);
-      pdf.text(`DATE: ${new Date().toLocaleDateString()}`, pageWidth - margin - 80, y);
 
       pdf.save(`Summary-of-Entries-${level}.pdf`);
       toast.success(`${level} Summary of Entries PDF generated`);
@@ -2147,26 +2163,27 @@ export function Reports({ onPageChange }: ReportsProps) {
         renderStatusMessage()
       ) : (
         <>
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {summaryCards.map((card) => (
-          <Card key={card.label} className="group overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
-            <CardContent className="p-0">
-              <div className={`h-1 w-full ${card.className.replace('border-l-4', 'bg').replace('border-l-', 'bg-')}`}></div>
-              <div className="p-4 md:p-5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{card.label}</p>
-                <div className="flex items-baseline gap-2">
-                  <p className={`text-2xl md:text-3xl font-black ${card.valueClass}`}>
-                    {card.value}
-                  </p>
-                  <span className="text-[9px] font-bold text-slate-300 uppercase">System Data</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Tabs defaultValue={isAdmin ? "consolidated" : "school-wise"} className="space-y-4 md:space-y-6 mt-1">
+          {isAdmin && (
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {summaryCards.map((card) => (
+                <Card key={card.label} className="group overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
+                  <CardContent className="p-0">
+                    <div className={`h-1 w-full ${card.className.replace('border-l-4', 'bg').replace('border-l-', 'bg-')}`}></div>
+                    <div className="p-4 md:p-5">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{card.label}</p>
+                      <div className="flex items-baseline gap-2">
+                        <p className={`text-2xl md:text-3xl font-black ${card.valueClass}`}>
+                          {card.value}
+                        </p>
+                        <span className="text-[9px] font-bold text-slate-300 uppercase">System Data</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          <Tabs defaultValue={isAdmin ? "consolidated" : "school-wise"} className="space-y-4 md:space-y-6 mt-1">
         <div className="overflow-x-auto pb-1 -mx-3 px-3 scrollbar-hide">
           <TabsList className="inline-flex h-10 items-center justify-start rounded-xl bg-slate-100 p-1 text-slate-500 w-auto min-w-full lg:min-w-0">
             {isAdmin && (
@@ -2204,6 +2221,12 @@ export function Reports({ onPageChange }: ReportsProps) {
               className="inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-xs md:text-sm font-bold ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm"
             >
               {isAdmin ? "Single School" : "My School Report"}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="financial"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-xs md:text-sm font-bold ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm"
+            >
+              Financial
             </TabsTrigger>
           </TabsList>
         </div>
@@ -3086,6 +3109,148 @@ export function Reports({ onPageChange }: ReportsProps) {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="financial" className="mt-0 outline-none">
+          <Card className="border-none shadow-none bg-transparent">
+            <CardContent className="p-0">
+              <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-50 pb-4">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2">
+                      <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
+                      Financial Reports
+                    </CardTitle>
+                    <CardDescription className="text-slate-500">
+                      {isAdmin ? "Payment collection summary and billing reports" : "Your billing and payment summary"}
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" className="h-9 rounded-xl font-bold border-slate-200" onClick={() => {
+                    try {
+                      const wb = XLSXUtils.book_new();
+                      if (isAdmin) {
+                        const rows = schools.map(s => {
+                          const si = invoices.filter(inv => inv.schoolCode === s.code);
+                          const ti = si.reduce((sum, inv) => sum + inv.totalAmount, 0);
+                          const tp = si.filter(inv => inv.status === "paid").reduce((sum, inv) => sum + inv.totalAmount, 0);
+                          return { School: s.name, Code: s.code, Zone: s.zone, Status: s.status, Invoiced: ti, Paid: tp, Outstanding: ti - tp };
+                        });
+                        XLSXUtils.book_append_sheet(wb, XLSXUtils.json_to_sheet(rows), "Summary");
+                      } else {
+                        const mi = invoices.filter(inv => inv.schoolCode === user?.schoolCode);
+                        const rows = mi.map(inv => ({ Serial: inv.serialNumber, Date: inv.date, Type: inv.type, Amount: inv.totalAmount, Status: inv.status }));
+                        XLSXUtils.book_append_sheet(wb, XLSXUtils.json_to_sheet(rows), "Invoices");
+                      }
+                      writeFile(wb, `financial-report-${new Date().toISOString().split("T")[0]}.xlsx`);
+                      toast.success("Financial report exported");
+                    } catch (e) { toast.error("Export failed"); }
+                  }}>
+                    <Download className="h-4 w-4 mr-1" /> Export Excel
+                  </Button>
+                </div>
+                {(() => {
+                  const ri = isAdmin ? invoices : invoices.filter(inv => inv.schoolCode === user?.schoolCode);
+                  const ti = ri.reduce((s, i) => s + i.totalAmount, 0);
+                  const tp = ri.filter(i => i.status === "paid").reduce((s, i) => s + i.totalAmount, 0);
+                  return (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Invoiced</p>
+                        <p className="text-xl font-black text-slate-900">{ti.toLocaleString()} <span className="text-sm text-slate-500">UGX</span></p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Collected</p>
+                        <p className="text-xl font-black text-emerald-700">{tp.toLocaleString()} <span className="text-sm text-emerald-500">UGX</span></p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+                        <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Outstanding</p>
+                        <p className="text-xl font-black text-orange-700">{(ti - tp).toLocaleString()} <span className="text-sm text-orange-500">UGX</span></p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Invoices</p>
+                        <p className="text-xl font-black text-blue-700">{ri.filter(i => i.status === "paid").length}<span className="text-sm text-blue-500">/{ri.length}</span> <span className="text-xs text-slate-400">paid</span></p>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {isAdmin ? (
+                  <div className="rounded-xl border border-slate-200 overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead className="font-black text-xs uppercase tracking-widest">School</TableHead>
+                          <TableHead className="font-black text-xs uppercase tracking-widest">Zone</TableHead>
+                          <TableHead className="font-black text-xs uppercase tracking-widest text-center">Status</TableHead>
+                          <TableHead className="font-black text-xs uppercase tracking-widest text-right">Invoiced</TableHead>
+                          <TableHead className="font-black text-xs uppercase tracking-widest text-right">Paid</TableHead>
+                          <TableHead className="font-black text-xs uppercase tracking-widest text-right">Outstanding</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {schools.map(s => {
+                          const si = invoices.filter(inv => inv.schoolCode === s.code);
+                          const inv = si.reduce((sum, i) => sum + i.totalAmount, 0);
+                          const pd = si.filter(i => i.status === "paid").reduce((sum, i) => sum + i.totalAmount, 0);
+                          return (
+                            <TableRow key={s.code} className="hover:bg-slate-50">
+                              <TableCell><p className="font-bold text-slate-900 text-sm">{s.name}</p><p className="text-[11px] text-slate-400">{s.code}</p></TableCell>
+                              <TableCell className="text-sm text-slate-600">{s.zone || "N/A"}</TableCell>
+                              <TableCell className="text-center"><Badge variant={s.status === "active" ? "success" : s.status === "verified" ? "info" : "warning"} className="text-[10px] font-bold">{s.status}</Badge></TableCell>
+                              <TableCell className="text-right font-medium text-slate-700">{inv.toLocaleString()}</TableCell>
+                              <TableCell className="text-right font-medium text-emerald-700">{pd.toLocaleString()}</TableCell>
+                              <TableCell className="text-right font-bold text-orange-600">{(inv - pd).toLocaleString()}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        {schools.length === 0 && (<TableRow><TableCell colSpan={6} className="text-center py-8 text-slate-400">No schools registered yet</TableCell></TableRow>)}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="font-black text-xs uppercase tracking-widest">Invoice</TableHead>
+                            <TableHead className="font-black text-xs uppercase tracking-widest">Type</TableHead>
+                            <TableHead className="font-black text-xs uppercase tracking-widest text-center">Status</TableHead>
+                            <TableHead className="font-black text-xs uppercase tracking-widest text-right">Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {invoices.filter(inv => inv.schoolCode === user?.schoolCode).map(inv => (
+                            <TableRow key={inv.id} className="hover:bg-slate-50">
+                              <TableCell className="font-mono font-bold text-slate-900 text-sm">{inv.serialNumber}</TableCell>
+                              <TableCell><Badge variant="outline" className={inv.type === "original" ? "bg-blue-50 text-blue-700 border-blue-100 font-bold" : "bg-orange-50 text-orange-700 border-orange-100 font-bold"}>{inv.type.toUpperCase()}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant={inv.status === "paid" ? "success" : "warning"} className="font-bold">{inv.status.toUpperCase()}</Badge></TableCell>
+                              <TableCell className="text-right font-black text-slate-900">{inv.totalAmount.toLocaleString()} UGX</TableCell>
+                            </TableRow>
+                          ))}
+                          {invoices.filter(inv => inv.schoolCode === user?.schoolCode).length === 0 && (<TableRow><TableCell colSpan={4} className="text-center py-8 text-slate-400">No invoices generated yet</TableCell></TableRow>)}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {(() => {
+                      const mi = invoices.filter(inv => inv.schoolCode === user?.schoolCode);
+                      const ot = mi.filter(i => i.type === "original").reduce((s, i) => s + i.totalAmount, 0);
+                      const at = mi.filter(i => i.type === "additional").reduce((s, i) => s + i.totalAmount, 0);
+                      if (mi.length === 0) return null;
+                      return (
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Fee Breakdown</p>
+                          <div className="space-y-2">
+                            <div className="flex justify-between"><span className="text-sm text-slate-600">Original Registration</span><span className="font-bold text-slate-900">{ot.toLocaleString()} UGX</span></div>
+                            {at > 0 && <div className="flex justify-between"><span className="text-sm text-slate-600">Additional Students</span><span className="font-bold text-orange-600">{at.toLocaleString()} UGX</span></div>}
+                            <div className="flex justify-between border-t border-slate-200 pt-2"><span className="text-sm font-bold text-slate-900">Grand Total</span><span className="font-black text-lg text-slate-900">{(ot + at).toLocaleString()} UGX</span></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

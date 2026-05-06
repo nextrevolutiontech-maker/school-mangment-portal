@@ -213,6 +213,48 @@ export function PaymentsVerification({
         ))}
       </div>
 
+      {/* Financial Collection Summary */}
+      <Card className="border-none shadow-sm bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collection Summary</p>
+              <p className="text-lg font-bold text-white">Financial Overview</p>
+            </div>
+            <FileText className="h-5 w-5 text-slate-400" />
+          </div>
+          {(() => {
+            const totalInvoiced = invoices.reduce((s, i) => s + i.totalAmount, 0);
+            const totalPaid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.totalAmount, 0);
+            const totalOutstanding = totalInvoiced - totalPaid;
+            const collectionRate = totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0;
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-3 rounded-xl bg-white/10">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Invoiced</p>
+                  <p className="text-xl font-black text-white">{totalInvoiced.toLocaleString()} <span className="text-sm text-slate-400">UGX</span></p>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-500/20">
+                  <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest mb-1">Collected</p>
+                  <p className="text-xl font-black text-emerald-300">{totalPaid.toLocaleString()} <span className="text-sm text-emerald-400/70">UGX</span></p>
+                </div>
+                <div className="p-3 rounded-xl bg-orange-500/20">
+                  <p className="text-[10px] font-black text-orange-300 uppercase tracking-widest mb-1">Outstanding</p>
+                  <p className="text-xl font-black text-orange-300">{totalOutstanding.toLocaleString()} <span className="text-sm text-orange-400/70">UGX</span></p>
+                </div>
+                <div className="p-3 rounded-xl bg-blue-500/20">
+                  <p className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-1">Collection Rate</p>
+                  <p className="text-xl font-black text-blue-300">{collectionRate}%</p>
+                  <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full rounded-full bg-blue-400 transition-all" style={{ width: `${collectionRate}%` }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </CardContent>
+      </Card>
+
       <Card className="w-full mt-6">
         <CardHeader className="border-b border-slate-200">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

@@ -204,19 +204,19 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       subject: "Mathematics",
       date: "2026-05-15",
       time: "09:00 AM",
-      duration: "3 hours",
+      duration: "3hrs",
     },
     {
       subject: "English Language",
       date: "2026-05-16",
       time: "09:00 AM",
-      duration: "2.5 hours",
+      duration: "2hrs 30mins",
     },
     {
       subject: "Physics",
       date: "2026-05-18",
       time: "09:00 AM",
-      duration: "3 hours",
+      duration: "3hrs",
     },
   ];
 
@@ -311,33 +311,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </Alert>
       )}
 
-      {/* Legacy Alert - kept only if status is pending/verified but not active */}
-      {user?.status !== "active" && user?.status !== "pending" && schoolInvoices.length > 0 && (
-        <>
-          {user?.status === "pending" && (
-            <Alert variant="warning">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Account Pending Verification</AlertTitle>
-              <AlertDescription>
-                Your account is awaiting payment review. Some actions may remain
-                limited until verification is complete.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {user?.status === "verified" && (
-            <Alert variant="info">
-              <Clock className="h-4 w-4" />
-              <AlertTitle>Payment Confirmed</AlertTitle>
-              <AlertDescription>
-                Your payment has been confirmed and your school is awaiting final
-                activation.
-              </AlertDescription>
-            </Alert>
-          )}
-        </>
-      )}
-
+      
       {user?.status === "active" && (
         <Alert variant="success" className="bg-emerald-50 border-emerald-100">
           <CheckCircle className="h-4 w-4 text-emerald-600" />
@@ -349,31 +323,31 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {stats.map((stat) => {
           const Icon = stat.icon;
 
           return (
-            <Card key={stat.title} className={`h-full border-l-4 ${stat.borderClass} transition-all duration-200 hover:shadow-md`}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+            <Card key={stat.title} className={`h-full border-l-4 ${stat.borderClass} transition-all duration-200 hover:shadow-md hover:shadow-lg`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">
                       {stat.title}
                     </p>
-                    <div className="flex flex-col">
-                      <p className="text-2xl font-black text-slate-900 leading-tight">
+                    <div className="flex items-baseline gap-1">
+                      <p className="text-xl font-black text-slate-900 leading-none">
                         {stat.value}
                       </p>
-                      <p className="text-[10px] font-medium text-slate-400 mt-0.5">
+                      <p className="text-[9px] font-medium text-slate-400">
                         {stat.subtitle}
                       </p>
                     </div>
                   </div>
                   <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${stat.iconClass}`}
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stat.iconClass}`}
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon className="h-4 w-4" />
                   </div>
                 </div>
               </CardContent>

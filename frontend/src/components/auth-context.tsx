@@ -17,9 +17,10 @@ export type SchoolStatus =
 export type EducationLevel = "UCE" | "UACE";
 
 // Predetermined class levels - managed by super admin only
+// Phase 1 restrictions: UCE only S.4, UACE only S.6
 export const CLASS_LEVELS = {
-  UCE: ["S.1", "S.2", "S.3", "S.4"],
-  UACE: ["S.5", "S.6"],
+  UCE: ["S.4"], // Only S.4 allowed for UCE
+  UACE: ["S.6"], // Only S.6 allowed for UACE
 } as const;
 
 export const CLASS_LEVELS_ARRAY = ["S.1", "S.2", "S.3", "S.4", "S.5", "S.6"] as const;
@@ -494,7 +495,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 1",
     level: "UCE",
     period: "Morning",
-    duration: "2.5 hours",
+    duration: "2hrs 30mins",
   },
   {
     id: "uce-2",
@@ -505,7 +506,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 1",
     level: "UCE",
     period: "Morning",
-    duration: "2.5 hours",
+    duration: "2hrs 30mins",
   },
   {
     id: "uce-3",
@@ -516,7 +517,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 2",
     level: "UCE",
     period: "Afternoon",
-    duration: "2.5 hours",
+    duration: "2hrs 30mins",
   },
   {
     id: "uce-4",
@@ -527,7 +528,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 1",
     level: "UCE",
     period: "Morning",
-    duration: "2.5 hours",
+    duration: "2hrs 30mins",
   },
   {
     id: "uce-5",
@@ -538,7 +539,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 1",
     level: "UCE",
     period: "Morning",
-    duration: "2.5 hours",
+    duration: "2hrs 30mins",
   },
   {
     id: "uace-1",
@@ -549,7 +550,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 1",
     level: "UACE",
     period: "Morning",
-    duration: "3 hours",
+    duration: "3hrs",
   },
   {
     id: "uace-2",
@@ -560,7 +561,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 1",
     level: "UACE",
     period: "Morning",
-    duration: "2.5 hours",
+    duration: "2hrs 30mins",
   },
   {
     id: "uace-3",
@@ -571,7 +572,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 2",
     level: "UACE",
     period: "Morning",
-    duration: "3 hours",
+    duration: "3hrs",
   },
   {
     id: "uace-4",
@@ -582,7 +583,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 2",
     level: "UACE",
     period: "Morning",
-    duration: "3 hours",
+    duration: "3hrs",
   },
   {
     id: "uace-5",
@@ -593,7 +594,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 2",
     level: "UACE",
     period: "Morning",
-    duration: "3 hours",
+    duration: "3hrs",
   },
   {
     id: "uace-6",
@@ -604,7 +605,7 @@ const initialTimetable: ScheduleEntry[] = [
     paper: "Paper 1",
     level: "UACE",
     period: "Afternoon",
-    duration: "3 hours",
+    duration: "3hrs",
   },
 ];
 
@@ -866,7 +867,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
 
-    const studentIds = schoolStudents.map(s => s.id);
+    const studentIds = levelStudents.map(s => s.id);
 
     addInvoice({
       serialNumber: `INV-${schoolCode}-${Date.now().toString().slice(-4)}`,

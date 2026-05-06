@@ -345,7 +345,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
     paper: "Paper 1",
     level: "UCE" as "UCE" | "UACE",
     period: "Morning" as "Morning" | "Afternoon",
-    duration: "2.5 hours",
+    duration: "2hrs 30mins",
   });
 
   const uceSchedule = timetable.filter(e => e.level === "UCE");
@@ -374,7 +374,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
       paper: "Paper 1",
       level: level,
       period: "Morning",
-      duration: level === "UCE" ? "2.5 hours" : "3 hours",
+      duration: level === "UCE" ? "2hrs 30mins" : "3hrs",
     });
     setIsManageDialogOpen(true);
   };
@@ -652,7 +652,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
               <Label htmlFor="duration" className="text-sm font-semibold text-slate-700">Duration</Label>
               <Input 
                 id="duration" 
-                placeholder="e.g. 2.5 hours" 
+                placeholder="e.g. 2hrs 30mins" 
                 required 
                 value={formData.duration}
                 onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
