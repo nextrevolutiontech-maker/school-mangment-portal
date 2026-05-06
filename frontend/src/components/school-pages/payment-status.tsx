@@ -52,6 +52,7 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
+  const [viewingReceipt, setViewingReceipt] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentSchool = useMemo(() => {
@@ -468,11 +469,18 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                onClick={() => window.open(invoice.paymentProof, "_blank")}
+                                onClick={() => {
+                                  if (invoice.paymentProof && invoice.paymentProof.trim() !== "") {
+                                    setViewingReceipt(invoice.paymentProof);
+                                  } else {
+                                    toast.error("No receipt available to view.");
+                                  }
+                                }}
                                 className="h-8 px-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 font-bold"
+                                title="View Payment Receipt"
                               >
                                 <Eye className="h-4 w-4 mr-1" />
-                                View
+                                Receipt
                               </Button>
                             </div>
                           ) : (
@@ -494,18 +502,19 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                             size="sm" 
                             className="h-8 px-2 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 font-bold"
                             onClick={() => setViewingInvoice(invoice)}
+                            title="View Invoice Details"
                           >
                             <Eye className="h-4 w-4 mr-1" />
-                            View
+                            Invoice
                           </Button>
                           <Button 
                             variant="ghost" 
                             size="sm" 
                             className="h-8 w-8 p-0" 
                             onClick={() => downloadInvoicePDF(invoice)}
-                            title="Print / Download PDF"
+                            title="Download PDF"
                           >
-                            <Printer className="h-4 w-4 text-slate-600" />
+                            <Download className="h-4 w-4 text-slate-600" />
                           </Button>
                         </div>
                       </td>
@@ -797,6 +806,122 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                 Download PDF
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Preview Modal */}
+      <Dialog open={!!viewingReceipt} onOpenChange={() => setViewingReceipt(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0 border-none shadow-2xl">
+          <DialogHeader className="p-4 border-b bg-slate-50">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                Payment Receipt
+              </DialogTitle>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setViewingReceipt(null)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+            {viewingReceipt && (
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                  <p className="text-sm font-medium text-blue-800 mb-2">
+                    <strong>Receipt Preview:</strong> This is the payment proof you submitted.
+                  </p>
+                  <div className="bg-white rounded-lg border border-slate-200 p-2">
+                    {viewingReceipt.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                      <img 
+                        src={viewingReceipt} 
+                        alt="Payment Receipt" 
+                        className="w-full h-auto max-h-[500px] object-contain rounded"
+                        onError={(e) => {
+                          console.error("Image load error:", e);
+                          toast.error("Failed to load receipt image. The file may be corrupted or not an image.");
+                        }}
+                        onLoad={() => {
+                          console.log("Image loaded successfully");
+                        }}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-[300px] bg-slate-50 rounded-lg border-2 border-dashed border-slate-300">
+                        <FileText className="h-12 w-12 text-slate-400 mb-3" />
+                        <p className="text-slate-600 font-medium mb-2">Receipt Document</p>
+                        <p className="text-slate-500 text-sm mb-4">This receipt may not be an image file</p>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              if (viewingReceipt) {
+                                window.open(viewingReceipt, '_blank');
+                              }
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Open Document
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              if (viewingReceipt) {
+                                const link = document.createElement('a');
+                                link.href = viewingReceipt;
+                                link.download = `receipt-${Date.now()}`;
+                                link.click();
+                                toast.success("Receipt downloaded successfully");
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 h-10 rounded-lg font-bold"
+                    onClick={() => {
+                      if (viewingReceipt) {
+                        const link = document.createElement('a');
+                        link.href = viewingReceipt;
+                        link.download = `receipt-${Date.now()}.jpg`;
+                        link.click();
+                        toast.success("Receipt downloaded successfully");
+                      }
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Receipt
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 h-10 rounded-lg font-bold"
+                    onClick={() => {
+                      if (viewingReceipt) {
+                        window.open(viewingReceipt, '_blank');
+                      }
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Open in New Tab
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
