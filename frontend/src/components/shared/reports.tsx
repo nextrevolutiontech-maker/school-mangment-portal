@@ -2049,19 +2049,18 @@ export function Reports({ onPageChange }: ReportsProps) {
   const getReportsStatus = () => {
     if (isAdmin) return "ready";
 
+    const currentSchool = schools.find(s => s.code === user?.schoolCode);
+    const isAnyLevelFinalised = currentSchool?.uceRegistrationFinalised || currentSchool?.uaceRegistrationFinalised;
+
+    if (isAnyLevelFinalised || hasGeneratedInvoice) {
+      return "ready";
+    }
+
     if (!hasCompletedRegistration) {
       return "registration_incomplete";
     }
 
-    if (!hasGeneratedInvoice) {
-      return "invoice_pending";
-    }
-
-    if (user?.status !== "verified" && user?.status !== "active") {
-      return "verification_pending";
-    }
-
-    return "ready";
+    return "invoice_pending";
   };
 
   const reportsStatus = getReportsStatus();
@@ -2069,21 +2068,21 @@ export function Reports({ onPageChange }: ReportsProps) {
   const renderStatusMessage = () => {
     if (reportsStatus === "registration_incomplete") {
       return (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-8 max-w-lg text-center shadow-lg">
-            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileQuestion className="h-8 w-8 text-orange-600" />
+        <div className="flex flex-col items-center justify-center py-24 px-4 bg-slate-50/50 rounded-[3rem] border border-dashed border-slate-200 mt-8">
+          <div className="bg-orange-50 border-2 border-orange-200 rounded-[2.5rem] p-10 max-w-lg text-center shadow-xl">
+            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+              <PlusCircle className="h-10 w-10 text-orange-600" />
             </div>
-            <h2 className="text-xl font-bold text-orange-900 mb-2">Student Registration Required</h2>
-            <p className="text-orange-700 mb-6 text-sm">
-              Reports will become available after completing student registration. Please add your students and their subject entries first.
+            <h2 className="text-2xl font-black text-orange-900 mb-3 uppercase tracking-tight">Registration Required</h2>
+            <p className="text-orange-700 mb-8 text-base font-medium leading-relaxed">
+              Official reports, summaries, and financial statements will become available after you complete student registration and finalise your entries.
             </p>
             <Button
               onClick={() => onPageChange("subject-entries")}
-              className="bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl h-11 px-6 shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="bg-orange-600 hover:bg-orange-700 text-white font-black rounded-2xl h-14 px-10 shadow-lg shadow-orange-200 transition-all hover:scale-[1.05] active:scale-[0.95] uppercase tracking-widest text-sm"
             >
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Complete Registration
+              <PlusCircle className="mr-3 h-6 w-6" />
+              Start Registration
             </Button>
           </div>
         </div>
@@ -2092,42 +2091,22 @@ export function Reports({ onPageChange }: ReportsProps) {
 
     if (reportsStatus === "invoice_pending") {
       return (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-8 max-w-lg text-center shadow-lg">
-            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="h-8 w-8 text-amber-600" />
+        <div className="flex flex-col items-center justify-center py-24 px-4 bg-slate-50/50 rounded-[3rem] border border-dashed border-slate-200 mt-8">
+          <div className="bg-amber-50 border-2 border-amber-200 rounded-[2.5rem] p-10 max-w-lg text-center shadow-xl">
+            <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+              <AlertTriangle className="h-10 w-10 text-amber-600" />
             </div>
-            <h2 className="text-xl font-bold text-amber-900 mb-2">Invoice Generation Pending</h2>
-            <p className="text-amber-700 mb-6 text-sm">
-              Your registration has been completed, but an invoice has not been generated yet. Finalise your registration to generate an invoice and proceed with payment.
+            <h2 className="text-2xl font-black text-amber-900 mb-3 uppercase tracking-tight">Finalisation Pending</h2>
+            <p className="text-amber-700 mb-8 text-base font-medium leading-relaxed">
+              Your registration is complete, but you haven't finalised it yet. Please finalise your registration on the dashboard to generate your invoice and unlock official reports.
             </p>
             <Button
-              onClick={() => onPageChange("subject-entries")}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl h-11 px-6 shadow-lg shadow-amber-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              onClick={() => onPageChange("dashboard")}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-black rounded-2xl h-14 px-10 shadow-lg shadow-amber-200 transition-all hover:scale-[1.05] active:scale-[0.95] uppercase tracking-widest text-sm"
             >
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Finalise Registration
+              <CheckCircle className="mr-3 h-6 w-6" />
+              Go to Dashboard to Finalise
             </Button>
-          </div>
-        </div>
-      );
-    }
-
-    if (reportsStatus === "verification_pending") {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-8 max-w-lg text-center shadow-lg">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Clock className="h-8 w-8 text-blue-600" />
-            </div>
-            <h2 className="text-xl font-bold text-blue-900 mb-2">Awaiting Verification</h2>
-            <p className="text-blue-700 mb-6 text-sm">
-              Your payment is being processed and verified by the WAKISSHA admin team. Reports will become available once your account is verified and activated.
-            </p>
-            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold">
-              <Clock className="h-4 w-4" />
-              Status: {user?.status?.replace("_", " ")}
-            </div>
           </div>
         </div>
       );
@@ -3075,36 +3054,42 @@ export function Reports({ onPageChange }: ReportsProps) {
 
                     <Button
                       variant="default"
-                      className="h-14 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-200 border-none group transition-all"
+                      className="h-16 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-200 border-none group transition-all"
                       onClick={() => handleExport("pdf", "Summary of Entries (UACE)")}
-                      disabled={isExporting("pdf", "Summary of Entries (UACE)")}
+                      disabled={isExporting("pdf", "Summary of Entries (UACE)") || !isUaceFinalised && user?.role !== "admin"}
                     >
                       <div className="flex items-center gap-3 text-left">
-                        <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center">
-                          <Download className="h-5 w-5 text-white" />
+                        <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                          <Download className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Official</p>
-                          <p className="font-bold text-white">UACE Summary</p>
+                          <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Generate Official</p>
+                          <p className="font-bold text-white text-base">UACE Summary</p>
                         </div>
                       </div>
+                      {!isUaceFinalised && user?.role !== "admin" && (
+                        <Badge className="absolute -top-2 -right-2 bg-slate-800 text-[9px]">LOCKED</Badge>
+                      )}
                     </Button>
 
                     <Button
                       variant="default"
-                      className="h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 border-none group transition-all"
+                      className="h-16 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 border-none group transition-all"
                       onClick={() => handleExport("pdf", "Summary of Entries (UCE)")}
-                      disabled={isExporting("pdf", "Summary of Entries (UCE)")}
+                      disabled={isExporting("pdf", "Summary of Entries (UCE)") || !isUceFinalised && user?.role !== "admin"}
                     >
                       <div className="flex items-center gap-3 text-left">
-                        <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center">
-                          <Download className="h-5 w-5 text-white" />
+                        <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                          <Download className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Official</p>
-                          <p className="font-bold text-white">UCE Appendix</p>
+                          <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Generate Official</p>
+                          <p className="font-bold text-white text-base">UCE Appendix</p>
                         </div>
                       </div>
+                      {!isUceFinalised && user?.role !== "admin" && (
+                        <Badge className="absolute -top-2 -right-2 bg-slate-800 text-[9px]">LOCKED</Badge>
+                      )}
                     </Button>
                   </div>
                 </div>
