@@ -290,16 +290,33 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
 
   const paymentStatus = user?.status || "pending";
   const getStatusContent = () => {
-    // Priority: If no invoices exist, we must show "Awaiting Registration Finalisation"
+    const isUceFinalised = currentSchool?.uceRegistrationFinalised ?? false;
+    const isUaceFinalised = currentSchool?.uaceRegistrationFinalised ?? false;
+    const isAnyFinalised = isUceFinalised || isUaceFinalised;
+
+    // Priority: If no invoices exist, we must check finalisation status
     if (schoolInvoices.length === 0) {
-      return {
-        title: "Awaiting Registration Finalisation",
-        description: "Your student registration must be completed and finalised before an invoice can be generated. Once finalised, you can download your payment slip and upload proof of payment.",
-        variant: "warning" as const,
-        badgeVariant: "warning" as const,
-        icon: Info,
-        needsFinalisation: true
-      };
+      if (!isAnyFinalised) {
+        return {
+          title: "Awaiting Registration Finalisation",
+          description: "Your student registration must be completed and finalised before an invoice can be generated. Once finalised, you can proceed to generate your payment invoice.",
+          variant: "warning" as const,
+          badgeVariant: "warning" as const,
+          icon: Info,
+          needsFinalisation: true,
+          targetPage: "dashboard" // Go to dashboard to finalise
+        };
+      } else {
+        return {
+          title: "Awaiting Invoice Generation",
+          description: "Registration has been finalised. Please proceed to generate your payment invoice by selecting marking guides and booklets.",
+          variant: "info" as const,
+          badgeVariant: "info" as const,
+          icon: Calculator,
+          needsInvoice: true,
+          targetPage: "make-payments"
+        };
+      }
     }
 
     switch (paymentStatus) {
@@ -375,18 +392,18 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
             <p className="text-slate-600 font-medium leading-relaxed text-base">
               {status.description}
             </p>
-            {(status as any).needsFinalisation && (
+            {((status as any).needsFinalisation || (status as any).needsInvoice) && (
               <div className="mt-5 flex flex-wrap items-center gap-4">
                 <Button 
-                  onClick={() => onPageChange("subject-entries")}
-                  className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold h-12 px-8 shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  onClick={() => onPageChange((status as any).targetPage)}
+                  className={`${(status as any).needsFinalisation ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl font-bold h-12 px-8 shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]`}
                 >
                   <PlusCircle className="mr-2 h-5 w-5" />
-                  Complete Registration
+                  {(status as any).needsFinalisation ? 'Go to Finalise Registration' : 'Generate Invoice Now'}
                 </Button>
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Info className="h-4 w-4" />
-                  Required to generate invoice
+                  {(status as any).needsFinalisation ? 'Required to generate invoice' : 'Select materials and calculate total'}
                 </div>
               </div>
             )}

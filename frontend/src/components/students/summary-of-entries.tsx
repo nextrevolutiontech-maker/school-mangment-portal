@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useAuth, SchoolRecord, StudentRecord, Subject, Invoice } from "../auth-context";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { FileText, ChevronDown, CheckCircle, Lock, AlertCircle } from "lucide-react";
+import { FileText, ChevronDown, CheckCircle, Lock, AlertCircle, Download } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -95,10 +95,10 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
     const subjectList = Array.from(new Set(studentSubjects.map(s => `${s.examLevel}:${s.subjectCode}`)))
       .map(key => {
         const [examLevel, subjectCode] = key.split(":");
-        const subject = subjects.find(s => s.subjectCode === subjectCode && s.examLevel === examLevel);
+        const subject = subjects.find(s => s.code === subjectCode && s.educationLevel === examLevel);
         return {
           code: subjectCode,
-          name: subject?.subjectName || "Unknown Subject",
+          name: subject?.name || "Unknown Subject",
           count: subjectCounts[key],
           examLevel
         };
@@ -109,17 +109,20 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
       totalStudents: filteredStudents.length,
       subjectList,
       totalEntries: filteredStudents.reduce((sum, s) => sum + s.totalEntries, 0),
-      subjectCountsMap: new Map(Object.entries(subjectCounts).map(([k, v]) => [k.split(":")[1], v]))
+      subjectCountsMap: new Map(Object.entries(subjectCounts).map(([k, v]) => {
+        const [examLevel, subjectCode] = k.split(":");
+        return [`${examLevel}:${subjectCode}`, v];
+      }))
     };
   }, [filteredStudents, subjects]);
 
-  const subjectCounts = stats.subjectCountsMap;
+  const subjectCountsMap = stats.subjectCountsMap;
 
   const foreignLanguages = ["309", "314", "337", "396"];
   const localLanguages = ["335", "336", "345", "355", "365"];
 
-  const uceSubjects = subjects.filter(s => s.educationLevel === "UCE");
-  const uaceSubjects = subjects.filter(s => s.educationLevel === "UACE");
+  const uceSubjects = useMemo(() => subjects.filter(s => s.educationLevel === "UCE"), [subjects]);
+  const uaceSubjects = useMemo(() => subjects.filter(s => s.educationLevel === "UACE"), [subjects]);
 
   const levelSubjects = useMemo(() => {
     if (level === "UCE") return uceSubjects;
@@ -146,9 +149,9 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
   }, [school, invoices]);
 
   const studentFeeTotal = filteredStudents.length * pricing.studentFee;
-  const uceMarkingGuideTotal = (level === "UCE" && school.uceMarkingGuideQuantity) ? school.uceMarkingGuideQuantity * pricing.uceMarkingGuide : 0;
-  const uaceArtsMarkingGuideTotal = (level === "UACE" && school.uaceArtsMarkingGuideQuantity) ? school.uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide : 0;
-  const uaceSciencesMarkingGuideTotal = (level === "UACE" && school.uaceSciencesMarkingGuideQuantity) ? school.uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide : 0;
+  const uceMarkingGuideTotal = (level !== "UACE" && school.uceMarkingGuideQuantity) ? school.uceMarkingGuideQuantity * pricing.uceMarkingGuide : 0;
+  const uaceArtsMarkingGuideTotal = (level !== "UCE" && school.uaceArtsMarkingGuideQuantity) ? school.uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide : 0;
+  const uaceSciencesMarkingGuideTotal = (level !== "UCE" && school.uaceSciencesMarkingGuideQuantity) ? school.uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide : 0;
   const answerBookletsTotal = school.answerBookletsQuantity ? school.answerBookletsQuantity * pricing.answerBooklet : 0;
 
   const totalAmount = schoolRegFeeTotal + studentFeeTotal + uceMarkingGuideTotal + uaceArtsMarkingGuideTotal + uaceSciencesMarkingGuideTotal + answerBookletsTotal;
@@ -161,249 +164,336 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
     });
 
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 30;
-    let yPos = margin;
+    const margin = 40;
+    let yPos = 40;
 
-    doc.setFontSize(9);
-    doc.text("Appendix 2", pageWidth - margin - 40, yPos);
-
+    // Header
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
+    doc.setFontSize(14);
     doc.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, yPos, { align: "center" });
     yPos += 20;
 
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    const line1Text = `SUMMARY OF ENTRIES ${level === "Combined" ? "UCE & UACE" : level}: YEAR`;
-    doc.text(line1Text, margin, yPos);
-    doc.line(margin + doc.getTextWidth(line1Text) + 4, yPos + 2, margin + doc.getTextWidth(line1Text) + 80, yPos + 2);
-    
-    doc.text("TOTAL CANDIDATES", margin + doc.getTextWidth(line1Text) + 100, yPos);
-    doc.line(margin + doc.getTextWidth(line1Text) + 100 + doc.getTextWidth("TOTAL CANDIDATES") + 4, yPos + 2, pageWidth - margin - 80, yPos + 2);
-    
-    doc.text("Ref No", pageWidth - margin - 50, yPos);
-    doc.line(pageWidth - margin - 50 + doc.getTextWidth("Ref No") + 4, yPos + 2, pageWidth - margin, yPos + 2);
-    yPos += 20;
+    doc.setFontSize(12);
+    doc.text(`${level === "Combined" ? "UCE & UACE" : level} SUMMARY OF ENTRIES`, pageWidth / 2, yPos, { align: "center" });
+    yPos += 30;
 
+    // School Details
     doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    const line2Text = "NAME OF SCHOOL:";
-    doc.text(line2Text, margin, yPos);
-    doc.line(margin + doc.getTextWidth(line2Text) + 4, yPos + 2, margin + doc.getTextWidth(line2Text) + 140, yPos + 2);
+    doc.setFont("helvetica", "normal");
     
-    doc.text("DISTRICT:", margin + doc.getTextWidth(line2Text) + 160, yPos);
-    doc.line(margin + doc.getTextWidth(line2Text) + 160 + doc.getTextWidth("DISTRICT:") + 4, yPos + 2, margin + doc.getTextWidth(line2Text) + 160 + doc.getTextWidth("DISTRICT:") + 100, yPos + 2);
-    
-    doc.text("ZONE:", margin + doc.getTextWidth(line2Text) + 160 + doc.getTextWidth("DISTRICT:") + 130, yPos);
-    doc.line(margin + doc.getTextWidth(line2Text) + 160 + doc.getTextWidth("DISTRICT:") + 130 + doc.getTextWidth("ZONE:") + 4, yPos + 2, pageWidth - margin - 120, yPos + 2);
-    
-    doc.text("TELEPHONE:", pageWidth - margin - 80, yPos);
-    doc.line(pageWidth - margin - 80 + doc.getTextWidth("TELEPHONE:") + 4, yPos + 2, pageWidth - margin, yPos + 2);
+    const drawField = (label: string, value: string, x: number, y: number) => {
+      doc.setFont("helvetica", "bold");
+      doc.text(label, x, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(value, x + doc.getTextWidth(label) + 5, y);
+    };
+
+    drawField("NAME OF SCHOOL:", school.name, margin, yPos);
+    drawField("TOTAL CANDIDATES:", filteredStudents.length.toString(), pageWidth - margin - 150, yPos);
     yPos += 20;
 
-    doc.setFont("helvetica", "bold");
-    doc.text("NAME & SIGN OF HEAD:", margin, yPos);
-    doc.line(margin + doc.getTextWidth("NAME & SIGN OF HEAD:") + 4, yPos + 2, pageWidth - margin, yPos + 2);
+    drawField("DISTRICT:", school.district, margin, yPos);
+    drawField("ZONE:", school.zone || "N/A", margin + 200, yPos);
     yPos += 20;
 
-    doc.text("CONTACT E-MAIL ADDRESS:", margin, yPos);
-    doc.line(margin + doc.getTextWidth("CONTACT E-MAIL ADDRESS:") + 4, yPos + 2, pageWidth - margin, yPos + 2);
-    yPos += 22;
+    drawField("REF NO:", school.code, margin, yPos);
+    drawField("TELEPHONE:", school.phone || "N/A", margin + 200, yPos);
+    yPos += 20;
 
+    drawField("CONTACT OF HEAD:", school.contactPerson || "_________________________", margin, yPos);
+    yPos += 20;
+
+    drawField("SIGNATURE & EMAIL ADDRESS:", school.email || "N/A", margin, yPos);
+    yPos += 30;
+
+    // Subjects Table
     const tableData: any[] = [];
+    
+    const addSubjectRows = (title: string, subjectsToFilter: any[]) => {
+      if (subjectsToFilter.length > 0) {
+        tableData.push([{ content: title, colSpan: 6, styles: { fontStyle: "bold", fillColor: [240, 240, 240] } }]);
+        subjectsToFilter.forEach(subject => {
+          const key = `${subject.educationLevel}:${subject.code}`;
+          tableData.push([
+            subject.code,
+            subject.name,
+            subjectCountsMap.get(key) || "-",
+            "", "", ""
+          ]);
+        });
+      }
+    };
 
-    levelSubjects.filter(s => !foreignLanguages.includes(s.standardCode) && !localLanguages.includes(s.standardCode)).forEach(subject => {
-      tableData.push([
-        subject.standardCode,
-        subject.name,
-        subjectCounts.get(subject.standardCode) || "-",
-        "", "", "", ""
-      ]);
-    });
+    const coreSubjects = levelSubjects.filter(s => !foreignLanguages.includes(s.standardCode) && !localLanguages.includes(s.standardCode));
+    const foreignSubjs = levelSubjects.filter(s => foreignLanguages.includes(s.standardCode));
+    const localSubjs = levelSubjects.filter(s => localLanguages.includes(s.standardCode));
 
-    tableData.push([{ content: "FOREIGN LANGUAGES", colSpan: 7, styles: { fontStyle: "bold", fillColor: [220, 220, 220] } }]);
-    levelSubjects.filter(s => foreignLanguages.includes(s.standardCode)).forEach(subject => {
-      tableData.push([
-        subject.standardCode,
-        subject.name,
-        subjectCounts.get(subject.standardCode) || "-",
-        "", "", "", ""
-      ]);
-    });
-
-    tableData.push([{ content: "LOCAL LANGUAGES", colSpan: 7, styles: { fontStyle: "bold", fillColor: [220, 220, 220] } }]);
-    levelSubjects.filter(s => localLanguages.includes(s.standardCode)).forEach(subject => {
-      tableData.push([
-        subject.standardCode,
-        subject.name,
-        subjectCounts.get(subject.standardCode) || "-",
-        "", "", "", ""
-      ]);
-    });
+    addSubjectRows("GENERAL SUBJECTS", coreSubjects);
+    addSubjectRows("FOREIGN LANGUAGES", foreignSubjs);
+    addSubjectRows("LOCAL LANGUAGES", localSubjs);
 
     autoTable(doc, {
       startY: yPos,
-      head: [["CODE", "SUBJECT NAME", "ENTRIES", "P 1", "P 2", "P 3", "P 4"]],
+      head: [["CODE", "SUBJECT NAME", "ENTRIES", "P 1", "P 2", "P 3"]],
       body: tableData,
       theme: "grid",
-      styles: { fontSize: 8, cellPadding: 2, lineWidth: 0.5 },
-      headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: "bold", lineWidth: 0.5 },
+      styles: { fontSize: 9, cellPadding: 3, lineWidth: 0.5 },
+      headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: "bold", lineWidth: 0.5 },
       columnStyles: {
-        0: { cellWidth: 40, halign: "center" },
+        0: { cellWidth: 50, halign: "center" },
         1: { cellWidth: "auto" },
-        2: { cellWidth: 50, halign: "center" },
-        3: { cellWidth: 30, halign: "center" },
-        4: { cellWidth: 30, halign: "center" },
-        5: { cellWidth: 30, halign: "center" },
-        6: { cellWidth: 30, halign: "center" }
+        2: { cellWidth: 60, halign: "center" },
+        3: { cellWidth: 40, halign: "center" },
+        4: { cellWidth: 40, halign: "center" },
+        5: { cellWidth: 40, halign: "center" }
       },
       margin: { left: margin, right: margin }
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 12;
+    yPos = (doc as any).lastAutoTable.finalY + 30;
 
+    // Financial Summary Table
     const feeTableBody = [];
-
-    if (schoolRegFeeTotal > 0) {
-      feeTableBody.push(["SCHOOL REG FEE", schoolRegFeeTotal.toLocaleString()]);
-    }
-    feeTableBody.push([`STUDENTS FEE (${pricing.studentFee.toLocaleString()} X ${filteredStudents.length})`, studentFeeTotal.toLocaleString()]);
+    if (schoolRegFeeTotal > 0) feeTableBody.push(["School Registration Fee", `${schoolRegFeeTotal.toLocaleString()} UGX`]);
+    feeTableBody.push([`Students Fee (${pricing.studentFee.toLocaleString()} X ${filteredStudents.length})`, `${studentFeeTotal.toLocaleString()} UGX`]);
+    if (uceMarkingGuideTotal > 0) feeTableBody.push([`UCE Marking Guide (35,000 X ${school.uceMarkingGuideQuantity})`, `${uceMarkingGuideTotal.toLocaleString()} UGX`]);
+    if (uaceArtsMarkingGuideTotal > 0) feeTableBody.push([`UACE Arts Marking Guide (25,000 X ${school.uaceArtsMarkingGuideQuantity})`, `${uaceArtsMarkingGuideTotal.toLocaleString()} UGX`]);
+    if (uaceSciencesMarkingGuideTotal > 0) feeTableBody.push([`UACE Sciences Marking Guide (25,000 X ${school.uaceSciencesMarkingGuideQuantity})`, `${uaceSciencesMarkingGuideTotal.toLocaleString()} UGX`]);
+    if (answerBookletsTotal > 0) feeTableBody.push([`Answer Booklets (25,000 X ${school.answerBookletsQuantity})`, `${answerBookletsTotal.toLocaleString()} UGX`]);
     
-    if (uceMarkingGuideTotal > 0) {
-      feeTableBody.push([`UCE MARKING GUIDE (${pricing.uceMarkingGuide.toLocaleString()} X ${school.uceMarkingGuideQuantity})`, uceMarkingGuideTotal.toLocaleString()]);
-    }
-    if (uaceArtsMarkingGuideTotal > 0) {
-      feeTableBody.push([`UACE ARTS MARKING GUIDE (${pricing.uaceMarkingGuide.toLocaleString()} X ${school.uaceArtsMarkingGuideQuantity})`, uaceArtsMarkingGuideTotal.toLocaleString()]);
-    }
-    if (uaceSciencesMarkingGuideTotal > 0) {
-      feeTableBody.push([`UACE SCIENCES MARKING GUIDE (${pricing.uaceMarkingGuide.toLocaleString()} X ${school.uaceSciencesMarkingGuideQuantity})`, uaceSciencesMarkingGuideTotal.toLocaleString()]);
-    }
-    if (answerBookletsTotal > 0) {
-      feeTableBody.push([`ANSWER BOOKLETS (${pricing.answerBooklet.toLocaleString()} X ${school.answerBookletsQuantity})`, answerBookletsTotal.toLocaleString()]);
-    }
-
-    feeTableBody.push([{ content: "TOTAL AMOUNT", styles: { fontStyle: "bold" } }, { content: totalAmount.toLocaleString(), styles: { fontStyle: "bold" } }]);
-    feeTableBody.push([{ content: `AMOUNT IN WORDS:\n${numberToWords(totalAmount)}`, colSpan: 2, styles: { cellPadding: 3 } }]);
+    feeTableBody.push([{ content: "TOTAL AMOUNT", styles: { fontStyle: "bold" } }, { content: `${totalAmount.toLocaleString()} UGX`, styles: { fontStyle: "bold" } }]);
+    feeTableBody.push([{ content: `AMOUNT IN WORDS: ${numberToWords(totalAmount)}`, colSpan: 2, styles: { fontSize: 8, fontStyle: "italic" } }]);
 
     autoTable(doc, {
       startY: yPos,
-      head: [["FOR OFFICIAL USE", "AMOUNT"]],
+      head: [["FINANCIAL SUMMARY", "AMOUNT"]],
       body: feeTableBody,
-      theme: "grid",
-      styles: { fontSize: 8, cellPadding: 2, lineWidth: 0.5 },
-      headStyles: { fillColor: [0, 0, 0], textColor: 255, fontStyle: "bold", lineWidth: 0.5 },
+      theme: "plain",
+      styles: { fontSize: 9, cellPadding: 2 },
+      headStyles: { fontStyle: "bold", borderBottom: 0.5 },
       columnStyles: {
         0: { cellWidth: "auto" },
-        1: { cellWidth: 80, halign: "right" }
+        1: { cellWidth: 150, halign: "right" }
       },
-      margin: { left: margin, right: pageWidth / 1.8 }
+      margin: { left: margin, right: margin }
     });
 
-    const signY = yPos + 100;
+    yPos = (doc as any).lastAutoTable.finalY + 50;
+
+    // Footer
     doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("CHECKED BY:", pageWidth / 1.8, signY);
-    doc.line(pageWidth / 1.8 + doc.getTextWidth("CHECKED BY:") + 6, signY + 3, pageWidth - margin, signY + 3);
-    
-    yPos = (doc as any).lastAutoTable.finalY + 25;
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("DATE:", pageWidth / 1.8, yPos);
-    doc.line(pageWidth / 1.8 + doc.getTextWidth("DATE:") + 6, yPos + 3, pageWidth - margin, yPos + 3);
+    doc.text("Official Stamp & Signature: ___________________________________", margin, yPos);
+    yPos += 25;
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPos);
 
     doc.save(`Summary_of_Entries_${level}_${school.code}.pdf`);
   };
 
   return (
-    <div>
-      <div className="mb-4 flex justify-end">
-        <Button onClick={handleDownloadPDF} className="bg-blue-600 hover:bg-blue-700">
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button onClick={handleDownloadPDF} className="bg-blue-600 hover:bg-blue-700 font-bold rounded-xl shadow-lg shadow-blue-200">
+          <Download className="mr-2 h-4 w-4" />
           Download PDF
         </Button>
       </div>
 
-      <div className="bg-white p-6 max-w-5xl mx-auto border border-slate-200 rounded-lg shadow-sm">
-          <div className="text-center mb-6">
-            <h1 className="text-xl font-bold uppercase">WAKISSHA JOINT MOCK EXAMINATIONS</h1>
-            <h2 className="text-sm font-bold">{level === "Combined" ? "UCE & UACE" : level} SUMMARY OF ENTRIES</h2>
-          </div>
+      <div className="bg-white p-6 md:p-12 lg:p-20 w-full max-w-full mx-auto border border-slate-200 rounded-3xl shadow-sm space-y-12 font-sans overflow-hidden relative">
+        {/* Header */}
+        <div className="text-center space-y-4 px-4">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 uppercase tracking-tight break-words leading-tight">WAKISSHA JOINT MOCK EXAMINATIONS</h1>
+          <h2 className="text-base md:text-xl font-bold text-slate-600 uppercase tracking-widest border-b-2 border-slate-100 pb-4 inline-block px-4 md:px-12">{level === "Combined" ? "UCE & UACE" : level} SUMMARY OF ENTRIES</h2>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-6 text-sm">
-            <div className="flex">
-              <span className="font-bold min-w-[120px]">NAME OF SCHOOL:</span> {school.name}
-            </div>
-            <div className="flex">
-              <span className="font-bold min-w-[120px]">TOTAL CANDIDATES:</span> {filteredStudents.length}
-            </div>
-            <div className="flex">
-              <span className="font-bold min-w-[120px]">DISTRICT:</span> {school.district}
-            </div>
-            <div className="flex">
-              <span className="font-bold min-w-[120px]">ZONE:</span> {school.zone}
-            </div>
-            <div className="flex">
-              <span className="font-bold min-w-[120px]">REF NO:</span> {school.code}
-            </div>
-            <div className="flex">
-              <span className="font-bold min-w-[120px]">TELEPHONE:</span> {school.phone}
-            </div>
-            <div className="flex md:col-span-2">
-              <span className="font-bold min-w-[120px]">CONTACT OF HEAD:</span> {school.contactPerson || "_________________________"}
-            </div>
-            <div className="flex md:col-span-2">
-              <span className="font-bold min-w-[120px]">SIGNATURE & EMAIL ADDRESS:</span> {school.email}
-            </div>
+        {/* School Details */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 lg:gap-x-16 gap-y-6 text-sm py-10 px-4 md:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+            <span className="font-bold text-slate-400 uppercase text-[11px] tracking-widest min-w-[140px] shrink-0">Name of School:</span>
+            <span className="font-bold text-slate-900 text-base lg:text-lg">{school.name}</span>
           </div>
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+            <span className="font-bold text-slate-400 uppercase text-[11px] tracking-widest min-w-[140px] shrink-0">Total Candidates:</span>
+            <span className="font-black text-blue-600 text-xl lg:text-3xl leading-none">{filteredStudents.length}</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+            <span className="font-bold text-slate-400 uppercase text-[11px] tracking-widest min-w-[140px] shrink-0">District:</span>
+            <span className="font-bold text-slate-800 text-base">{school.district}</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+            <span className="font-bold text-slate-400 uppercase text-[11px] tracking-widest min-w-[140px] shrink-0">Zone:</span>
+            <span className="font-bold text-slate-800 text-base">{school.zone || "N/A"}</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+            <span className="font-bold text-slate-400 uppercase text-[11px] tracking-widest min-w-[140px] shrink-0">Ref No:</span>
+            <span className="font-mono font-black text-slate-700 text-base bg-slate-100 px-3 py-1 rounded-lg w-fit">{school.code}</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+            <span className="font-bold text-slate-400 uppercase text-[11px] tracking-widest min-w-[140px] shrink-0">Telephone:</span>
+            <span className="font-bold text-slate-800 text-base">{school.phone || "N/A"}</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4 md:col-span-2">
+            <span className="font-bold text-slate-400 uppercase text-[11px] tracking-widest min-w-[140px] shrink-0">Contact of Head:</span>
+            <span className="font-bold text-slate-800 text-base border-b-2 border-slate-100 flex-1 pb-1">{school.contactPerson || "________________________________________________"}</span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4 md:col-span-2">
+            <span className="font-bold text-slate-400 uppercase text-[11px] tracking-widest min-w-[140px] shrink-0">Email Address:</span>
+            <span className="font-bold text-slate-800 text-base truncate">{school.email}</span>
+          </div>
+        </div>
 
-          <div className="text-sm text-slate-600 mb-4">
-            <h3 className="font-bold text-lg mb-2">Financial Summary</h3>
-            <div className="space-y-1">
-              {schoolRegFeeTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>School Registration Fee:</span>
-                  <span>{schoolRegFeeTotal.toLocaleString()} UGX</span>
-                </div>
+        {/* Subjects Table */}
+        <div className="overflow-x-auto rounded-3xl border border-slate-200 shadow-sm mx-4 md:mx-8">
+          <table className="w-full min-w-[600px] text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th rowSpan={2} className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider w-20 border-r border-slate-200">Code</th>
+                <th rowSpan={2} className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-200">Subject Name</th>
+                <th rowSpan={2} className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-center w-24 border-r border-slate-200">Entries</th>
+                <th colSpan={3} className="px-4 py-2 text-[10px] font-black text-slate-500 uppercase tracking-wider text-center border-b border-slate-200">Papers</th>
+              </tr>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-4 py-2 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center w-16 border-r border-slate-200">P1</th>
+                <th className="px-4 py-2 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center w-16 border-r border-slate-200">P2</th>
+                <th className="px-4 py-2 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center w-16">P3</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm">
+              {levelSubjects.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center text-slate-400 font-medium italic">No subjects registered for this level</td>
+                </tr>
+              ) : (
+                <>
+                  {/* General Subjects */}
+                  <tr className="bg-slate-50/50">
+                    <td colSpan={6} className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50">General Subjects</td>
+                  </tr>
+                  {levelSubjects.filter(s => !foreignLanguages.includes(s.standardCode) && !localLanguages.includes(s.standardCode)).map(subject => (
+                    <tr key={`${subject.educationLevel}:${subject.code}`} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3 font-mono font-bold text-slate-600 border-r border-slate-100">{subject.code}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-900 border-r border-slate-100">{subject.name}</td>
+                      <td className="px-4 py-3 text-center font-black text-blue-600 border-r border-slate-100">{subjectCountsMap.get(`${subject.educationLevel}:${subject.code}`) || "-"}</td>
+                      <td className="px-4 py-3 text-center border-r border-slate-100 bg-slate-50/20"></td>
+                      <td className="px-4 py-3 text-center border-r border-slate-100 bg-slate-50/20"></td>
+                      <td className="px-4 py-3 text-center bg-slate-50/20"></td>
+                    </tr>
+                  ))}
+                  
+                  {/* Foreign Languages */}
+                  {levelSubjects.some(s => foreignLanguages.includes(s.standardCode)) && (
+                    <>
+                      <tr className="bg-slate-50/50">
+                        <td colSpan={6} className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Foreign Languages</td>
+                      </tr>
+                      {levelSubjects.filter(s => foreignLanguages.includes(s.standardCode)).map(subject => (
+                        <tr key={`${subject.educationLevel}:${subject.code}`} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-3 font-mono font-bold text-slate-600 border-r border-slate-100">{subject.code}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-900 border-r border-slate-100">{subject.name}</td>
+                          <td className="px-4 py-3 text-center font-black text-blue-600 border-r border-slate-100">{subjectCountsMap.get(`${subject.educationLevel}:${subject.code}`) || "-"}</td>
+                          <td className="px-4 py-3 text-center border-r border-slate-100 bg-slate-50/20"></td>
+                          <td className="px-4 py-3 text-center border-r border-slate-100 bg-slate-50/20"></td>
+                          <td className="px-4 py-3 text-center bg-slate-50/20"></td>
+                        </tr>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Local Languages */}
+                  {levelSubjects.some(s => localLanguages.includes(s.standardCode)) && (
+                    <>
+                      <tr className="bg-slate-50/50">
+                        <td colSpan={6} className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Local Languages</td>
+                      </tr>
+                      {levelSubjects.filter(s => localLanguages.includes(s.standardCode)).map(subject => (
+                        <tr key={`${subject.educationLevel}:${subject.code}`} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-4 py-3 font-mono font-bold text-slate-600 border-r border-slate-100">{subject.code}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-900 border-r border-slate-100">{subject.name}</td>
+                          <td className="px-4 py-3 text-center font-black text-blue-600 border-r border-slate-100">{subjectCountsMap.get(`${subject.educationLevel}:${subject.code}`) || "-"}</td>
+                          <td className="px-4 py-3 text-center border-r border-slate-100 bg-slate-50/20"></td>
+                          <td className="px-4 py-3 text-center border-r border-slate-100 bg-slate-50/20"></td>
+                          <td className="px-4 py-3 text-center bg-slate-50/20"></td>
+                        </tr>
+                      ))}
+                    </>
+                  )}
+                </>
               )}
-              <div className="flex justify-between">
-                <span>Students Fee ({pricing.studentFee.toLocaleString()} X {filteredStudents.length}):</span>
-                <span>{studentFeeTotal.toLocaleString()} UGX</span>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Financial Summary */}
+        <div className="bg-slate-50 rounded-[2.5rem] p-12 border border-slate-200 space-y-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-8 w-2 bg-blue-600 rounded-full"></div>
+            <h3 className="font-black text-slate-900 uppercase tracking-widest text-base">Official Financial Summary</h3>
+          </div>
+          
+          <div className="space-y-4 text-base">
+            {schoolRegFeeTotal > 0 && (
+              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
+                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">School Registration Fee</span>
+                <span className="font-black text-slate-900">{schoolRegFeeTotal.toLocaleString()} UGX</span>
               </div>
-              {uceMarkingGuideTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>UCE Marking Guide ({pricing.uceMarkingGuide.toLocaleString()} X {school.uceMarkingGuideQuantity}):</span>
-                  <span>{uceMarkingGuideTotal.toLocaleString()} UGX</span>
-                </div>
-              )}
-              {uaceArtsMarkingGuideTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>UACE Arts Marking Guide ({pricing.uaceMarkingGuide.toLocaleString()} X {school.uaceArtsMarkingGuideQuantity}):</span>
-                  <span>{uaceArtsMarkingGuideTotal.toLocaleString()} UGX</span>
-                </div>
-              )}
-              {uaceSciencesMarkingGuideTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>UACE Sciences Marking Guide ({pricing.uaceMarkingGuide.toLocaleString()} X {school.uaceSciencesMarkingGuideQuantity}):</span>
-                  <span>{uaceSciencesMarkingGuideTotal.toLocaleString()} UGX</span>
-                </div>
-              )}
-              {answerBookletsTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>Answer Booklets ({pricing.answerBooklet.toLocaleString()} X {school.answerBookletsQuantity}):</span>
-                  <span>{answerBookletsTotal.toLocaleString()} UGX</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold border-t pt-2 mt-2">
-                <span>TOTAL AMOUNT:</span>
-                <span>{totalAmount.toLocaleString()} UGX</span>
+            )}
+            <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
+              <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Students Fee ({pricing.studentFee.toLocaleString()} X {filteredStudents.length})</span>
+              <span className="font-black text-slate-900">{studentFeeTotal.toLocaleString()} UGX</span>
+            </div>
+            {uceMarkingGuideTotal > 0 && (
+              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
+                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">UCE Marking Guide (35,000 X {school.uceMarkingGuideQuantity})</span>
+                <span className="font-black text-slate-900">{uceMarkingGuideTotal.toLocaleString()} UGX</span>
               </div>
-              <div className="text-right text-xs mt-1">
-                <span>AMOUNT IN WORDS: {numberToWords(totalAmount)}</span>
+            )}
+            {uaceArtsMarkingGuideTotal > 0 && (
+              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
+                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">UACE Arts Marking Guide (25,000 X {school.uaceArtsMarkingGuideQuantity})</span>
+                <span className="font-black text-slate-900">{uaceArtsMarkingGuideTotal.toLocaleString()} UGX</span>
               </div>
+            )}
+            {uaceSciencesMarkingGuideTotal > 0 && (
+              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
+                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">UACE Sciences Marking Guide (25,000 X {school.uaceSciencesMarkingGuideQuantity})</span>
+                <span className="font-black text-slate-900">{uaceSciencesMarkingGuideTotal.toLocaleString()} UGX</span>
+              </div>
+            )}
+            {answerBookletsTotal > 0 && (
+              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
+                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Answer Booklets (25,000 X {school.answerBookletsQuantity})</span>
+                <span className="font-black text-slate-900">{answerBookletsTotal.toLocaleString()} UGX</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between items-center pt-8">
+              <span className="text-xl font-black text-slate-900 uppercase tracking-tighter">Total Amount Due</span>
+              <div className="text-right">
+                <span className="text-4xl font-black text-blue-600 tracking-tight">{totalAmount.toLocaleString()} UGX</span>
+              </div>
+            </div>
+            <div className="text-right pt-4 border-t-2 border-slate-200">
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Amount in Words</span>
+              <p className="text-sm font-black text-slate-700 italic mt-2 bg-white px-6 py-3 rounded-2xl border border-slate-100 shadow-sm inline-block">{numberToWords(totalAmount)}</p>
             </div>
           </div>
         </div>
+
+        {/* Signatures */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-12 pb-4">
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <div className="h-px bg-slate-300 w-full"></div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Official School Stamp & Date</p>
+            </div>
+          </div>
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <div className="h-px bg-slate-300 w-full"></div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Signature of Headteacher</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -488,66 +578,72 @@ export function SummaryDialog() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DialogContent className="max-w-6xl w-[98vw] max-h-[95vh] overflow-y-auto rounded-3xl" aria-describedby={undefined}>
-        <DialogHeader className="border-b pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-2xl bg-green-100 flex items-center justify-center text-green-600">
-                <FileText className="h-6 w-6" />
+      <DialogContent className="max-w-[95vw] md:max-w-[1200px] lg:max-w-[1400px] w-full max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-3xl p-0 md:p-0 border-none shadow-[0_32px_80px_rgba(0,0,0,0.5)]" aria-describedby={undefined}>
+        <div className="flex flex-col h-full w-full max-w-full overflow-x-hidden">
+          <DialogHeader className="p-6 md:p-8 border-b bg-white/90 backdrop-blur-xl sticky top-0 z-20 rounded-t-3xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-green-100 flex items-center justify-center text-green-600 shadow-inner">
+                  <FileText className="h-7 w-7" />
+                </div>
+                <div>
+                  <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">
+                    {selectedLevel} Summary of Entries
+                  </DialogTitle>
+                  <DialogDescription className="text-sm font-semibold text-slate-500">
+                    Official registration summary for {currentSchool.name}
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-xl font-black text-slate-900">
-                  {selectedLevel} Summary of Entries
-                </DialogTitle>
-                <DialogDescription className="text-sm font-medium text-slate-500">
-                  Review and download the summary of entries for {currentSchool.name}
-                </DialogDescription>
+              <div className="flex items-center gap-3">
+                <Badge variant={isLevelFinalised ? "success" : "warning"} className="rounded-xl px-4 py-1.5 font-bold text-xs uppercase tracking-widest shadow-sm">
+                  {isLevelFinalised ? "Finalised" : "Pending Finalisation"}
+                </Badge>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={isLevelFinalised ? "success" : "warning"} className="rounded-lg px-3 py-1">
-                {isLevelFinalised ? "Finalised" : "Pending Finalisation"}
-              </Badge>
-            </div>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
-        {!canAccessSummary ? (
-          <div className="py-12 flex flex-col items-center justify-center text-center space-y-6">
-            <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-              <Lock className="h-10 w-10" />
-            </div>
-            <div className="max-w-md space-y-2">
-              <h3 className="text-xl font-bold text-slate-900">Summary Locked</h3>
-              <p className="text-slate-500 font-medium">
-                Official Summary of Entries PDFs are only accessible after registration is <strong>finalised</strong> and an <strong>invoice</strong> has been generated.
-              </p>
-            </div>
-            <Alert variant="warning" className="max-w-md bg-orange-50 border-orange-200 text-orange-800 rounded-2xl">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs font-bold uppercase tracking-wider">
-                Action Required: Finalise {selectedLevel} registration to unlock
-              </AlertDescription>
-            </Alert>
-            <Button 
-              variant="outline" 
-              className="rounded-xl font-bold border-slate-200"
-              onClick={() => setOpen(false)}
-            >
-              Close Preview
-            </Button>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50/30">
+            {!canAccessSummary ? (
+              <div className="py-32 flex flex-col items-center justify-center text-center space-y-8 px-6">
+                <div className="h-24 w-24 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 shadow-inner">
+                  <Lock className="h-12 w-12" />
+                </div>
+                <div className="max-w-md space-y-3">
+                  <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Summary Locked</h3>
+                  <p className="text-slate-500 font-bold leading-relaxed">
+                    Official Summary of Entries PDFs are only accessible after registration is <span className="text-slate-900 underline decoration-green-500 decoration-2">finalised</span> and an <span className="text-slate-900 underline decoration-blue-500 decoration-2">invoice</span> has been generated.
+                  </p>
+                </div>
+                <div className="w-full max-w-md">
+                  <Alert variant="warning" className="bg-orange-50 border-orange-200 text-orange-800 rounded-[2rem] p-6 shadow-sm">
+                    <AlertCircle className="h-5 w-5" />
+                    <AlertDescription className="text-[11px] font-black uppercase tracking-[0.1em] ml-2 text-left">
+                      Action Required: Finalise {selectedLevel} registration to unlock
+                    </AlertDescription>
+                  </Alert>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="rounded-2xl h-12 px-8 font-black uppercase tracking-widest border-slate-200 hover:bg-white hover:border-slate-300 transition-all"
+                  onClick={() => setOpen(false)}
+                >
+                  Close Preview
+                </Button>
+              </div>
+            ) : (
+              <div className="p-4 md:p-10 lg:p-16 w-full max-w-full overflow-x-hidden">
+                <SummaryOfEntries 
+                  school={currentSchool}
+                  students={scopedStudents}
+                  subjects={subjects}
+                  level={selectedLevel}
+                  invoices={invoices}
+                />
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="py-4">
-            <SummaryOfEntries 
-              school={currentSchool}
-              students={scopedStudents}
-              subjects={subjects}
-              level={selectedLevel}
-              invoices={invoices}
-            />
-          </div>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   );

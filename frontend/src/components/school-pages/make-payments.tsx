@@ -56,14 +56,19 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
     );
   }, [invoices, user]);
 
+  const hasOriginalInvoice = useMemo(() => {
+    return schoolInvoices.some(inv => inv.examLevel === paymentLevel && inv.type === "original");
+  }, [schoolInvoices, paymentLevel]);
+
   const schoolStudents = useMemo(() => {
     return students.filter(s => 
       s.schoolCode === user?.schoolCode && 
       s.examLevel === paymentLevel &&
       !s.isInvoiced &&
-      (isLevelFinalised ? s.isAdditional : !s.isAdditional)
+      (isLevelFinalised ? s.isAdditional : !s.isAdditional) &&
+      isStudentFullyRegistered(s, subjects)
     );
-  }, [students, user, paymentLevel, isLevelFinalised]);
+  }, [students, user, paymentLevel, isLevelFinalised, subjects]);
 
   const studentCount = useMemo(() => {
     return schoolStudents.length;
@@ -188,7 +193,8 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
       items,
       totalAmount: totals.grandTotal,
       status: "pending",
-      type: isLevelFinalised ? "additional" : "original"
+      type: isLevelFinalised ? "additional" : "original",
+      examLevel: paymentLevel
     }, studentIds);
 
     toast.success("Invoice Generated", {
@@ -237,6 +243,30 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
           <p className="text-[10px] text-slate-500 font-medium">Generate and pay</p>
         </div>
       </div>
+
+      {/* Status Alert */}
+      {isLevelFinalised && studentCount === 0 && hasOriginalInvoice && (
+        <Alert variant="info" className="bg-blue-50 border-blue-200 text-blue-800 rounded-2xl p-6">
+          <ShieldCheck className="h-6 w-6 text-blue-600" />
+          <div className="ml-3">
+            <AlertTitle className="text-lg font-bold">Registration Already Finalised</AlertTitle>
+            <AlertDescription className="text-sm font-medium mt-1">
+              Your {paymentLevel} registration is finalised and an invoice has already been generated. 
+              If you have added new students since then, they will appear here for an additional invoice.
+            </AlertDescription>
+            <div className="mt-4">
+              <Button 
+                onClick={() => onPageChange("payment-status")}
+                variant="outline"
+                className="rounded-xl font-bold border-blue-300 text-blue-700 hover:bg-blue-100"
+              >
+                View Existing Invoices
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </Alert>
+      )}
 
       {/* Level Selection */}
       <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden mb-6">

@@ -100,8 +100,12 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const schoolZone = zones.find(z => z.id === currentSchool?.zone_id || z.name === currentSchool?.zone);
 
   const levelStudents = useMemo(() => {
-    return schoolStudents.filter(s => s.examLevel === finaliseLevel && !s.isAdditional);
-  }, [schoolStudents, finaliseLevel]);
+    return schoolStudents.filter(s => 
+      s.examLevel === finaliseLevel && 
+      !s.isAdditional && 
+      isStudentFullyRegistered(s, subjects)
+    );
+  }, [schoolStudents, finaliseLevel, subjects]);
 
   const levelStats = useMemo(() => {
     return {
@@ -144,9 +148,9 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
     setFinaliseStep(1);
     setIsVerified(false);
     toast.success(`${finaliseLevel} Registration Finalised`, {
-      description: `${finaliseLevel} records have been locked. Proceed to select marking guides and generate your invoice.`
+      description: `${finaliseLevel} records have been locked. Your invoice has been generated automatically.`
     });
-    onPageChange("make-payments");
+    onPageChange("payment-status");
   };
 
   const stats = [
@@ -597,88 +601,139 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
             </div>
           </DialogHeader>
           
-          <div className="space-y-6 py-4">
+          <div className="space-y-8 py-6">
             {finaliseStep === 1 && (
-              <div className="space-y-6">
+              <div className="space-y-8">
+                <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 space-y-3">
+                  <div className="flex items-center gap-2 text-blue-700 font-bold">
+                    <Info className="h-5 w-5" />
+                    <h4 className="text-base">Important Registration Instructions</h4>
+                  </div>
+                  <ul className="text-sm text-blue-600 space-y-2 list-disc list-inside font-medium leading-relaxed">
+                    <li>Please ensure you select the correct exam level to finalise.</li>
+                    <li>For <span className="font-bold underline decoration-2">UCE (O-Level)</span>: Candidates must have <span className="text-blue-800 font-black">7 compulsory</span> + <span className="text-blue-800 font-black">1 or 2 optional</span> subjects (Total 8 or 9).</li>
+                    <li>Marking guides and answer booklets quantities will be included in your official invoice.</li>
+                    <li>Once finalised, records for that level will be <span className="font-bold text-red-600">LOCKED</span> and cannot be edited.</li>
+                  </ul>
+                </div>
+
                 <div className="space-y-4">
-                  <Label className="text-sm font-bold text-slate-700">Select Exam Level to Finalise</Label>
+                  <Label className="text-sm font-black text-slate-900 uppercase tracking-wider">Select Exam Level to Finalise</Label>
                   <RadioGroup value={finaliseLevel} onValueChange={(value: "UCE" | "UACE") => setFinaliseLevel(value)} className="grid grid-cols-2 gap-4">
                     <div>
                       <RadioGroupItem value="UCE" id="uce" disabled={isUceFinalised} className="peer sr-only" />
-                      <Label htmlFor="uce" className={`flex flex-col items-center justify-between rounded-xl border-2 p-4 ${isUceFinalised ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"} peer-data-[state=checked]:border-slate-900`}>
-                        <span className="text-sm font-bold">UCE (O-Level)</span>
-                        {isUceFinalised && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALISED</span>}
+                      <Label htmlFor="uce" className={`flex flex-col items-center justify-between rounded-2xl border-2 p-5 transition-all ${isUceFinalised ? "opacity-40 grayscale cursor-not-allowed border-slate-100" : "cursor-pointer border-slate-200 hover:border-slate-300 hover:bg-slate-50"} peer-data-[state=checked]:border-slate-900 peer-data-[state=checked]:bg-slate-900 peer-data-[state=checked]:text-white`}>
+                        <span className="text-sm font-black uppercase tracking-widest">UCE (O-Level)</span>
+                        {isUceFinalised ? (
+                          <Badge className="bg-emerald-500 text-white border-none font-bold mt-2">FINALISED</Badge>
+                        ) : (
+                          <span className="text-[10px] font-bold mt-2 opacity-60">READY FOR LOCKING</span>
+                        )}
                       </Label>
                     </div>
                     <div>
                       <RadioGroupItem value="UACE" id="uace" disabled={isUaceFinalised} className="peer sr-only" />
-                      <Label htmlFor="uace" className={`flex flex-col items-center justify-between rounded-xl border-2 p-4 ${isUaceFinalised ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"} peer-data-[state=checked]:border-slate-900`}>
-                        <span className="text-sm font-bold">UACE (A-Level)</span>
-                        {isUaceFinalised && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALISED</span>}
+                      <Label htmlFor="uace" className={`flex flex-col items-center justify-between rounded-2xl border-2 p-5 transition-all ${isUaceFinalised ? "opacity-40 grayscale cursor-not-allowed border-slate-100" : "cursor-pointer border-slate-200 hover:border-slate-300 hover:bg-slate-50"} peer-data-[state=checked]:border-slate-900 peer-data-[state=checked]:bg-slate-900 peer-data-[state=checked]:text-white`}>
+                        <span className="text-sm font-black uppercase tracking-widest">UACE (A-Level)</span>
+                        {isUaceFinalised ? (
+                          <Badge className="bg-emerald-500 text-white border-none font-bold mt-2">FINALISED</Badge>
+                        ) : (
+                          <span className="text-[10px] font-bold mt-2 opacity-60">READY FOR LOCKING</span>
+                        )}
                       </Label>
                     </div>
                   </RadioGroup>
                 </div>
 
-                {finaliseLevel === "UCE" && (
-                  <div className="space-y-4">
-                    <Label className="text-sm font-bold text-slate-700">UCE Marking Guide (35,000 UGX per guide)</Label>
-                    <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                  {finaliseLevel === "UCE" && (
+                    <div className="space-y-4">
+                      <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">UCE Marking Guide (35,000 UGX)</Label>
+                      <div className="flex items-center gap-4 p-5 rounded-3xl border border-slate-200 bg-white shadow-sm">
+                        <FormInput
+                          type="number"
+                          min="0"
+                          value={uceMarkingGuideQuantity}
+                          onChange={(e) => setUceMarkingGuideQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-20 h-12 text-center text-lg font-black rounded-xl border-slate-200"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-slate-900">Guides</span>
+                          <span className="text-[10px] font-bold text-slate-400">Fixed Fee per guide</span>
+                        </div>
+                        <div className="ml-auto">
+                          <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 px-3 py-1 font-black">
+                            {(uceMarkingGuideQuantity * 35000).toLocaleString()} UGX
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {finaliseLevel === "UACE" && (
+                    <div className="md:col-span-2 space-y-4">
+                      <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">UACE Marking Guides (25,000 UGX each)</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-4 p-5 rounded-3xl border border-slate-200 bg-white shadow-sm">
+                          <FormInput
+                            type="number"
+                            min="0"
+                            value={uaceArtsMarkingGuideQuantity}
+                            onChange={(e) => setUaceArtsMarkingGuideQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                            className="w-20 h-12 text-center text-lg font-black rounded-xl border-slate-200"
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-900">Arts</span>
+                            <span className="text-[10px] font-bold text-slate-400">Guides</span>
+                          </div>
+                          <div className="ml-auto">
+                            <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 px-3 py-1 font-black">
+                              {(uaceArtsMarkingGuideQuantity * 25000).toLocaleString()} UGX
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 p-5 rounded-3xl border border-slate-200 bg-white shadow-sm">
+                          <FormInput
+                            type="number"
+                            min="0"
+                            value={uaceSciencesMarkingGuideQuantity}
+                            onChange={(e) => setUaceSciencesMarkingGuideQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                            className="w-20 h-12 text-center text-lg font-black rounded-xl border-slate-200"
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-900">Sciences</span>
+                            <span className="text-[10px] font-bold text-slate-400">Guides</span>
+                          </div>
+                          <div className="ml-auto">
+                            <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 px-3 py-1 font-black">
+                              {(uaceSciencesMarkingGuideQuantity * 25000).toLocaleString()} UGX
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4 md:col-span-2">
+                    <Label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Answer Booklets (25,000 UGX each)</Label>
+                    <div className="flex items-center gap-4 p-5 rounded-3xl border border-slate-200 bg-white shadow-sm">
                       <FormInput
                         type="number"
                         min="0"
-                        value={uceMarkingGuideQuantity}
-                        onChange={(e) => setUceMarkingGuideQuantity(parseInt(e.target.value))}
-                        className="w-24 text-center font-bold"
+                        value={answerBookletsQuantity}
+                        onChange={(e) => setAnswerBookletsQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-20 h-12 text-center text-lg font-black rounded-xl border-slate-200"
                       />
-                      <span className="font-semibold text-slate-700">Quantity</span>
-                      <Badge variant="secondary">Total: {(uceMarkingGuideQuantity * 35000).toLocaleString()} UGX</Badge>
-                    </div>
-                  </div>
-                )}
-
-                {finaliseLevel === "UACE" && (
-                  <div className="space-y-4">
-                    <Label className="text-sm font-bold text-slate-700">UACE Marking Guides (25,000 UGX per guide)</Label>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                        <FormInput
-                          type="number"
-                          min="0"
-                          value={uaceArtsMarkingGuideQuantity}
-                          onChange={(e) => setUaceArtsMarkingGuideQuantity(parseInt(e.target.value))}
-                          className="w-24 text-center font-bold"
-                        />
-                        <span className="font-semibold text-slate-700">Arts Guide Quantity</span>
-                        <Badge variant="secondary">Total: {(uaceArtsMarkingGuideQuantity * 25000).toLocaleString()} UGX</Badge>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-900">Booklets</span>
+                        <span className="text-[10px] font-bold text-slate-400">Official Exam Booklets</span>
                       </div>
-                      <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                        <FormInput
-                          type="number"
-                          min="0"
-                          value={uaceSciencesMarkingGuideQuantity}
-                          onChange={(e) => setUaceSciencesMarkingGuideQuantity(parseInt(e.target.value))}
-                          className="w-24 text-center font-bold"
-                        />
-                        <span className="font-semibold text-slate-700">Sciences Guide Quantity</span>
-                        <Badge variant="secondary">Total: {(uaceSciencesMarkingGuideQuantity * 25000).toLocaleString()} UGX</Badge>
+                      <div className="ml-auto">
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 px-3 py-1 font-black">
+                          {(answerBookletsQuantity * 25000).toLocaleString()} UGX
+                        </Badge>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  <Label className="text-sm font-bold text-slate-700">Answer Booklets (25,000 UGX per booklet)</Label>
-                  <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                    <FormInput
-                      type="number"
-                      min="0"
-                      value={answerBookletsQuantity}
-                      onChange={(e) => setAnswerBookletsQuantity(parseInt(e.target.value))}
-                      className="w-24 text-center font-bold"
-                    />
-                    <span className="font-semibold text-slate-700">Quantity</span>
-                    <Badge variant="secondary">Total: {(answerBookletsQuantity * 25000).toLocaleString()} UGX</Badge>
                   </div>
                 </div>
               </div>

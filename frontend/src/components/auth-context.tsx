@@ -86,6 +86,7 @@ export interface Invoice {
   totalAmount: number;
   status: "pending" | "paid";
   type: "original" | "additional";
+  examLevel: "UCE" | "UACE";
   paymentProof?: string;
   studentIds?: string[];
 }
@@ -916,7 +917,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       items,
       totalAmount,
       status: "pending",
-      type: "original" // This invoice is for the original finalisation of a level
+      type: "original",
+      examLevel: level // This was missing
     }, studentIds);
   };
 
