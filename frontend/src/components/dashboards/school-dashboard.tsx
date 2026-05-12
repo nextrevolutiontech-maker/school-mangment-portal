@@ -171,7 +171,7 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
       iconClass: "bg-emerald-500/10 text-emerald-600",
     },
     {
-      title: "Balance",
+      title: "Balance Due",
       value: `${outstandingBalance.toLocaleString()} UGX`,
       subtitle: "Outstanding payment",
       icon: AlertTriangle,
@@ -260,39 +260,31 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const completionPercentage = (completedSteps / completionSteps.length) * 100;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-6 anim-fade-up">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between anim-fade-up-delay">
-        <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-            School Workspace
+    <div className="space-y-10 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2.5">
+            <Badge variant="outline" className="rounded-md border-blue-200 bg-blue-50 text-blue-700 font-black px-2 py-0.5 text-[10px] uppercase tracking-widest">
+              School Dashboard
+            </Badge>
+            <span className="h-1 w-1 bg-slate-300 rounded-full"></span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Academic Year 2026</span>
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+            {currentSchool?.name || "Welcome Back"}
+          </h1>
+          <p className="text-slate-500 text-sm font-medium">
+            Manage your student registrations, examination entries, and financial summaries.
           </p>
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">School Dashboard</h1>
-            <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
-              Welcome back, {user?.name}. Track registration progress and entries in real-time.
-            </p>
-          </div>
         </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition-all hover:shadow-md">
-          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
-            {currentSchool?.schoolLogo ? (
-              <img
-                src={currentSchool.schoolLogo}
-                alt={`${currentSchool.name} logo`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <ImageIcon className="h-5 w-5 text-slate-300" />
-            )}
-          </div>
-          <div className="pr-4">
-            <p className="text-sm font-black text-slate-900 leading-tight">
-              {currentSchool?.name ?? user?.name}
-            </p>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
-              Academic year: <span className="text-slate-600">{user?.academicYear ?? "2026"}</span>
-            </p>
-          </div>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => onPageChange("students")}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-blue-100 transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest text-[11px]"
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Students
+          </Button>
         </div>
       </div>
 
@@ -336,28 +328,30 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.title} className={`h-full border-l-4 ${stat.borderClass} transition-all duration-200 hover:shadow-md`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-500">{stat.title}</p>
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-xl font-black text-slate-900 leading-none">{stat.value}</p>
-                      <p className="text-[9px] font-medium text-slate-400">{stat.subtitle}</p>
-                    </div>
-                  </div>
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stat.iconClass}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {stats.map((stat, i) => (
+          <Card key={i} className={`border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-3xl overflow-hidden bg-white ring-1 ring-slate-100`}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-2xl ${stat.iconClass}`}>
+                  <stat.icon className="h-6 w-6" />
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                <div className="h-1 w-12 bg-slate-100 rounded-full"></div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">
+                  {stat.title}
+                </p>
+                <p className="text-2xl font-black text-slate-900 tracking-tight">
+                  {stat.value}
+                </p>
+                <p className="text-xs font-bold text-slate-500/80">
+                  {stat.subtitle}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -498,28 +492,28 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
           </CardContent>
         </Card>
 
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-slate-900">Submission Progress</CardTitle>
-            <CardDescription className="text-slate-500">Complete each step to finalise registration</CardDescription>
+        <Card className="w-full border border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-black text-slate-900 tracking-tight">Submission Progress</CardTitle>
+            <CardDescription className="text-xs font-bold text-slate-500">Complete each step to finalise registration</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-4">
-              <div className="mb-3 flex items-center justify-between text-sm">
-                <span className="text-slate-500">Completion</span>
-                <span className="font-semibold text-slate-900">{completedSteps}/{completionSteps.length}</span>
+          <CardContent className="space-y-5">
+            <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Completion</span>
+                <span className="text-sm font-black text-slate-900">{completedSteps}/{completionSteps.length}</span>
               </div>
-              <Progress value={completionPercentage} className="h-2.5" />
+              <Progress value={completionPercentage} className="h-2.5 rounded-full bg-slate-100" />
             </div>
             <div className="space-y-2.5">
               {completionSteps.map((step, index) => (
-                <div key={index} className={`shadow-sm border rounded-2xl flex items-center gap-3 px-4 py-3 transition-all ${step.completed ? "bg-emerald-50/60 border-emerald-200" : "bg-white border-slate-200"}`}>
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-full ${step.completed ? "bg-emerald-500 text-white shadow-md shadow-emerald-200" : "bg-slate-100 text-slate-400"}`}>
-                    {step.completed ? <CheckCircle className="h-5 w-5" /> : <span className="text-sm font-bold">{index + 1}</span>}
+                <div key={index} className={`rounded-xl flex items-center gap-3 px-4 py-3 border transition-all ${step.completed ? "bg-emerald-50/40 border-emerald-100" : "bg-white border-slate-100"}`}>
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${step.completed ? "bg-emerald-500 text-white shadow-md shadow-emerald-100" : "bg-slate-100 text-slate-400"}`}>
+                    {step.completed ? <CheckCircle className="h-4 w-4" /> : <span className="text-[10px] font-black">{index + 1}</span>}
                   </div>
-                  <div className="flex flex-col">
-                    <span className={`text-sm font-bold ${step.completed ? "text-emerald-900" : "text-slate-500"}`}>{step.label}</span>
-                    {step.completed && <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-tight">Step Completed</span>}
+                  <div className="flex flex-col min-w-0">
+                    <span className={`text-xs font-bold truncate ${step.completed ? "text-emerald-900" : "text-slate-600"}`}>{step.label}</span>
+                    {step.completed && <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest leading-none mt-0.5">Step Completed</span>}
                   </div>
                 </div>
               ))}
