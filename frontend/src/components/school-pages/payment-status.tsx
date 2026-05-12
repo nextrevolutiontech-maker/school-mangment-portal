@@ -290,15 +290,15 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
 
   const paymentStatus = user?.status || "pending";
   const getStatusContent = () => {
-    // Priority: If no invoices exist, we must show "Awaiting Registration Finalization"
+    // Priority: If no invoices exist, we must show "Awaiting Registration Finalisation"
     if (schoolInvoices.length === 0) {
       return {
-        title: "Awaiting Registration Finalization",
-        description: "Your student registration must be completed and finalized before an invoice can be generated. Once finalized, you can download your payment slip and upload proof of payment.",
+        title: "Awaiting Registration Finalisation",
+        description: "Your student registration must be completed and finalised before an invoice can be generated. Once finalised, you can download your payment slip and upload proof of payment.",
         variant: "warning" as const,
         badgeVariant: "warning" as const,
         icon: Info,
-        needsFinalization: true
+        needsFinalisation: true
       };
     }
 
@@ -375,7 +375,7 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
             <p className="text-slate-600 font-medium leading-relaxed text-base">
               {status.description}
             </p>
-            {(status as any).needsFinalization && (
+            {(status as any).needsFinalisation && (
               <div className="mt-5 flex flex-wrap items-center gap-4">
                 <Button 
                   onClick={() => onPageChange("subject-entries")}
@@ -423,9 +423,9 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                 <FileText className="h-6 w-6 text-slate-400" />
               </div>
               <p className="text-slate-500 font-medium">No invoices generated yet.</p>
-              {!currentSchool?.registrationFinalized && (
+              {!currentSchool?.registrationFinalised && (
                 <p className="text-sm text-slate-400 mt-2">
-                  Finalize your student registration to generate your first invoice.
+                  Finalise your student registration to generate your first invoice.
                 </p>
               )}
             </div>
@@ -819,6 +819,9 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                 <FileText className="h-5 w-5 text-blue-600" />
                 Payment Receipt
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                View the details of your payment receipt.
+              </DialogDescription>
               <Button 
                 variant="ghost" 
                 size="sm" 

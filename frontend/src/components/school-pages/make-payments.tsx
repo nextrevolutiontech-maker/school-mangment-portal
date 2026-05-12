@@ -34,20 +34,20 @@ import { Checkbox } from "../ui/checkbox";
 export function MakePayments({ onPageChange }: MakePaymentsProps) {
   const { user, students, subjects, addInvoice, schools, invoices } = useAuth();
   const [paymentLevel, setPaymentLevel] = useState<"UCE" | "UACE">("UCE");
-  const [markingGuides, setMarkingGuides] = useState<{ arts: boolean; sciences: boolean }>({
-    arts: false,
-    sciences: false,
-  });
+  const [uceMarkingGuideQuantity, setUceMarkingGuideQuantity] = useState(0);
+  const [uaceArtsMarkingGuideQuantity, setUaceArtsMarkingGuideQuantity] = useState(0);
+  const [uaceSciencesMarkingGuideQuantity, setUaceSciencesMarkingGuideQuantity] = useState(0);
+  const [answerBookletsQuantity, setAnswerBookletsQuantity] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentSchool = useMemo(() => {
     return schools.find(s => s.code === user?.schoolCode);
   }, [schools, user]);
 
-  const isUceFinalized = currentSchool?.uceRegistrationFinalized ?? false;
-  const isUaceFinalized = currentSchool?.uaceRegistrationFinalized ?? false;
-  const isLevelFinalized = paymentLevel === "UCE" ? isUceFinalized : isUaceFinalized;
-  const hasAnyLevelFinalized = isUceFinalized || isUaceFinalized;
+  const isUceFinalised = currentSchool?.uceRegistrationFinalised ?? false;
+  const isUaceFinalised = currentSchool?.uaceRegistrationFinalised ?? false;
+  const isLevelFinalised = paymentLevel === "UCE" ? isUceFinalised : isUaceFinalised;
+  const hasAnyLevelFinalised = isUceFinalised || isUaceFinalised;
 
   const hasRegistrationInvoice = useMemo(() => {
     return invoices.some(inv => 
@@ -61,86 +61,123 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
       s.schoolCode === user?.schoolCode && 
       s.examLevel === paymentLevel &&
       !s.isInvoiced &&
-      (isLevelFinalized ? s.isAdditional : !s.isAdditional)
+      (isLevelFinalised ? s.isAdditional : !s.isAdditional)
     );
-  }, [students, user, paymentLevel, isLevelFinalized]);
+  }, [students, user, paymentLevel, isLevelFinalised]);
 
   const studentCount = useMemo(() => {
     return schoolStudents.length;
   }, [schoolStudents]);
 
-  const markingGuideTotalCount = (markingGuides.arts ? 1 : 0) + (markingGuides.sciences ? 1 : 0);
-
-  const toggleMarkingGuide = (type: 'arts' | 'sciences') => {
-    setMarkingGuides(prev => ({ ...prev, [type]: !prev[type] }));
-  };
-
   const pricing = {
     registration: 500000,
     student: 27000,
-    booklets: 25000,
-    markingGuide: 25000,
+    uceMarkingGuide: 35000,
+    uaceMarkingGuide: 25000,
+    answerBooklet: 25000,
   };
 
   const totals = useMemo(() => {
-    const registrationTotal = (!hasAnyLevelFinalized && !isLevelFinalized && !hasRegistrationInvoice) ? pricing.registration : 0;
+    const registrationTotal = (!hasAnyLevelFinalised && !isLevelFinalised && !hasRegistrationInvoice) ? pricing.registration : 0;
     const studentTotal = studentCount * pricing.student;
-    const bookletsTotal = studentCount * pricing.booklets;
-    const markingGuideTotal = markingGuideTotalCount * pricing.markingGuide;
+    const uceMarkingGuideTotal = (paymentLevel === "UCE") ? uceMarkingGuideQuantity * pricing.uceMarkingGuide : 0;
+    const uaceArtsMarkingGuideTotal = (paymentLevel === "UACE") ? uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide : 0;
+    const uaceSciencesMarkingGuideTotal = (paymentLevel === "UACE") ? uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide : 0;
+    const answerBookletsTotal = answerBookletsQuantity * pricing.answerBooklet;
+
+    const totalMarkingGuide = uceMarkingGuideTotal + uaceArtsMarkingGuideTotal + uaceSciencesMarkingGuideTotal;
 
     return {
       registration: registrationTotal,
       student: studentTotal,
-      booklets: bookletsTotal,
-      markingGuide: markingGuideTotal,
-      grandTotal: registrationTotal + studentTotal + bookletsTotal + markingGuideTotal
+      uceMarkingGuide: uceMarkingGuideTotal,
+      uaceArtsMarkingGuide: uaceArtsMarkingGuideTotal,
+      uaceSciencesMarkingGuide: uaceSciencesMarkingGuideTotal,
+      answerBooklet: answerBookletsTotal,
+      grandTotal: registrationTotal + studentTotal + totalMarkingGuide + answerBookletsTotal
     };
-  }, [studentCount, markingGuideTotalCount, isLevelFinalized, hasAnyLevelFinalized, hasRegistrationInvoice]);
+  }, [studentCount, uceMarkingGuideQuantity, uaceArtsMarkingGuideQuantity, uaceSciencesMarkingGuideQuantity, answerBookletsQuantity, isLevelFinalised, hasAnyLevelFinalised, hasRegistrationInvoice, paymentLevel]);
 
   const handleGenerateInvoice = () => {
-    if (markingGuideTotalCount === 0) {
+    if (paymentLevel === "UCE" && uceMarkingGuideQuantity === 0) {
       toast.error("Selection Required", {
-        description: "Please select at least one marking guide (Arts or Sciences)."
+        description: "Please specify quantity for UCE Marking Guide."
+      });
+      return;
+    }
+    if (paymentLevel === "UACE" && uaceArtsMarkingGuideQuantity === 0 && uaceSciencesMarkingGuideQuantity === 0) {
+      toast.error("Selection Required", {
+        description: "Please specify quantity for at least one UACE Marking Guide (Arts or Sciences)."
+      });
+      return;
+    }
+    if (answerBookletsQuantity === 0) {
+      toast.error("Selection Required", {
+        description: "Please specify quantity for Answer Booklets."
       });
       return;
     }
 
     setIsSubmitting(true);
 
-    const selectedGuides = [];
-    if (markingGuides.arts) selectedGuides.push("Arts");
-    if (markingGuides.sciences) selectedGuides.push("Sciences");
+    const items = [];
 
-    const items = [
-      { 
+    if (totals.registration > 0) {
+      items.push({ 
         description: "School Registration Fee", 
         quantity: 1, 
         unitPrice: pricing.registration, 
         total: totals.registration,
         formula: "Fixed Amount"
-      },
-      { 
-        description: `${isLevelFinalized ? "Additional " : ""}${paymentLevel} Student Fee`, 
-        quantity: studentCount, 
-        unitPrice: pricing.student, 
-        total: totals.student,
-        formula: `${pricing.student.toLocaleString()} × ${studentCount} = ${totals.student.toLocaleString()}`
-      },
-      { 
+      });
+    }
+    
+    items.push({ 
+      description: `${isLevelFinalised ? "Additional " : ""}${paymentLevel} Student Fee`, 
+      quantity: studentCount, 
+      unitPrice: pricing.student, 
+      total: totals.student,
+      formula: `${pricing.student.toLocaleString()} × ${studentCount} = ${totals.student.toLocaleString()}`
+    });
+
+    if (paymentLevel === "UCE" && uceMarkingGuideQuantity > 0) {
+      items.push({ 
+        description: "UCE Marking Guide (All Papers)", 
+        quantity: uceMarkingGuideQuantity, 
+        unitPrice: pricing.uceMarkingGuide, 
+        total: totals.uceMarkingGuide,
+        formula: `${pricing.uceMarkingGuide.toLocaleString()} × ${uceMarkingGuideQuantity} = ${totals.uceMarkingGuide.toLocaleString()}`
+      });
+    } else if (paymentLevel === "UACE") {
+      if (uaceArtsMarkingGuideQuantity > 0) {
+        items.push({ 
+          description: "UACE Arts Marking Guide", 
+          quantity: uaceArtsMarkingGuideQuantity, 
+          unitPrice: pricing.uaceMarkingGuide, 
+          total: totals.uaceArtsMarkingGuide,
+          formula: `${pricing.uaceMarkingGuide.toLocaleString()} × ${uaceArtsMarkingGuideQuantity} = ${totals.uaceArtsMarkingGuide.toLocaleString()}`
+        });
+      }
+      if (uaceSciencesMarkingGuideQuantity > 0) {
+        items.push({ 
+          description: "UACE Sciences Marking Guide", 
+          quantity: uaceSciencesMarkingGuideQuantity, 
+          unitPrice: pricing.uaceMarkingGuide, 
+          total: totals.uaceSciencesMarkingGuide,
+          formula: `${pricing.uaceMarkingGuide.toLocaleString()} × ${uaceSciencesMarkingGuideQuantity} = ${totals.uaceSciencesMarkingGuide.toLocaleString()}`
+        });
+      }
+    }
+
+    if (answerBookletsQuantity > 0) {
+      items.push({ 
         description: "Answer Booklets", 
-        quantity: studentCount, 
-        unitPrice: pricing.booklets, 
-        total: totals.booklets,
-        formula: `${pricing.booklets.toLocaleString()} × ${studentCount} = ${totals.booklets.toLocaleString()}`
-      },
-      { 
-        description: `Marking Guide (${selectedGuides.join(" & ")})`, 
-        quantity: markingGuideTotalCount, 
-        unitPrice: pricing.markingGuide, 
-        total: totals.markingGuide,
-        formula: `${pricing.markingGuide.toLocaleString()} × ${markingGuideTotalCount} = ${totals.markingGuide.toLocaleString()}`
-      },
-    ].filter(item => item.total > 0 || (!isLevelFinalized && !hasAnyLevelFinalized && !hasRegistrationInvoice && item.description.includes("Registration")));
+        quantity: answerBookletsQuantity, 
+        unitPrice: pricing.answerBooklet, 
+        total: totals.answerBooklet,
+        formula: `${pricing.answerBooklet.toLocaleString()} × ${answerBookletsQuantity} = ${totals.answerBooklet.toLocaleString()}`
+      });
+    }
 
     const studentIds = schoolStudents.map(s => s.id);
 
@@ -151,11 +188,11 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
       items,
       totalAmount: totals.grandTotal,
       status: "pending",
-      type: isLevelFinalized ? "additional" : "original"
+      type: isLevelFinalised ? "additional" : "original"
     }, studentIds);
 
     toast.success("Invoice Generated", {
-      description: isLevelFinalized 
+      description: isLevelFinalised 
         ? `Your additional student invoice for ${paymentLevel} has been generated successfully.`
         : `Your payment invoice for ${paymentLevel} has been generated successfully.`
     });
@@ -166,18 +203,39 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 pb-12 anim-fade-up">
       <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-          Step 2: {isLevelFinalized ? "Additional Students Payment" : "Payment Generation"}
+        <p className="text-sm font-black uppercase tracking-[0.2em] text-blue-600">
+          Registration Completion Workflow
         </p>
-        <h1 className="text-3xl font-bold text-slate-900">
-          {isLevelFinalized ? "Additional Payment" : "Make Payment"}
+        <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+          {isLevelFinalised ? "Marking Guide & Booklets" : "Complete Registration"}
         </h1>
-        <p className="text-slate-500">
-          {isLevelFinalized 
-            ? `Generate an invoice for ${paymentLevel} students added after finalization. Registration fee is not required.`
+        <p className="text-slate-500 font-medium">
+          {isLevelFinalised 
+            ? `Your ${paymentLevel} registration is finalised. Now, select your required marking guides and answer booklets to generate the final invoice.`
             : `Select the items you need for this ${paymentLevel} examination cycle. School registration and student fees are mandatory.`
           }
         </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <div className={`flex flex-col gap-2 p-4 rounded-2xl border-2 transition-all ${isLevelFinalised ? "border-emerald-500 bg-emerald-50" : "border-slate-200 bg-white"}`}>
+          <div className="flex items-center justify-between">
+            <Badge className={isLevelFinalised ? "bg-emerald-500" : "bg-slate-200 text-slate-600"}>Step 1</Badge>
+            {isLevelFinalised && <CheckCircle className="h-4 w-4 text-emerald-600" />}
+          </div>
+          <p className="font-bold text-sm mt-1">Finalise Entries</p>
+          <p className="text-[10px] text-slate-500 font-medium">Lock student records</p>
+        </div>
+        <div className="flex flex-col gap-2 p-4 rounded-2xl border-2 border-blue-500 bg-blue-50">
+          <Badge className="bg-blue-600">Step 2</Badge>
+          <p className="font-bold text-sm mt-1">Guides & Booklets</p>
+          <p className="text-[10px] text-slate-500 font-medium">Select additional materials</p>
+        </div>
+        <div className="flex flex-col gap-2 p-4 rounded-2xl border-2 border-slate-200 bg-white opacity-50">
+          <Badge className="bg-slate-200 text-slate-600">Step 3</Badge>
+          <p className="font-bold text-sm mt-1">Invoice & Payment</p>
+          <p className="text-[10px] text-slate-500 font-medium">Generate and pay</p>
+        </div>
       </div>
 
       {/* Level Selection */}
@@ -202,8 +260,8 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 cursor-pointer`}
               >
                 <span className="text-sm font-bold">UCE (O-Level)</span>
-                {isUceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED (Additional Mode)</span>}
-                {!isUceFinalized && <span className="text-[10px] text-blue-600 font-bold mt-1">NOT FINALIZED (Original Mode)</span>}
+                {isUceFinalised && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALISED (Additional Mode)</span>}
+                {!isUceFinalised && <span className="text-[10px] text-blue-600 font-bold mt-1">NOT FINALISED (Original Mode)</span>}
               </Label>
             </div>
             <div>
@@ -213,8 +271,8 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 className={`flex flex-col items-center justify-between rounded-xl border-2 bg-popover p-4 hover:bg-slate-50 peer-data-[state=checked]:border-slate-900 [&:has([data-state=checked])]:border-slate-900 cursor-pointer`}
               >
                 <span className="text-sm font-bold">UACE (A-Level)</span>
-                {isUaceFinalized && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALIZED (Additional Mode)</span>}
-                {!isUaceFinalized && <span className="text-[10px] text-blue-600 font-bold mt-1">NOT FINALIZED (Original Mode)</span>}
+                {isUaceFinalised && <span className="text-[10px] text-emerald-600 font-bold mt-1">FINALISED (Additional Mode)</span>}
+                {!isUaceFinalised && <span className="text-[10px] text-blue-600 font-bold mt-1">NOT FINALISED (Original Mode)</span>}
               </Label>
             </div>
           </RadioGroup>
@@ -231,14 +289,14 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 Mandatory Fees
               </CardTitle>
               <CardDescription>
-                {isLevelFinalized 
+                {isLevelFinalised 
                   ? `Calculated for additional ${paymentLevel} candidates` 
                   : `Automatically calculated based on your ${paymentLevel} registration`
                 }
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
-              {(!hasAnyLevelFinalized && !isLevelFinalized) && (
+              {(!hasAnyLevelFinalised && !isLevelFinalised) && (
                 <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-primary border border-slate-100">
@@ -262,7 +320,7 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                   <BookOpen className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900">{isLevelFinalized ? "Additional " : ""}{paymentLevel} Student Fee</p>
+                  <p className="font-bold text-slate-900">{isLevelFinalised ? "Additional " : ""}{paymentLevel} Student Fee</p>
                   <p className="text-xs text-slate-500">{pricing.student.toLocaleString()} × {studentCount} candidates</p>
                 </div>
               </div>
@@ -272,11 +330,27 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
               </div>
             </div>
 
+            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-primary border border-slate-100">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900">Answer Booklets</p>
+                  <p className="text-xs text-slate-500">{pricing.answerBooklet.toLocaleString()} × {studentCount} candidates</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-slate-900">{totals.answerBooklet.toLocaleString()} UGX</p>
+                <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest bg-blue-50 text-blue-700 border-blue-100">Required</Badge>
+              </div>
+            </div>
+
               {studentCount === 0 && (
                 <Alert variant="warning" className="bg-amber-50 border-amber-200 text-amber-800 rounded-xl">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs font-medium">
-                    No fully submitted {isLevelFinalized ? "additional " : ""}{paymentLevel} candidates found. Student fees will be 0 UGX. 
+                    No fully submitted {isLevelFinalised ? "additional " : ""}{paymentLevel} candidates found. Student fees will be 0 UGX. 
                     Ensure candidates have all compulsory subjects selected.
                   </AlertDescription>
                 </Alert>
@@ -291,37 +365,69 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 <Calculator className="h-5 w-5 text-blue-600" />
                 Additional Items
               </CardTitle>
-              <CardDescription>Select marking guides for your school</CardDescription>
+              <CardDescription>Select marking guides and answer booklets for your school</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
+              {paymentLevel === "UCE" && (
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold text-slate-700">UCE Marking Guide (All Papers) <span className="text-red-500">*</span></Label>
+                  <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={uceMarkingGuideQuantity}
+                      onChange={(e) => setUceMarkingGuideQuantity(parseInt(e.target.value))}
+                      className="w-24 text-center font-bold"
+                    />
+                    <span className="font-semibold text-slate-700">Quantity</span>
+                    <Badge variant="secondary">Total: {totals.uceMarkingGuide.toLocaleString()} UGX</Badge>
+                  </div>
+                </div>
+              )}
+
+              {paymentLevel === "UACE" && (
+                <div className="space-y-4">
+                  <Label className="text-sm font-bold text-slate-700">UACE Marking Guides <span className="text-red-500">*</span></Label>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={uaceArtsMarkingGuideQuantity}
+                        onChange={(e) => setUaceArtsMarkingGuideQuantity(parseInt(e.target.value))}
+                        className="w-24 text-center font-bold"
+                      />
+                      <span className="font-semibold text-slate-700">Arts Guide Quantity</span>
+                      <Badge variant="secondary">Total: {totals.uaceArtsMarkingGuide.toLocaleString()} UGX</Badge>
+                    </div>
+                    <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={uaceSciencesMarkingGuideQuantity}
+                        onChange={(e) => setUaceSciencesMarkingGuideQuantity(parseInt(e.target.value))}
+                        className="w-24 text-center font-bold"
+                      />
+                      <span className="font-semibold text-slate-700">Sciences Guide Quantity</span>
+                      <Badge variant="secondary">Total: {totals.uaceSciencesMarkingGuide.toLocaleString()} UGX</Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-bold text-slate-700">Select Marking Guide (25,000 UGX each) <span className="text-red-500">*</span></Label>
-                  {markingGuideTotalCount === 0 && <Badge variant="destructive" className="text-[10px]">REQUIRED</Badge>}
+                <Label className="text-sm font-bold text-slate-700">Answer Booklets <span className="text-red-500">*</span></Label>
+                <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={answerBookletsQuantity}
+                    onChange={(e) => setAnswerBookletsQuantity(parseInt(e.target.value))}
+                    className="w-24 text-center font-bold"
+                  />
+                  <span className="font-semibold text-slate-700">Quantity</span>
+                  <Badge variant="secondary">Total: {totals.answerBooklet.toLocaleString()} UGX</Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div 
-                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 transition-all cursor-pointer ${markingGuides.arts ? 'border-primary bg-primary/5 shadow-sm' : 'border-slate-100 hover:border-slate-200'}`} 
-                    onClick={() => toggleMarkingGuide('arts')}
-                  >
-                    <Checkbox checked={markingGuides.arts} onCheckedChange={() => toggleMarkingGuide('arts')} id="arts" />
-                    <div>
-                      <Label htmlFor="arts" className="font-bold cursor-pointer">Arts</Label>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">{pricing.markingGuide.toLocaleString()} × 1</p>
-                    </div>
-                  </div>
-                  <div 
-                    className={`flex items-center space-x-3 p-4 rounded-xl border-2 transition-all cursor-pointer ${markingGuides.sciences ? 'border-primary bg-primary/5 shadow-sm' : 'border-slate-100 hover:border-slate-200'}`} 
-                    onClick={() => toggleMarkingGuide('sciences')}
-                  >
-                    <Checkbox checked={markingGuides.sciences} onCheckedChange={() => toggleMarkingGuide('sciences')} id="sciences" />
-                    <div>
-                      <Label htmlFor="sciences" className="font-bold cursor-pointer">Sciences</Label>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">{pricing.markingGuide.toLocaleString()} × 1</p>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 italic">You must select at least one marking guide to proceed. You can select both if needed.</p>
               </div>
             </CardContent>
           </Card>
@@ -355,17 +461,37 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
                 <div className="flex justify-between text-sm">
                   <div className="flex flex-col">
                     <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Answer Booklets</span>
-                    <span className="text-[11px] text-slate-400 font-bold italic">{pricing.booklets.toLocaleString()} × {studentCount}</span>
+                    <span className="text-[11px] text-slate-400 font-bold italic">{pricing.answerBooklet.toLocaleString()} × {answerBookletsQuantity}</span>
                   </div>
-                  <span className="font-bold text-slate-900">{totals.booklets.toLocaleString()} UGX</span>
+                  <span className="font-bold text-slate-900">{totals.answerBooklet.toLocaleString()} UGX</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <div className="flex flex-col">
-                    <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Marking Guide</span>
-                    <span className="text-[11px] text-slate-400 font-bold italic">{markingGuideTotalCount > 0 ? `${pricing.markingGuide.toLocaleString()} × ${markingGuideTotalCount}` : "Not Selected"}</span>
+                {paymentLevel === "UCE" && uceMarkingGuideQuantity > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <div className="flex flex-col">
+                      <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">UCE Marking Guide</span>
+                      <span className="text-[11px] text-slate-400 font-bold italic">{pricing.uceMarkingGuide.toLocaleString()} × {uceMarkingGuideQuantity}</span>
+                    </div>
+                    <span className="font-bold text-slate-900">{totals.uceMarkingGuide.toLocaleString()} UGX</span>
                   </div>
-                  <span className="font-bold text-slate-900">{totals.markingGuide.toLocaleString()} UGX</span>
-                </div>
+                )}
+                {paymentLevel === "UACE" && uaceArtsMarkingGuideQuantity > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <div className="flex flex-col">
+                      <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">UACE Arts Guide</span>
+                      <span className="text-[11px] text-slate-400 font-bold italic">{pricing.uaceMarkingGuide.toLocaleString()} × {uaceArtsMarkingGuideQuantity}</span>
+                    </div>
+                    <span className="font-bold text-slate-900">{totals.uaceArtsMarkingGuide.toLocaleString()} UGX</span>
+                  </div>
+                )}
+                {paymentLevel === "UACE" && uaceSciencesMarkingGuideQuantity > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <div className="flex flex-col">
+                      <span className="text-slate-500 font-bold uppercase text-[10px] tracking-wider">UACE Sciences Guide</span>
+                      <span className="text-[11px] text-slate-400 font-bold italic">{pricing.uaceMarkingGuide.toLocaleString()} × {uaceSciencesMarkingGuideQuantity}</span>
+                    </div>
+                    <span className="font-bold text-slate-900">{totals.uaceSciencesMarkingGuide.toLocaleString()} UGX</span>
+                  </div>
+                )}
                 
                 <div className="border-t pt-4 mt-4">
                   <div className="flex justify-between items-end">
@@ -381,7 +507,12 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
               <div className="p-5 bg-slate-50 border-t space-y-3">
                 <Button 
                   className="w-full h-12 rounded-xl font-bold text-base shadow-md"
-                  disabled={markingGuideTotalCount === 0 || isSubmitting}
+                  disabled={
+                    isSubmitting || 
+                    (paymentLevel === "UCE" && uceMarkingGuideQuantity === 0) ||
+                    (paymentLevel === "UACE" && uaceArtsMarkingGuideQuantity === 0 && uaceSciencesMarkingGuideQuantity === 0) ||
+                    answerBookletsQuantity === 0
+                  }
                   onClick={handleGenerateInvoice}
                 >
                   Generate Invoice

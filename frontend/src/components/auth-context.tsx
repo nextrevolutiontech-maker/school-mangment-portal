@@ -62,10 +62,13 @@ export interface SchoolRecord {
   schoolLogo?: string;
   contactPerson?: string;
   contactDesignation?: string;
-  registrationFinalized?: boolean;
-  uceRegistrationFinalized?: boolean;
-  uaceRegistrationFinalized?: boolean;
-  markingGuide?: "Arts" | "Sciences" | "Both" | "None";
+  registrationFinalised?: boolean;
+  uceRegistrationFinalised?: boolean;
+  uaceRegistrationFinalised?: boolean;
+  uceMarkingGuideQuantity?: number;
+  uaceArtsMarkingGuideQuantity?: number;
+  uaceSciencesMarkingGuideQuantity?: number;
+  answerBookletsQuantity?: number;
 }
 
 export interface Invoice {
@@ -213,11 +216,14 @@ interface AuthContextType {
     status: SchoolStatus,
     activationCode?: string,
   ) => void;
-  finalizeRegistration: (
+  finaliseRegistration: (
     schoolCode: string, 
-    markingGuide: "Arts" | "Sciences" | "Both",
     level: "UCE" | "UACE",
-    levelStudents: StudentRecord[]
+    levelStudents: StudentRecord[],
+    uceMarkingGuideQuantity: number,
+    uaceArtsMarkingGuideQuantity: number,
+    uaceSciencesMarkingGuideQuantity: number,
+    answerBookletsQuantity: number,
   ) => void;
   addInvoice: (invoice: Omit<Invoice, "id">, studentIds?: string[]) => void;
   uploadPaymentProof: (invoiceId: string, proofUrl: string) => void;
@@ -790,21 +796,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const finalizeRegistration = (
+  const finaliseRegistration = (
     schoolCode: string, 
-    markingGuide: "Arts" | "Sciences" | "Both",
     level: "UCE" | "UACE",
-    levelStudents: StudentRecord[]
+    levelStudents: StudentRecord[],
+    uceMarkingGuideQuantity: number,
+    uaceArtsMarkingGuideQuantity: number,
+    uaceSciencesMarkingGuideQuantity: number,
+    answerBookletsQuantity: number,
   ) => {
     setSchools((prev) =>
       prev.map((school) =>
         school.code === schoolCode
           ? {
               ...school,
-              registrationFinalized: true, // Keep for backward compatibility
-              uceRegistrationFinalized: level === "UCE" ? true : school.uceRegistrationFinalized,
-              uaceRegistrationFinalized: level === "UACE" ? true : school.uaceRegistrationFinalized,
-              markingGuide,
+              uceRegistrationFinalised: level === "UCE" ? true : school.uceRegistrationFinalised,
+              uaceRegistrationFinalised: level === "UACE" ? true : school.uaceRegistrationFinalised,
+              uceMarkingGuideQuantity,
+              uaceArtsMarkingGuideQuantity,
+              uaceSciencesMarkingGuideQuantity,
+              answerBookletsQuantity,
             }
           : school,
       ),
@@ -814,54 +825,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const school = schools.find(s => s.code === schoolCode);
     if (!school) return;
 
-    // Use passed levelStudents for accurate count
     const studentCount = levelStudents.length;
 
-    const items = [
-      // Only add school registration fee if this is the first level being finalized
-      ...( (level === "UCE" && !school.uaceRegistrationFinalized) || 
-           (level === "UACE" && !school.uceRegistrationFinalized) ||
-           (!school.uceRegistrationFinalized && !school.uaceRegistrationFinalized)
-        ? [{ 
-            description: "School Registration Fee", 
-            quantity: 1, 
-            unitPrice: 500000, 
-            total: 500000,
-            formula: "Fixed Amount"
-          }] 
-        : []
-      ),
-      { 
+    const pricing = {
+      uceMarkingGuide: 35000,
+      uaceMarkingGuide: 25000,
+      answerBooklet: 25000,
+      studentFee: 27000,
+      schoolRegistrationFee: 500000, // Only for the very first finalisation
+    };
+
+    const items = [];
+
+    // School Registration Fee - only if no level has been finalised yet and no registration invoice exists
+    const hasAnyLevelFinalised = school.uceRegistrationFinalised || school.uaceRegistrationFinalised;
+    const hasRegistrationInvoice = invoices.some(inv => 
+      inv.schoolCode === schoolCode && inv.items.some(item => item.description === "School Registration Fee")
+    );
+
+    if (!hasAnyLevelFinalised && !hasRegistrationInvoice) {
+      items.push({ 
+        description: "School Registration Fee", 
+        quantity: 1, 
+        unitPrice: pricing.schoolRegistrationFee, 
+        total: pricing.schoolRegistrationFee,
+        formula: "Fixed Amount"
+      });
+    }
+
+    // Student Fees
+    if (studentCount > 0) {
+      items.push({ 
         description: `${level} Student Fee`, 
         quantity: studentCount, 
-        unitPrice: 27000, 
-        total: studentCount * 27000,
-        formula: `27,000 × ${studentCount} = ${(studentCount * 27000).toLocaleString()}`
-      },
-      { 
-        description: "Answer Booklets", 
-        quantity: studentCount, 
-        unitPrice: 25000, 
-        total: studentCount * 25000,
-        formula: `25,000 × ${studentCount} = ${(studentCount * 25000).toLocaleString()}`
-      },
-    ];
-
-    if (markingGuide === "Both") {
-      items.push({ 
-        description: "Marking Guide (Arts & Sciences)", 
-        quantity: 2, 
-        unitPrice: 25000, 
-        total: 50000,
-        formula: "25,000 × 2 = 50,000"
+        unitPrice: pricing.studentFee, 
+        total: studentCount * pricing.studentFee,
+        formula: `${pricing.studentFee.toLocaleString()} × ${studentCount} = ${(studentCount * pricing.studentFee).toLocaleString()}`
       });
-    } else if (markingGuide !== "None") {
-      items.push({ 
-        description: `Marking Guide (${markingGuide})`, 
-        quantity: 1, 
-        unitPrice: 25000, 
-        total: 25000,
-        formula: "25,000 × 1 = 25,000"
+    }
+
+    // Marking Guides
+    if (level === "UCE" && uceMarkingGuideQuantity > 0) {
+      items.push({
+        description: "UCE Marking Guide (All Papers)",
+        quantity: uceMarkingGuideQuantity,
+        unitPrice: pricing.uceMarkingGuide,
+        total: uceMarkingGuideQuantity * pricing.uceMarkingGuide,
+        formula: `${pricing.uceMarkingGuide.toLocaleString()} × ${uceMarkingGuideQuantity} = ${(uceMarkingGuideQuantity * pricing.uceMarkingGuide).toLocaleString()}`
+      });
+    } else if (level === "UACE") {
+      if (uaceArtsMarkingGuideQuantity > 0) {
+        items.push({
+          description: "UACE Arts Marking Guide",
+          quantity: uaceArtsMarkingGuideQuantity,
+          unitPrice: pricing.uaceMarkingGuide,
+          total: uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide,
+          formula: `${pricing.uaceMarkingGuide.toLocaleString()} × ${uaceArtsMarkingGuideQuantity} = ${(uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide).toLocaleString()}`
+        });
+      }
+      if (uaceSciencesMarkingGuideQuantity > 0) {
+        items.push({
+          description: "UACE Sciences Marking Guide",
+          quantity: uaceSciencesMarkingGuideQuantity,
+          unitPrice: pricing.uaceMarkingGuide,
+          total: uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide,
+          formula: `${pricing.uaceMarkingGuide.toLocaleString()} × ${uaceSciencesMarkingGuideQuantity} = ${(uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide).toLocaleString()}`
+        });
+      }
+    }
+
+    // Answer Booklets
+    if (answerBookletsQuantity > 0) {
+      items.push({
+        description: "Answer Booklets",
+        quantity: answerBookletsQuantity,
+        unitPrice: pricing.answerBooklet,
+        total: answerBookletsQuantity * pricing.answerBooklet,
+        formula: `${pricing.answerBooklet.toLocaleString()} × ${answerBookletsQuantity} = ${(answerBookletsQuantity * pricing.answerBooklet).toLocaleString()}`
       });
     }
 
@@ -876,7 +916,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       items,
       totalAmount,
       status: "pending",
-      type: "original"
+      type: "original" // This invoice is for the original finalisation of a level
     }, studentIds);
   };
 
@@ -968,11 +1008,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ["S.1", "S.2", "S.3", "S.4"].includes(entry.classLevel) ? "UCE" : "UACE";
 
       const schoolRecord = schools.find(s => s.code === entry.schoolCode);
-      const levelFinalized = examLevel === "UCE" 
-        ? schoolRecord?.uceRegistrationFinalized 
-        : schoolRecord?.uaceRegistrationFinalized;
+      const levelFinalised = examLevel === "UCE" 
+        ? schoolRecord?.uceRegistrationFinalised 
+        : schoolRecord?.uaceRegistrationFinalised;
       
-      const isAdditional = entry.isAdditional ?? levelFinalized ?? false;
+      const isAdditional = entry.isAdditional ?? levelFinalised ?? false;
 
       const newStudent: StudentRecord = {
         id: `student-${Date.now()}`,
@@ -1007,12 +1047,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const schoolRecord = schools.find(s => s.code === studentToUpdate.schoolCode);
     const examLevel = studentToUpdate.examLevel;
-    const levelFinalized = examLevel === "UCE" 
-      ? schoolRecord?.uceRegistrationFinalized 
-      : schoolRecord?.uaceRegistrationFinalized;
+    const levelFinalised = examLevel === "UCE" 
+      ? schoolRecord?.uceRegistrationFinalised 
+      : schoolRecord?.uaceRegistrationFinalised;
 
-    // Lock non-additional students if level registration is finalized
-    if (levelFinalized && !studentToUpdate.isAdditional) {
+    // Lock non-additional students if level registration is finalised
+    if (levelFinalised && !studentToUpdate.isAdditional) {
       console.warn("Attempted to update a locked student record.");
       return;
     }
@@ -1041,12 +1081,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!studentToDelete) return;
 
     const schoolRecord = schools.find(s => s.code === studentToDelete.schoolCode);
-    const levelFinalized = studentToDelete.examLevel === "UCE" 
-      ? schoolRecord?.uceRegistrationFinalized 
-      : schoolRecord?.uaceRegistrationFinalized;
+    const levelFinalised = studentToDelete.examLevel === "UCE" 
+      ? schoolRecord?.uceRegistrationFinalised 
+      : schoolRecord?.uaceRegistrationFinalised;
 
-    // Lock non-additional students if level registration is finalized
-    if (levelFinalized && !studentToDelete.isAdditional) {
+    // Lock non-additional students if level registration is finalised
+    if (levelFinalised && !studentToDelete.isAdditional) {
       console.warn("Attempted to delete a locked student record.");
       return;
     }
@@ -1170,7 +1210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         addSchool,
         submitSchoolDocuments,
         updateSchoolStatus,
-        finalizeRegistration,
+        finaliseRegistration,
         addInvoice,
         uploadPaymentProof,
         markInvoiceAsPaid,

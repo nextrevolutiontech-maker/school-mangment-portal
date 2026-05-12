@@ -95,7 +95,7 @@ export function UploadPDF({ onPageChange }: UploadPDFProps) {
       return {
         title: "Verification Completed",
         description:
-          "Your uploaded documents have been confirmed. Final activation details are being finalized by the WAKISSHA admin team.",
+          "Your uploaded documents have been confirmed. Final activation details are being finalised by the WAKISSHA admin team.",
         badge: "Verified",
       };
     }

@@ -58,7 +58,7 @@ type PaperOption = 1 | 2 | 3 | 4;
 const PAPER_OPTIONS: PaperOption[] = [1, 2, 3, 4];
 
 export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: StudentsEntriesProps) {
-  const { user, schools, students, subjects, addStudentEntry, updateStudentEntry, deleteStudentEntry, finalizeRegistration } = useAuth();
+  const { user, schools, students, subjects, addStudentEntry, updateStudentEntry, deleteStudentEntry, finaliseRegistration } = useAuth();
   const isAdmin = user?.role === "admin";
 
   const currentSchool = useMemo(() => {
@@ -91,26 +91,29 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
     return scopedSchools.filter(s => s.zone === zoneFilter);
   }, [scopedSchools, zoneFilter]);
 
-  const isUceFinalized = currentSchool?.uceRegistrationFinalized ?? false;
-  const isUaceFinalized = currentSchool?.uaceRegistrationFinalized ?? false;
-  const isAllFinalized = (currentSchool?.educationLevel === "UCE" && isUceFinalized) || 
-                         (currentSchool?.educationLevel === "UACE" && isUaceFinalized) ||
-                         (isUceFinalized && isUaceFinalized);
+  const isUceFinalised = currentSchool?.uceRegistrationFinalised ?? false;
+  const isUaceFinalised = currentSchool?.uaceRegistrationFinalised ?? false;
+  const isAllFinalised = (currentSchool?.educationLevel === "UCE" && isUceFinalised) || 
+                         (currentSchool?.educationLevel === "UACE" && isUaceFinalised) ||
+                         (isUceFinalised && isUaceFinalised);
 
   // Reset school filter when zone changes
   useEffect(() => {
     setSchoolFilter("all");
   }, [zoneFilter]);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
-  const [finalizeLevel, setFinalizeLevel] = useState<"UCE" | "UACE">("UCE");
-  const [finalizeMarkingGuide, setFinalizeMarkingGuide] = useState<"Arts" | "Sciences" | "Both">("Arts");
+  const [isFinaliseDialogOpen, setIsFinaliseDialogOpen] = useState(false);
+  const [finaliseLevel, setFinaliseLevel] = useState<"UCE" | "UACE">("UCE");
+  const [uceMarkingGuideQuantity, setUceMarkingGuideQuantity] = useState(1);
+  const [uaceArtsMarkingGuideQuantity, setUaceArtsMarkingGuideQuantity] = useState(0);
+  const [uaceSciencesMarkingGuideQuantity, setUaceSciencesMarkingGuideQuantity] = useState(0);
+  const [answerBookletsQuantity, setAnswerBookletsQuantity] = useState(0);
 
-  // Set default finalize level based on what's not finalized
+  // Set default finalise level based on what's not finalised
   useEffect(() => {
-    if (isUceFinalized && !isUaceFinalized) setFinalizeLevel("UACE");
-    else if (!isUceFinalized) setFinalizeLevel("UCE");
-  }, [isUceFinalized, isUaceFinalized]);
+    if (isUceFinalised && !isUaceFinalised) setFinaliseLevel("UACE");
+    else if (!isUceFinalised) setFinaliseLevel("UCE");
+  }, [isUceFinalised, isUaceFinalised]);
 
   // View Student Modal
   const [viewingStudent, setViewingStudent] = useState<typeof students[0] | null>(null);
@@ -1076,11 +1079,11 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
   return (
     <div className="flex flex-col w-full gap-6">
-      {(isUceFinalized || isUaceFinalized) && !isAdmin && (
+      {(isUceFinalised || isUaceFinalised) && !isAdmin && (
         <Alert className="bg-blue-50 border-blue-200 text-blue-800 rounded-2xl mb-2">
           <Lock className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-sm font-medium">
-            Your {isUceFinalized && isUaceFinalized ? "complete" : (isUceFinalized ? "UCE" : "UACE")} registration has been finalized. Original student entries for finalized levels are now locked. 
+            Your {isUceFinalised && isUaceFinalised ? "complete" : (isUceFinalised ? "UCE" : "UACE")} registration has been finalised. Original student entries for finalised levels are now locked. 
             To edit locked records, please contact the WAKISSHA Secretariat or your Zone Leader.
           </AlertDescription>
         </Alert>
@@ -1099,66 +1102,122 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
         <div className="flex flex-col gap-2 sm:flex-row lg:w-auto">
           <SummaryDialog />
-          {!isAdmin && (!isUceFinalized || !isUaceFinalized) && (
-            <Dialog open={isFinalizeDialogOpen} onOpenChange={setIsFinalizeDialogOpen}>
+          {!isAdmin && (!isUceFinalised || !isUaceFinalised) && (
+            <Dialog open={isFinaliseDialogOpen} onOpenChange={setIsFinaliseDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800">
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Finalize {(!isUceFinalized && !isUaceFinalized) ? "" : (isUceFinalized ? "UACE " : "UCE ")}Registration
+                  Finalise {(!isUceFinalised && !isUaceFinalised) ? "" : (isUceFinalised ? "UACE " : "UCE ")}Registration
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md rounded-3xl">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-black text-slate-900">Finalize Registration</DialogTitle>
+                  <DialogTitle className="text-xl font-black text-slate-900">Finalise Registration</DialogTitle>
                   <DialogDescription className="text-slate-500 font-medium">
-                    Once finalized, you will no longer be able to edit or delete existing students for this level. 
+                    Once finalised, you will no longer be able to edit or delete existing students for this level. 
                     Any students added after this will be treated as "Additional Students" with separate invoices.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-6 space-y-4">
                   <div className="space-y-3">
-                    <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">Select Exam Level to Finalize</Label>
-                    <Select value={finalizeLevel} onValueChange={(value: "UCE" | "UACE") => setFinalizeLevel(value)}>
+                    <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">Select Exam Level to Finalise</Label>
+                    <Select value={finaliseLevel} onValueChange={(value: "UCE" | "UACE") => setFinaliseLevel(value)}>
                       <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="UCE" disabled={isUceFinalized} className="font-bold">UCE (O-Level) {isUceFinalized ? "(Finalized)" : ""}</SelectItem>
-                        <SelectItem value="UACE" disabled={isUaceFinalized} className="font-bold">UACE (A-Level) {isUaceFinalized ? "(Finalized)" : ""}</SelectItem>
+                        <SelectItem value="UCE" disabled={isUceFinalised} className="font-bold">UCE (O-Level) {isUceFinalised ? "(Finalised)" : ""}</SelectItem>
+                        <SelectItem value="UACE" disabled={isUaceFinalised} className="font-bold">UACE (A-Level) {isUaceFinalised ? "(Finalised)" : ""}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
+                  {finaliseLevel === "UCE" && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">UCE Marking Guide (35,000 UGX per guide)</Label>
+                      <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                        <Input
+                          type="number"
+                          min="0"
+                          value={uceMarkingGuideQuantity}
+                          onChange={(e) => setUceMarkingGuideQuantity(parseInt(e.target.value))}
+                          className="w-24 text-center font-bold"
+                        />
+                        <span className="font-semibold text-slate-700">Quantity</span>
+                        <Badge variant="secondary">Total: {(uceMarkingGuideQuantity * 35000).toLocaleString()} UGX</Badge>
+                      </div>
+                    </div>
+                  )}
+
+                  {finaliseLevel === "UACE" && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">UACE Marking Guides (25,000 UGX per guide)</Label>
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={uaceArtsMarkingGuideQuantity}
+                            onChange={(e) => setUaceArtsMarkingGuideQuantity(parseInt(e.target.value))}
+                            className="w-24 text-center font-bold"
+                          />
+                          <span className="font-semibold text-slate-700">Arts Guide Quantity</span>
+                          <Badge variant="secondary">Total: {(uaceArtsMarkingGuideQuantity * 25000).toLocaleString()} UGX</Badge>
+                        </div>
+                        <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={uaceSciencesMarkingGuideQuantity}
+                            onChange={(e) => setUaceSciencesMarkingGuideQuantity(parseInt(e.target.value))}
+                            className="w-24 text-center font-bold"
+                          />
+                          <span className="font-semibold text-slate-700">Sciences Guide Quantity</span>
+                          <Badge variant="secondary">Total: {(uaceSciencesMarkingGuideQuantity * 25000).toLocaleString()} UGX</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-3">
-                    <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">Select Marking Guide Package</Label>
-                    <Select value={finalizeMarkingGuide} onValueChange={(value: any) => setFinalizeMarkingGuide(value)}>
-                      <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
-                        <SelectValue placeholder="Select marking guide" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Arts" className="font-bold">Arts (UGX 25,000)</SelectItem>
-                        <SelectItem value="Sciences" className="font-bold">Sciences (UGX 25,000)</SelectItem>
-                        <SelectItem value="Both" className="font-bold">Both (Arts & Sciences) (UGX 50,000)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-sm font-black text-slate-700 uppercase tracking-widest">Answer Booklets (25,000 UGX per booklet)</Label>
+                    <div className="flex items-center space-x-3 p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                      <Input
+                        type="number"
+                        min="0"
+                        value={answerBookletsQuantity}
+                        onChange={(e) => setAnswerBookletsQuantity(parseInt(e.target.value))}
+                        className="w-24 text-center font-bold"
+                      />
+                      <span className="font-semibold text-slate-700">Quantity</span>
+                      <Badge variant="secondary">Total: {(answerBookletsQuantity * 25000).toLocaleString()} UGX</Badge>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="outline" className="rounded-xl font-bold" onClick={() => setIsFinalizeDialogOpen(false)}>Cancel</Button>
+                  <Button variant="outline" className="rounded-xl font-bold" onClick={() => setIsFinaliseDialogOpen(false)}>Cancel</Button>
                   <Button 
                     className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold"
                     onClick={() => {
                       if (user?.schoolCode) {
-                        finalizeRegistration(user.schoolCode, finalizeMarkingGuide, finalizeLevel);
-                        toast.success(`${finalizeLevel} Registration Finalized`, {
+                        finaliseRegistration(
+                          user.schoolCode, 
+                          finaliseLevel, 
+                          filteredStudents.filter(s => s.examLevel === finaliseLevel && !s.isAdditional),
+                          uceMarkingGuideQuantity,
+                          uaceArtsMarkingGuideQuantity,
+                          uaceSciencesMarkingGuideQuantity,
+                          answerBookletsQuantity
+                        );
+                        toast.success(`${finaliseLevel} Registration Finalised`, {
                           description: "Your registration has been locked. Generating payment items..."
                         });
-                        setIsFinalizeDialogOpen(false);
+                        setIsFinaliseDialogOpen(false);
                         onPageChange("make-payments");
                       }
                     }}
                   >
-                    Confirm & Finalize {finalizeLevel}
+                    Confirm & Finalise {finaliseLevel}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1169,7 +1228,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
             <DialogTrigger asChild>
               <Button className="w-full lg:w-auto bg-blue-600 hover:bg-blue-700">
                 <UserPlus className="h-4 w-4 mr-2" />
-                {isAllFinalized ? "Add Additional Student" : "Add Student"}
+                {isAllFinalised ? "Add Additional Student" : "Add Student"}
               </Button>
             </DialogTrigger>
           <DialogContent className="w-[96vw] sm:max-w-[850px] h-[90vh] max-h-[90vh] overflow-hidden p-0 border-none shadow-2xl" aria-describedby="register-description">
@@ -1181,7 +1240,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                 </div>
                 <div>
                   <DialogTitle className="text-lg font-black text-slate-900">
-                    {(registrationLevel === "UCE" ? isUceFinalized : isUaceFinalized) ? `Register Additional ${registrationLevel} Student` : `Register ${registrationLevel} Student`}
+                    {(registrationLevel === "UCE" ? isUceFinalised : isUaceFinalised) ? `Register Additional ${registrationLevel} Student` : `Register ${registrationLevel} Student`}
                   </DialogTitle>
                   <DialogDescription id="register-description" className="sr-only">
                     Fill in the details to register a new student for examinations.
@@ -1707,8 +1766,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 text-slate-500 hover:text-slate-900 hover:bg-slate-100"
-                                title={(student.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !student.isAdditional ? "Cannot edit/delete after level finalization" : "Edit or delete student"}
-                                disabled={(student.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !student.isAdditional && !isAdmin}
+                                title={(student.examLevel === "UCE" ? isUceFinalised : isUaceFinalised) && !student.isAdditional ? "Cannot edit/delete after level finalisation" : "Edit or delete student"}
+                                disabled={(student.examLevel === "UCE" ? isUceFinalised : isUaceFinalised) && !student.isAdditional && !isAdmin}
                               >
                                 <MoreVertical className="h-3.5 w-3.5" />
                               </Button>
@@ -1812,8 +1871,8 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
               Close
             </Button>
             <Button 
-              disabled={(viewingStudent?.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !viewingStudent?.isAdditional && !isAdmin}
-              title={(viewingStudent?.examLevel === "UCE" ? isUceFinalized : isUaceFinalized) && !viewingStudent?.isAdditional && !isAdmin ? "Cannot edit after finalization" : ""}
+              disabled={(viewingStudent?.examLevel === "UCE" ? isUceFinalised : isUaceFinalised) && !viewingStudent?.isAdditional && !isAdmin}
+              title={(viewingStudent?.examLevel === "UCE" ? isUceFinalised : isUaceFinalised) && !viewingStudent?.isAdditional && !isAdmin ? "Cannot edit after finalisation" : ""}
               onClick={() => {
                 setIsViewModalOpen(false);
                 handleEditStudent(viewingStudent!);

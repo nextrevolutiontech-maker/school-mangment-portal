@@ -1943,12 +1943,12 @@ export function Reports({ onPageChange }: ReportsProps) {
         return;
       }
 
-      const levelFinalized = level === "UCE" 
-        ? selected.uceRegistrationFinalized 
-        : selected.uaceRegistrationFinalized;
-
-      if (!levelFinalized && user?.role !== "admin") {
-        toast.error(`WPF can only be generated for schools with finalized ${level} registration`);
+      const levelFinalised = level === "UCE" 
+        ? selected.uceRegistrationFinalised 
+        : selected.uaceRegistrationFinalised;
+      
+      if (!levelFinalised && user?.role !== "admin") {
+        toast.error(`WPF can only be generated for schools with finalised ${level} registration`);
         return;
       }
 
@@ -2099,14 +2099,14 @@ export function Reports({ onPageChange }: ReportsProps) {
             </div>
             <h2 className="text-xl font-bold text-amber-900 mb-2">Invoice Generation Pending</h2>
             <p className="text-amber-700 mb-6 text-sm">
-              Your registration has been completed, but an invoice has not been generated yet. Finalize your registration to generate an invoice and proceed with payment.
+              Your registration has been completed, but an invoice has not been generated yet. Finalise your registration to generate an invoice and proceed with payment.
             </p>
             <Button
               onClick={() => onPageChange("subject-entries")}
               className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl h-11 px-6 shadow-lg shadow-amber-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <PlusCircle className="mr-2 h-5 w-5" />
-              Finalize Registration
+              Finalise Registration
             </Button>
           </div>
         </div>
