@@ -403,64 +403,62 @@ const initialZones: Zone[] = [
 
 const initialSubjects: Subject[] = [
   // UCE Subjects
-  { id: "subj-1", name: "English Language", code: "ENG", standardCode: "112", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-2", name: "Literature in English", code: "LIT", standardCode: "208", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-3", name: "Kiswahili", code: "KISWA", standardCode: "336", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-4", name: "Christian Religious Education", code: "CRE", standardCode: "223", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-5", name: "Islamic Religious Education", code: "IRE", standardCode: "225", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-6", name: "History & Political Education", code: "HIST", standardCode: "241", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-7", name: "Geography", code: "GEOG", standardCode: "273", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-8", name: "French", code: "FRENCH", standardCode: "314", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-9", name: "German", code: "GERMAN", standardCode: "309", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-10", name: "Arabic", code: "ARABIC", standardCode: "337", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-11", name: "Luganda", code: "LUGANDA", standardCode: "335", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-12", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "345", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-13", name: "Lusoga", code: "LUSOGA", standardCode: "355", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-14", name: "Mathematics", code: "MATH", standardCode: "456", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-15", name: "Agriculture", code: "AGRIC", standardCode: "527", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-16", name: "Physics", code: "PHY", standardCode: "535", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
-  { id: "subj-17", name: "Chemistry", code: "CHEM", standardCode: "545", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
-  { id: "subj-18", name: "Biology", code: "BIO", standardCode: "553", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
-  { id: "subj-19", name: "Art & Design", code: "ART", standardCode: "612", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-20", name: "Nutrition & Food Technology", code: "FN", standardCode: "662", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-21", name: "Technical & Design", code: "TD", standardCode: "745", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-22", name: "ICT", code: "CPS", standardCode: "840", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-23", name: "Entrepreneurship", code: "ENT", standardCode: "845", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-ateso-uce", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-chinese-uce", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-commerce-uce", name: "Commerce", code: "COM", standardCode: "800", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-accounts-uce", name: "Principles of Accounts", code: "ACC", standardCode: "810", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-music-uce", name: "Music", code: "MUSIC", standardCode: "610", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-pe-uce", name: "Physical Education", code: "PE", standardCode: "860", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-112-uce", name: "English Language", code: "ENG", standardCode: "112", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-208-uce", name: "Literature in English", code: "LIT", standardCode: "208", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-336-uce", name: "Kiswahili", code: "KISWA", standardCode: "336", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-223-uce", name: "Christian Religious Education", code: "CRE", standardCode: "223", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-225-uce", name: "Islamic Religious Education", code: "IRE", standardCode: "225", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-241-uce", name: "History & Political Education", code: "HIST", standardCode: "241", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-273-uce", name: "Geography", code: "GEOG", standardCode: "273", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-314-uce", name: "French", code: "FRENCH", standardCode: "314", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-309-uce", name: "German", code: "GERMAN", standardCode: "309", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-337-uce", name: "Arabic", code: "ARABIC", standardCode: "337", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-335-uce", name: "Luganda", code: "LUGANDA", standardCode: "335", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-345-uce", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "345", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-355-uce", name: "Lusoga", code: "LUSOGA", standardCode: "355", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-456-uce", name: "Mathematics", code: "MATH", standardCode: "456", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-527-uce", name: "Agriculture", code: "AGRIC", standardCode: "527", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-535-uce", name: "Physics", code: "PHY", standardCode: "535", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-545-uce", name: "Chemistry", code: "CHEM", standardCode: "545", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-553-uce", name: "Biology", code: "BIO", standardCode: "553", educationLevel: "UCE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-612-uce", name: "Art & Design", code: "ART", standardCode: "612", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-662-uce", name: "Nutrition & Food Technology", code: "FN", standardCode: "662", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-745-uce", name: "Technical & Design", code: "TD", standardCode: "745", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-840-uce", name: "ICT", code: "CPS", standardCode: "840", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-845-uce", name: "Entrepreneurship", code: "ENT", standardCode: "845", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-365-uce", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-396-uce", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-800-uce", name: "Commerce", code: "COM", standardCode: "800", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }] },
+  { id: "subj-860-uce", name: "Physical Education", code: "PE", standardCode: "860", educationLevel: "UCE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
   // UACE Subjects
-  { id: "subj-24", name: "General Paper", code: "GP", standardCode: "101", educationLevel: "UACE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }] },
-  { id: "subj-submath-uace", name: "Subsidiary Mathematics", code: "SUB_MATHS", standardCode: "475S", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }] },
-  { id: "subj-subict-uace", name: "Subsidiary ICT", code: "SUB_ICT", standardCode: "610", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-3-uace", name: "Kiswahili", code: "KISWA", standardCode: "340", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-4-uace", name: "Christian Religious Education", code: "CRE", standardCode: "221", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-5-uace", name: "Islamic Religious Education", code: "IRE", standardCode: "224", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-7-uace", name: "Geography", code: "GEOG", standardCode: "230", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-8-uace", name: "French", code: "FRENCH", standardCode: "351", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-9-uace", name: "German", code: "GERMAN", standardCode: "358", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-10-uace", name: "Arabic", code: "ARABIC", standardCode: "361", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-11-uace", name: "Luganda", code: "LUGANDA", standardCode: "380", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-12-uace", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "383", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-13-uace", name: "Lusoga", code: "LUSOGA", standardCode: "386", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-14-uace", name: "Mathematics", code: "MATH", standardCode: "475", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-15-uace", name: "Agriculture", code: "AGRIC", standardCode: "515", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
-  { id: "subj-16-uace", name: "Physics", code: "PHY", standardCode: "525", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
-  { id: "subj-17-uace", name: "Chemistry", code: "CHEM", standardCode: "535", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
-  { id: "subj-18-uace", name: "Biology", code: "BIO", standardCode: "545", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
-  { id: "subj-19-uace", name: "Fine Art", code: "ART", standardCode: "615", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }, { id: "p4", name: "Paper 4", isCompulsory: true }] },
-  { id: "subj-21-uace", name: "Technical Drawing", code: "TD", standardCode: "680", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-23-uace", name: "Entrepreneurship", code: "ENT", standardCode: "268", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-econ-uace", name: "Economics", code: "ECON", standardCode: "220", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
-  { id: "subj-hist-uace", name: "History", code: "HIST", standardCode: "210", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-lit-uace", name: "Literature in English", code: "LIT", standardCode: "208", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-fn-uace", name: "Food and Nutrition", code: "FN", standardCode: "640", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
-  { id: "subj-chinese-uace", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-ateso-uace", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
-  { id: "subj-music-uace", name: "Music", code: "MUSIC", standardCode: "620", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }, { id: "p4", name: "Paper 4", isCompulsory: true }] },
+  { id: "subj-101-uace", name: "General Paper", code: "GP", standardCode: "101", educationLevel: "UACE", optional: false, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }] },
+  { id: "subj-475-uace", name: "Subsidiary Mathematics", code: "SUB_MATHS", standardCode: "475", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }] },
+  { id: "subj-850-uace", name: "Subsidiary ICT", code: "SUB_ICT", standardCode: "850", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-340-uace", name: "Kiswahili", code: "KISWA", standardCode: "340", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-221-uace", name: "Christian Religious Education", code: "CRE", standardCode: "221", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-224-uace", name: "Islamic Religious Education", code: "IRE", standardCode: "224", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-250-uace", name: "Geography", code: "GEOG", standardCode: "250", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-351-uace", name: "French", code: "FRENCH", standardCode: "351", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-358-uace", name: "German", code: "GERMAN", standardCode: "358", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-361-uace", name: "Arabic", code: "ARABIC", standardCode: "361", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-380-uace", name: "Luganda", code: "LUGANDA", standardCode: "380", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-383-uace", name: "Runyankole / Rukiga", code: "RUNY", standardCode: "383", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-386-uace", name: "Lusoga", code: "LUSOGA", standardCode: "386", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-425-uace", name: "Mathematics", code: "MATH", standardCode: "425", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-515-uace", name: "Agriculture", code: "AGRIC", standardCode: "515", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-510-uace", name: "Physics", code: "PHY", standardCode: "510", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-525-uace", name: "Chemistry", code: "CHEM", standardCode: "525", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-530-uace", name: "Biology", code: "BIO", standardCode: "530", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-615-uace", name: "Fine Art", code: "ART", standardCode: "615", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-680-uace", name: "Technical Drawing", code: "TD", standardCode: "680", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-230-uace", name: "Entrepreneurship", code: "ENT", standardCode: "230", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-220-uace", name: "Economics", code: "ECON", standardCode: "220", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }] },
+  { id: "subj-210-uace", name: "History", code: "HIST", standardCode: "210", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-208-uace", name: "Literature in English", code: "LIT", standardCode: "208", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-640-uace", name: "Food and Nutrition", code: "FN", standardCode: "640", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3 (Practical)", isCompulsory: true }] },
+  { id: "subj-396-uace", name: "Chinese", code: "CHINESE", standardCode: "396", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-365-uace", name: "Ateso", code: "ATESO", standardCode: "365", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
+  { id: "subj-music-uace", name: "Music", code: "MUSIC", standardCode: "620", educationLevel: "UACE", optional: true, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }, { id: "p2", name: "Paper 2", isCompulsory: true }, { id: "p3", name: "Paper 3", isCompulsory: true }] },
 
 ];
 
@@ -654,7 +652,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [zones] = useState<Zone[]>(initialZones);
   const [subjects, setSubjects] = useState<Subject[]>(() => {
     const saved = localStorage.getItem("wakissha_subjects");
-    return saved ? JSON.parse(saved) : initialSubjects;
+    const loadedSubjects = saved ? JSON.parse(saved) : initialSubjects;
+    
+    // Purge logic: Remove subjects that are no longer part of the curriculum (Music, Accounts, Office Practice for UCE)
+    // and fix Commerce papers if needed
+    return loadedSubjects.filter((s: Subject) => {
+      const isRemovedUCE = s.educationLevel === "UCE" && 
+        (s.name.includes("Music") || 
+         s.name.includes("Accounts") || 
+         s.name.includes("Office Practice") ||
+         s.code === "ACC" ||
+         s.code === "OFF_PRAC");
+      return !isRemovedUCE;
+    }).map((s: Subject) => {
+      if (s.educationLevel === "UCE" && s.code === "COM") {
+        return { ...s, papers: [{ id: "p1", name: "Paper 1", isCompulsory: true }] };
+      }
+      return s;
+    });
   });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [timetable, setTimetable] = useState<ScheduleEntry[]>(() => {
@@ -829,11 +844,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const studentCount = levelStudents.length;
 
     const pricing = {
-      uceMarkingGuide: 35000,
-      uaceMarkingGuide: 25000,
+      uceMarkingGuide: 0,
+      uaceMarkingGuide: 0,
       answerBooklet: 25000,
       studentFee: 27000,
-      schoolRegistrationFee: 500000, // Only for the very first finalisation
+      schoolRegistrationFee: 25000,
     };
 
     const items = [];
@@ -863,36 +878,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         total: studentCount * pricing.studentFee,
         formula: `${pricing.studentFee.toLocaleString()} × ${studentCount} = ${(studentCount * pricing.studentFee).toLocaleString()}`
       });
-    }
-
-    // Marking Guides
-    if (level === "UCE" && uceMarkingGuideQuantity > 0) {
-      items.push({
-        description: "UCE Marking Guide (All Papers)",
-        quantity: uceMarkingGuideQuantity,
-        unitPrice: pricing.uceMarkingGuide,
-        total: uceMarkingGuideQuantity * pricing.uceMarkingGuide,
-        formula: `${pricing.uceMarkingGuide.toLocaleString()} × ${uceMarkingGuideQuantity} = ${(uceMarkingGuideQuantity * pricing.uceMarkingGuide).toLocaleString()}`
-      });
-    } else if (level === "UACE") {
-      if (uaceArtsMarkingGuideQuantity > 0) {
-        items.push({
-          description: "UACE Arts Marking Guide",
-          quantity: uaceArtsMarkingGuideQuantity,
-          unitPrice: pricing.uaceMarkingGuide,
-          total: uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide,
-          formula: `${pricing.uaceMarkingGuide.toLocaleString()} × ${uaceArtsMarkingGuideQuantity} = ${(uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide).toLocaleString()}`
-        });
-      }
-      if (uaceSciencesMarkingGuideQuantity > 0) {
-        items.push({
-          description: "UACE Sciences Marking Guide",
-          quantity: uaceSciencesMarkingGuideQuantity,
-          unitPrice: pricing.uaceMarkingGuide,
-          total: uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide,
-          formula: `${pricing.uaceMarkingGuide.toLocaleString()} × ${uaceSciencesMarkingGuideQuantity} = ${(uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide).toLocaleString()}`
-        });
-      }
     }
 
     // Answer Booklets

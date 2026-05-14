@@ -37,8 +37,8 @@ export const generateWPF_PDF = (
   const margin = 8;
   const colGap = 2;
   const colWidth = (pageWidth - (margin * 2) - (colGap * 3)) / 4;
-  const headerHeight = 35; // Total height used by header
-  const footerHeight = 15; // Total height reserved for footer
+  const headerHeight = 48; // Increased height to accommodate spaced out info
+  const footerHeight = 15;
   const maxTableHeight = pageHeight - footerHeight;
 
   let currentCol = 0;
@@ -47,65 +47,74 @@ export const generateWPF_PDF = (
   const drawHeader = (doc: jsPDF, pageNum: number) => {
     let y = 12;
     doc.setFont("times", "bold");
-    doc.setFontSize(16);
-    doc.text("WAKISSHA JOINT MOCK EXAMINATIONS", margin, y);
-    
     doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, y, { align: "center" });
+    
+    y += 7;
+    doc.setFontSize(12);
     const titleText = `WEEKLY PACKING FORM; ${level}`;
     doc.text(titleText, pageWidth / 2, y, { align: "center" });
     
     const yearText = `YEAR: ${schoolContext.academicYear ?? "2026"}`;
-    doc.text(yearText, pageWidth - margin - 5, y, { align: "right" });
+    doc.text(yearText, pageWidth - margin - 5, y - 7, { align: "right" });
     
-    y += 8;
+    y += 10;
 
     doc.setFontSize(9);
     doc.setFont("times", "bold");
     
-    // Line 1: School Name, REF No, H/M Sign, Telephone
+    // Line 1: School Name and REF No.
     const line1Y = y;
     doc.text("NAME OF SCHOOL:", margin, line1Y);
     doc.setFont("times", "normal");
-    doc.text(schoolContext.name.toUpperCase(), margin + 30, line1Y);
-    doc.line(margin + 30, line1Y + 1, margin + 110, line1Y + 1);
+    const schoolName = schoolContext.name.toUpperCase();
+    doc.text(schoolName, margin + 35, line1Y);
+    doc.line(margin + 35, line1Y + 1, margin + 140, line1Y + 1);
 
     doc.setFont("times", "bold");
-    doc.text("REF No.:", margin + 115, line1Y);
+    doc.text("REF No.:", margin + 145, line1Y);
     doc.setFont("times", "normal");
-    doc.text(schoolContext.code, margin + 130, line1Y);
-    doc.line(margin + 130, line1Y + 1, margin + 155, line1Y + 1);
+    doc.text(schoolContext.code, margin + 162, line1Y);
+    doc.line(margin + 162, line1Y + 1, margin + 195, line1Y + 1);
 
-    doc.setFont("times", "bold");
-    doc.text("NAME & SIGNATURE OF H/M:", margin + 160, line1Y);
-    doc.line(margin + 205, line1Y + 1, margin + 235, line1Y + 1);
+    y += 8;
 
-    doc.setFont("times", "bold");
-    doc.text("TELEPHONE:", margin + 240, line1Y);
-    doc.setFont("times", "normal");
-    doc.text(schoolContext.telephone, margin + 262, line1Y);
-    doc.line(margin + 262, line1Y + 1, margin + 285, line1Y + 1);
-
-    y += 7;
-
-    // Line 2: District, Zone, Contact Email
+    // Line 2: District, Zone, and Telephone
     const line2Y = y;
     doc.setFont("times", "bold");
     doc.text("DISTRICT:", margin, line2Y);
     doc.setFont("times", "normal");
-    doc.text(schoolContext.district.toUpperCase(), margin + 18, line2Y);
-    doc.line(margin + 18, line2Y + 1, margin + 85, line2Y + 1);
+    doc.text(schoolContext.district.toUpperCase(), margin + 20, line2Y);
+    doc.line(margin + 20, line2Y + 1, margin + 80, line2Y + 1);
 
     doc.setFont("times", "bold");
-    doc.text("ZONE:", margin + 95, line2Y);
+    doc.text("ZONE:", margin + 85, line2Y);
     doc.setFont("times", "normal");
-    doc.text(schoolContext.zone.toUpperCase(), margin + 107, line2Y);
-    doc.line(margin + 107, line2Y + 1, margin + 160, line2Y + 1);
+    doc.text(schoolContext.zone.toUpperCase(), margin + 98, line2Y);
+    doc.line(margin + 98, line2Y + 1, margin + 170, line2Y + 1);
 
     doc.setFont("times", "bold");
-    doc.text("CONTACT EMAIL ADDRESS:", margin + 170, line2Y);
+    doc.text("TELEPHONE:", margin + 175, line2Y);
     doc.setFont("times", "normal");
-    doc.text(schoolContext.email || "", margin + 218, line2Y);
-    doc.line(margin + 218, line2Y + 1, margin + 285, line2Y + 1);
+    doc.text(schoolContext.telephone, margin + 198, line2Y);
+    doc.line(margin + 198, line2Y + 1, margin + 250, line2Y + 1);
+
+    y += 8;
+
+    // Line 3: Headteacher and Email
+    const line3Y = y;
+    doc.setFont("times", "bold");
+    doc.text("NAME & SIGNATURE OF H/M:", margin, line3Y);
+    doc.line(margin + 50, line3Y + 1, margin + 140, line3Y + 1);
+
+    doc.setFont("times", "bold");
+    doc.text("CONTACT EMAIL ADDRESS:", margin + 145, line3Y);
+    doc.setFont("times", "normal");
+    doc.text(schoolContext.email || "N/A", margin + 195, line3Y);
+    doc.line(margin + 195, line3Y + 1, pageWidth - margin - 5, line3Y + 1);
+
+    y += 7;
   };
 
   const drawFooter = (doc: jsPDF) => {

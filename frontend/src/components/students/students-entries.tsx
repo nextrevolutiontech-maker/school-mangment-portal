@@ -249,7 +249,7 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
   };
 
   const getSubjectCategory = (code: string) => {
-    const arts = ["LIT", "HIST", "GEOG", "KISWA", "CRE", "IRE", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA", "ART", "MUSIC", "PE", "COM", "ACC", "ECON", "ENG", "CHINESE", "ATESO"];
+    const arts = ["LIT", "HIST", "GEOG", "KISWA", "CRE", "IRE", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA", "ART", "PE", "COM", "ECON", "ENG", "CHINESE", "ATESO"];
     return arts.includes(code) ? "Arts" : "Sciences";
   };
 

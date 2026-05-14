@@ -74,6 +74,7 @@ const uaceSubjectColumns: FormColumn[] = [
   { key: "SUB_MATHS", label: "SUB MATHS" },
   { key: "SUB_ICT", label: "SUB ICT" },
   { key: "HIST", label: "HIST" },
+  { key: "ECON", label: "ECON" },
   { key: "ENT", label: "ENT" },
   { key: "IRE", label: "IRE" },
   { key: "CRE", label: "CRE" },
@@ -94,6 +95,7 @@ const uaceSubjectColumns: FormColumn[] = [
   { key: "LUGANDA", label: "LUGANDA" },
   { key: "RUNY", label: "RUNY" },
   { key: "LUSOGA", label: "LUSOGA" },
+  { key: "MUSIC", label: "MUSIC" },
 ];
 
 const uceSubjectColumns: FormColumn[] = [
@@ -107,12 +109,19 @@ const uceSubjectColumns: FormColumn[] = [
   { key: "CRE", label: "CRE" },
   { key: "IRE", label: "IRE" },
   { key: "CPS", label: "ICT" },
+  { key: "ENT", label: "ENT" },
+  { key: "AGRIC", label: "AGRIC" },
+  { key: "ART", label: "ART" },
+  { key: "FN", label: "FN" },
+  { key: "TD", label: "TD" },
   { key: "FRENCH", label: "FRENCH" },
   { key: "GERMAN", label: "GERMAN" },
   { key: "ARABIC", label: "ARABIC" },
   { key: "LUGANDA", label: "LUGANDA" },
   { key: "RUNY", label: "RUNY" },
   { key: "LUSOGA", label: "LUSOGA" },
+  { key: "LIT", label: "LIT ENG" },
+  { key: "KISWA", label: "KISWA" },
 ];
 
 type FormRow = Record<string, string | number>;
@@ -178,29 +187,30 @@ const uceOfficialSubjectRows: OfficialSubjectRow[] = [
 const uaceOfficialSubjectRows: OfficialSubjectRow[] = [
   { key: "GP", code: "101", name: "GENERAL PAPER" },
   { key: "SUB_MATHS", code: "475", name: "SUBSIDIARY MATHEMATICS" },
-  { key: "SUB_ICT", code: "610", name: "SUBSIDIARY ICT" },
+  { key: "SUB_ICT", code: "850", name: "SUBSIDIARY ICT" },
   { key: "HIST", code: "210", name: "HISTORY" },
   { key: "ECON", code: "220", name: "ECONOMICS" },
-  { key: "ENT", code: "268", name: "ENTREPRENEURSHIP" },
+  { key: "ENT", code: "230", name: "ENTREPRENEURSHIP" },
   { key: "IRE", code: "224", name: "IRE" },
   { key: "CRE", code: "221", name: "CRE" },
-  { key: "GEOG", code: "230", name: "GEOGRAPHY" },
-  { key: "LIT", code: "220", name: "LITERATURE IN ENGLISH" },
+  { key: "GEOG", code: "250", name: "GEOGRAPHY" },
+  { key: "LIT", code: "208", name: "LITERATURE IN ENGLISH" },
   { key: "KISWA", code: "340", name: "KISWAHILI" },
   { key: "ART", code: "615", name: "FINE ART" },
-  { key: "PHY", code: "525", name: "PHYSICS" },
-  { key: "CHEM", code: "535", name: "CHEMISTRY" },
-  { key: "BIO", code: "545", name: "BIOLOGY" },
-  { key: "MATH", code: "475", name: "MATHEMATICS" },
+  { key: "PHY", code: "510", name: "PHYSICS" },
+  { key: "CHEM", code: "525", name: "CHEMISTRY" },
+  { key: "BIO", code: "530", name: "BIOLOGY" },
+  { key: "MATH", code: "425", name: "MATHEMATICS" },
   { key: "AGRIC", code: "515", name: "AGRICULTURE" },
-  { key: "FN", code: "635", name: "FOOD & NUTRITION" },
+  { key: "FN", code: "640", name: "FOOD & NUTRITION" },
   { key: "TD", code: "680", name: "TECHNICAL DRAWING" },
   { key: "FRENCH", code: "351", name: "FRENCH" },
   { key: "GERMAN", code: "358", name: "GERMAN" },
   { key: "ARABIC", code: "361", name: "ARABIC" },
   { key: "LUGANDA", code: "380", name: "LUGANDA" },
-  { key: "RUNY", code: "383", name: "RUNYAKITARA" },
+  { key: "RUNY", code: "383", name: "RUNYANKOLE / RUKIGA" },
   { key: "LUSOGA", code: "386", name: "LUSOGA" },
+  { key: "MUSIC", code: "620", name: "MUSIC" },
 ];
 
 const appendixUCE: AppendixRow[] = [
@@ -242,19 +252,19 @@ const appendixUACE: AppendixRow[] = [
   { code: "P210", key: "HIST", name: "HISTORY" },
   { code: "P220", key: "ECON", name: "ECONOMICS" },
   { code: "P230", key: "ENT", name: "ENTREPRE" },
-  { code: "P235", key: "IRE", name: "IRE" },
-  { code: "P245", key: "CRE", name: "CRE" },
+  { code: "P224", key: "IRE", name: "IRE" },
+  { code: "P221", key: "CRE", name: "CRE" },
   { code: "P250", key: "GEOG", name: "GEOGRAPHY" },
-  { code: "P310", key: "LIT", name: "LIT. IN ENGLISH" },
-  { code: "P320", key: "KISWA", name: "KISWAHILI" },
+  { code: "P208", key: "LIT", name: "LIT. IN ENGLISH" },
+  { code: "P340", key: "KISWA", name: "KISWAHILI" },
   { code: "", key: "sec-foreign-uace", name: "", section: "FOREIGN LANGUAGES" },
-  { code: "P330", key: "FRENCH", name: "FRENCH" },
-  { code: "P340", key: "GERMAN", name: "GERMAN" },
-  { code: "P370", key: "ARABIC", name: "ARABIC" },
+  { code: "P351", key: "FRENCH", name: "FRENCH" },
+  { code: "P358", key: "GERMAN", name: "GERMAN" },
+  { code: "P361", key: "ARABIC", name: "ARABIC" },
   { code: "", key: "sec-local-uace", name: "", section: "LOCAL LANGUAGES" },
-  { code: "P360", key: "LUGANDA", name: "LUGANDA" },
-  { code: "P364", key: "RUNY", name: "RUNYANKOLE / RUKIGA" },
-  { code: "P366", key: "LUSOGA", name: "LUSOGA" },
+  { code: "P380", key: "LUGANDA", name: "LUGANDA" },
+  { code: "P383", key: "RUNY", name: "RUNYANKOLE / RUKIGA" },
+  { code: "P386", key: "LUSOGA", name: "LUSOGA" },
   { code: "P425", key: "MATH", name: "MATHS" },
   { code: "P510", key: "PHY", name: "PHYSICS" },
   { code: "P515", key: "AGRIC", name: "AGRIC" },
@@ -263,8 +273,9 @@ const appendixUACE: AppendixRow[] = [
   { code: "P615", key: "ART", name: "ART" },
   { code: "P640", key: "FN", name: "FOODS & NUTRITION" },
   { code: "S475", key: "SUB_MATHS", name: "SUB MATHS" },
-  { code: "P720", key: "TD", name: "TECH. DRAWING" },
+  { code: "P680", key: "TD", name: "TECH. DRAWING" },
   { code: "S850", key: "SUB_ICT", name: "SUB COMPUTER" },
+  { code: "P620", key: "MUSIC", name: "MUSIC" },
 ];
 
 function buildSubjectLevelKey(subjectCode: string, level: "UCE" | "UACE") {
@@ -828,16 +839,9 @@ export function Reports({ onPageChange }: ReportsProps) {
     const totalStudents = rows.reduce((sum, row) => sum + Number(row.registeredSubjects || 0), 0);
     const schoolFee = 25_000;
     const studentFee = 27_000 * totalStudents;
-    const markingFee = rows.reduce((sum, row) => {
-      const subjectCount = Object.keys(row).filter(key =>
-        uaceSubjectColumns.some(col => col.key === key) ||
-        uceSubjectColumns.some(col => col.key === key)
-      ).reduce((acc, key) => acc + Number(row[key] || 0), 0);
-      return sum + subjectCount * 100;
-    }, 0);
-    const totalAmount = schoolFee + studentFee + markingFee;
+    const totalAmount = schoolFee + studentFee;
 
-    return { schoolFee, studentFee, markingFee, totalAmount, totalStudents };
+    return { schoolFee, studentFee, markingFee: 0, totalAmount, totalStudents };
   };
 
   const buildTemplateTable = (rows: FormRow[], subjectsColumns: FormColumn[]) =>
@@ -876,7 +880,7 @@ export function Reports({ onPageChange }: ReportsProps) {
 
     const stats = new Map<
       string,
-      { entries: Set<string>; p1: Set<string>; p2: Set<string>; p3: Set<string>; p4: Set<string> }
+      { entries: Set<string>; p1: Set<string>; p2: Set<string>; p3: Set<string> }
     >();
     subjectRows.forEach((row) => {
       stats.set(row.key, {
@@ -884,7 +888,6 @@ export function Reports({ onPageChange }: ReportsProps) {
         p1: new Set<string>(),
         p2: new Set<string>(),
         p3: new Set<string>(),
-        p4: new Set<string>(),
       });
     });
 
@@ -929,7 +932,6 @@ export function Reports({ onPageChange }: ReportsProps) {
           if (paper === "1") rowStats.p1.add(studentKey);
           if (paper === "2") rowStats.p2.add(studentKey);
           if (paper === "3") rowStats.p3.add(studentKey);
-          if (paper === "4") rowStats.p4.add(studentKey);
         });
       });
     });
@@ -942,71 +944,61 @@ export function Reports({ onPageChange }: ReportsProps) {
     const schoolRegFee = 25_000;
     const studentFeeRate = 27_000;
     const studentFeeTotal = totalCandidates * studentFeeRate;
-    const lateRegFee = 0;
-    const artsCodes = new Set(level === "UACE" ? ["615", "640", "310", "320", "330", "340", "370", "360", "364", "366"] : ["612", "662", "208", "336", "314", "309", "337", "335", "345", "355", "365"]);
-    let artsPapers = 0;
-    let sciencesPapers = 0;
-    stats.forEach((value, key) => {
-      const count = value.p1.size + value.p2.size + value.p3.size + value.p4.size;
-      if (artsCodes.has(key)) artsPapers += count;
-      else sciencesPapers += count;
-    });
-    const artsMarking = artsPapers * 100;
-    const sciencesMarking = sciencesPapers * 100;
     const answerBookletRate = 25_000;
     const answerBookletQty = 0;
     const answerBookletTotal = answerBookletRate * answerBookletQty;
     const totalAmount =
       schoolRegFee +
       studentFeeTotal +
-      artsMarking +
-      sciencesMarking +
       answerBookletTotal;
 
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageWidth = pdf.internal.pageSize.getWidth();
-    const margin = 2;
-    let y = 8;
+    const margin = 5; // Slightly larger margin for safety
+    let y = 10;
 
     pdf.setFont("times", "bold");
-    pdf.setFontSize(6.8);
+    pdf.setFontSize(8); // Slightly larger font for header
+    pdf.setTextColor(0, 0, 0); // Black text
     pdf.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, y, { align: "center" });
-    pdf.text(level === "UACE" ? "Appendix 2" : "Appendix 1", pageWidth - 3, y - 3, {
+    pdf.text(level === "UACE" ? "Appendix 2" : "Appendix 1", pageWidth - 5, y - 5, {
       align: "right",
     });
-    y += 3;
+    y += 4;
 
     pdf.setFont("times", "normal");
-    pdf.setFontSize(6.6);
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(0, 0, 0);
     pdf.text(
       `SUMMARY OF ENTRIES ${level}: YEAR ${schoolContext.academicYear ?? "2026"}        TOTAL CANDIDATES: ${totalCandidates}`,
       margin,
       y,
     );
-    y += 3;
+    y += 4;
     pdf.text(`NAME OF SCHOOL: ................................................................................. REF No. .......`, margin, y);
-    y += 3;
+    y += 4;
     pdf.text(`DISTRICT...................... ZONE:......................... TELEPHONE:............................`, margin, y);
-    y += 3;
+    y += 4;
     pdf.text(`NAME & SIGN OF HEAD.....................................................................................`, margin, y);
-    y += 3;
+    y += 4;
     pdf.text(`CONTACT E-MAIL ADDRESS: .................................................................................`, margin, y);
-    y += 3.5;
+    y += 5;
 
     pdf.setFont("times", "bold");
     pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
     pdf.text("SUBJECT", 12, y);
-    pdf.text("P      A      P      E      R      S", 70, y);
-    y += 1.5;
+    pdf.text("P      A      P      E      R      S", 85, y); // Adjusted for 3 papers
+    y += 2;
 
     autoTable(pdf, {
       startY: y,
       margin: { left: margin, right: margin },
       tableWidth: pageWidth - margin * 2,
-      head: [["CODE", "NAME", "ENTRIES", "1", "2", "3", "4"]],
+      head: [["CODE", "NAME", "NO. OF\nCANDIDATES", "1", "2", "3"]],
       body: rows.map((row) => {
         if (row.section) {
-          return ["", row.section, "", "", "", "", ""];
+          return ["", row.section, "", "", "", ""];
         }
         const rowStats = stats.get(row.key);
         return [
@@ -1016,17 +1008,16 @@ export function Reports({ onPageChange }: ReportsProps) {
           String(rowStats?.p1.size ?? 0),
           String(rowStats?.p2.size ?? 0),
           String(rowStats?.p3.size ?? 0),
-          String(rowStats?.p4.size ?? 0),
         ];
       }),
       theme: "grid",
       styles: {
         font: "times",
-        fontSize: 6.3,
+        fontSize: 7, // Slightly larger font for readability
         lineWidth: 0.25,
         lineColor: [0, 0, 0],
         textColor: [0, 0, 0],
-        cellPadding: { top: 0.8, right: 1, bottom: 0.8, left: 1 },
+        cellPadding: { top: 1, right: 1, bottom: 1, left: 1 },
       },
       headStyles: {
         fillColor: [255, 255, 255],
@@ -1034,29 +1025,40 @@ export function Reports({ onPageChange }: ReportsProps) {
         lineWidth: 0.25,
         lineColor: [0, 0, 0],
         fontStyle: "bold",
+        halign: "center",
+        valign: "middle"
       },
       columnStyles: {
-        0: { cellWidth: 14, halign: "left", fontStyle: "bold" },
-        1: { cellWidth: 65 },
-        2: { cellWidth: 18, halign: "center", fontStyle: "bold" },
-        3: { cellWidth: 16, halign: "center" },
-        4: { cellWidth: 16, halign: "center" },
-        5: { cellWidth: 16, halign: "center" },
-        6: { cellWidth: 16, halign: "center" },
+        0: { cellWidth: 15, halign: "left", fontStyle: "bold" },
+        1: { cellWidth: "auto" }, // Let name expand
+        2: { cellWidth: 25, halign: "center", fontStyle: "bold" }, // Wider for No. of Candidates
+        3: { cellWidth: 15, halign: "center" },
+        4: { cellWidth: 15, halign: "center" },
+        5: { cellWidth: 15, halign: "center" },
       },
       didParseCell: (hookData) => {
         const row = rows[hookData.row.index];
         if (hookData.section === "body" && row?.section) {
           hookData.cell.styles.fontStyle = "bold";
+          hookData.cell.styles.fillColor = [245, 245, 245];
           if (hookData.column.index !== 1) hookData.cell.text = [""];
         }
       },
     });
 
-    const summaryStartY = ((pdf as any).lastAutoTable?.finalY ?? y) - 0.4;
+    y = (pdf as any).lastAutoTable.finalY + 10;
+
+    // Signature section at bottom
+    if (y > 260) { // Safety check to prevent overlap
+       pdf.addPage();
+       y = 20;
+    }
     
-    // Finance section removed as per client requirements. 
-    // Finance must come ONLY from Make Payments module.
+    pdf.setFont("times", "bold");
+    pdf.setFontSize(8);
+    pdf.text("Official Stamp & Signature: ___________________________________", margin, y);
+    y += 8;
+    pdf.text(`Date: ${new Date().toLocaleDateString()}`, margin, y);
 
     pdf.save(`${fileName}.pdf`);
     toast.success(`${level} official form exported successfully`);
@@ -1332,7 +1334,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       const appendixRows = level === "UCE" ? appendixUCE : appendixUACE;
       const tableData = appendixRows.map((subj) => {
         if (subj.section) {
-          return ["", subj.section, "", "", "", "", ""];
+          return ["", subj.section, "", "", "", ""];
         }
 
         const subjectStudents = summaryStudents.filter(s => 
@@ -1343,7 +1345,6 @@ export function Reports({ onPageChange }: ReportsProps) {
         const p1 = summaryStudents.filter(s => s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "1")).length;
         const p2 = summaryStudents.filter(s => s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "2")).length;
         const p3 = summaryStudents.filter(s => s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "3")).length;
-        const p4 = summaryStudents.filter(s => s.subjects?.some(sub => mapSubjectCode(sub.subjectCode) === subj.key && getPaperNumber(sub.paper) === "4")).length;
 
         return [
           subj.code,
@@ -1352,79 +1353,80 @@ export function Reports({ onPageChange }: ReportsProps) {
           p1 > 0 ? String(p1) : "-",
           p2 > 0 ? String(p2) : "-",
           p3 > 0 ? String(p3) : "-",
-          p4 > 0 ? String(p4) : "-"
         ];
       });
 
       autoTable(pdf, {
         startY: y,
         margin: { left: margin, right: margin },
-        head: [["CODE", "SUBJECT NAME", "ENTRIES", "P1", "P2", "P3", "P4"]],
+        head: [["CODE", "SUBJECT NAME", "NO. OF\nCANDIDATES", "P1", "P2", "P3"]],
         body: tableData,
         theme: "grid",
-        styles: { font: "times", fontSize: 7, cellPadding: 1 },
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: "bold" },
+        styles: { 
+          font: "times", 
+          fontSize: 6.5, // Smaller font to fit more rows
+          cellPadding: 0.8, // Reduced padding
+          textColor: [0, 0, 0], 
+          lineColor: [0, 0, 0] 
+        },
+        headStyles: { 
+          fillColor: [255, 255, 255], 
+          textColor: [0, 0, 0], 
+          fontStyle: "bold",
+          lineWidth: 0.25,
+          halign: "center",
+          valign: "middle"
+        },
         columnStyles: {
-          0: { cellWidth: 15 },
-          1: { cellWidth: 85 },
-          2: { cellWidth: 18, halign: "center", fontStyle: "bold" },
-          3: { cellWidth: 18, halign: "center" },
-          4: { cellWidth: 18, halign: "center" },
-          5: { cellWidth: 18, halign: "center" },
-          6: { cellWidth: 18, halign: "center" },
+          0: { cellWidth: 12 },
+          1: { cellWidth: "auto" },
+          2: { cellWidth: 20, halign: "center", fontStyle: "bold" },
+          3: { cellWidth: 14, halign: "center" },
+          4: { cellWidth: 14, halign: "center" },
+          5: { cellWidth: 14, halign: "center" },
         },
         didParseCell: (data) => {
           if (data.section === "body") {
             const row = appendixRows[data.row.index];
             if (row?.section) {
               data.cell.styles.fontStyle = "bold";
-              data.cell.styles.fillColor = [250, 250, 250];
+              data.cell.styles.fillColor = [245, 245, 245];
               if (data.column.index !== 1) data.cell.text = [""];
             }
           }
         }
       });
 
-      y = (pdf as any).lastAutoTable.finalY + 10;
+      y = (pdf as any).lastAutoTable.finalY + 5;
 
-      // Check if we need a new page for financial section
-      if (y > 220) {
-        pdf.addPage();
-        y = 20;
+      // Check if we need to scale down or prevent overflow
+      if (y > 240) {
+        // If still overflowing, we might need a second page, but we try to avoid it
+        // by reducing spacing further if possible. For now, let's keep the logic.
       }
 
       // 3. FINANCIAL SUMMARY
       pdf.setFont("times", "bold");
-      pdf.setFontSize(11);
+      pdf.setFontSize(10); // Slightly smaller
+      pdf.setTextColor(0, 0, 0);
       pdf.text("FINANCIAL SUMMARY", margin, y);
-      y += 4;
+      y += 3;
 
       const pricing = {
-        registration: 500000,
+        registration: 25000,
         student: 27000,
-        uceMarkingGuide: 35000,
-        uaceMarkingGuide: 25000,
         answerBooklet: 25000,
-        markingFee: 100
       };
 
       const totalStudents = summaryStudents.length;
-      const totalPapers = summaryStudents.reduce((sum, s) => sum + (s.subjects?.length ?? 0), 0);
       
       const schoolRegFee = pricing.registration;
       const studentFeesTotal = totalStudents * pricing.student;
-      const markingFeesTotal = totalPapers * pricing.markingFee;
-      
-      const markingGuideQty = level === "UCE" 
-        ? (headerSchool as any).uceMarkingGuideQuantity || 0 
-        : ((headerSchool as any).uaceArtsMarkingGuideQuantity || 0) + ((headerSchool as any).uaceSciencesMarkingGuideQuantity || 0);
-      const markingGuideRate = level === "UCE" ? pricing.uceMarkingGuide : pricing.uaceMarkingGuide;
-      const markingGuideTotal = markingGuideQty * markingGuideRate;
       
       const bookletQty = (headerSchool as any).answerBookletsQuantity || 0;
       const bookletTotal = bookletQty * pricing.answerBooklet;
 
-      const grandTotal = schoolRegFee + studentFeesTotal + markingFeesTotal + markingGuideTotal + bookletTotal;
+      const grandTotal = schoolRegFee + studentFeesTotal + bookletTotal;
 
       autoTable(pdf, {
         startY: y,
@@ -1433,14 +1435,21 @@ export function Reports({ onPageChange }: ReportsProps) {
         body: [
           ["School Registration Fee", "Fixed Annual", schoolRegFee.toLocaleString()],
           [`Student Fees (${totalStudents} candidates)`, `@ ${pricing.student.toLocaleString()}`, studentFeesTotal.toLocaleString()],
-          [`Marking Fees (${totalPapers} papers)`, `@ ${pricing.markingFee.toLocaleString()}`, markingFeesTotal.toLocaleString()],
-          [`Marking Guides (${markingGuideQty} units)`, `@ ${markingGuideRate.toLocaleString()}`, markingGuideTotal.toLocaleString()],
           [`Answer Booklets (${bookletQty} units)`, `@ ${pricing.answerBooklet.toLocaleString()}`, bookletTotal.toLocaleString()],
           [{ content: "GRAND TOTAL", colSpan: 2, styles: { fontStyle: "bold", halign: "right" } }, { content: grandTotal.toLocaleString(), styles: { fontStyle: "bold" } }]
         ],
         theme: "grid",
-        styles: { font: "times", fontSize: 9, cellPadding: 2 },
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: "bold" },
+        styles: { 
+          font: "times", 
+          fontSize: 8, // Smaller font
+          cellPadding: 1.5,
+          textColor: [0, 0, 0] 
+        },
+        headStyles: { 
+          fillColor: [245, 245, 245], 
+          textColor: [0, 0, 0], 
+          fontStyle: "bold" 
+        },
         columnStyles: {
           0: { cellWidth: 80 },
           1: { cellWidth: 60, halign: "center" },
@@ -1448,13 +1457,13 @@ export function Reports({ onPageChange }: ReportsProps) {
         }
       });
 
-      y = (pdf as any).lastAutoTable.finalY + 8;
+      y = (pdf as any).lastAutoTable.finalY + 6;
       
       pdf.setFont("times", "bolditalic");
-      pdf.setFontSize(9);
+      pdf.setFontSize(8); // Smaller font
       pdf.text(`AMOUNT IN WORDS: ${numberToWords(grandTotal)}`, margin, y);
       
-      y += 15;
+      y += 10;
       pdf.setFont("times", "normal");
       pdf.text("..................................................", margin, y);
       pdf.text("..................................................", pageWidth - margin - 50, y);

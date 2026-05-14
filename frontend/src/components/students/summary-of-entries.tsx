@@ -132,11 +132,11 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
 
   // Financial calculations based on new quantity fields
   const pricing = {
-    uceMarkingGuide: 35000,
-    uaceMarkingGuide: 25000,
+    uceMarkingGuide: 0,
+    uaceMarkingGuide: 0,
     answerBooklet: 25000,
     studentFee: 27000,
-    schoolRegistrationFee: 500000,
+    schoolRegistrationFee: 25000,
   };
 
   const schoolRegFeeTotal = useMemo(() => {
@@ -164,54 +164,59 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
     });
 
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 40;
-    let yPos = 40;
+    const margin = 30; // Reduced margin
+    let yPos = 30; // Reduced starting yPos
 
     // Header
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(12); // Slightly smaller header
+    doc.setTextColor(0, 0, 0); // Proper black
     doc.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, yPos, { align: "center" });
+    yPos += 15;
+
+    doc.setFontSize(10); // Slightly smaller
+    doc.setTextColor(0, 0, 0);
+    doc.text(`${level === "Combined" ? "UCE & UACE" : level} SUMMARY OF ENTRIES`, pageWidth / 2, yPos, { align: "center" });
     yPos += 20;
 
-    doc.setFontSize(12);
-    doc.text(`${level === "Combined" ? "UCE & UACE" : level} SUMMARY OF ENTRIES`, pageWidth / 2, yPos, { align: "center" });
-    yPos += 30;
-
     // School Details
-    doc.setFontSize(10);
+    doc.setFontSize(9); // Smaller font for details
+    doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "normal");
     
     const drawField = (label: string, value: string, x: number, y: number) => {
       doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 0, 0);
       doc.text(label, x, y);
       doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
       doc.text(value, x + doc.getTextWidth(label) + 5, y);
     };
 
     drawField("NAME OF SCHOOL:", school.name, margin, yPos);
-    drawField("TOTAL CANDIDATES:", filteredStudents.length.toString(), pageWidth - margin - 150, yPos);
-    yPos += 20;
+    drawField("TOTAL CANDIDATES:", filteredStudents.length.toString(), pageWidth - margin - 120, yPos);
+    yPos += 15;
 
     drawField("DISTRICT:", school.district, margin, yPos);
-    drawField("ZONE:", school.zone || "N/A", margin + 200, yPos);
-    yPos += 20;
+    drawField("ZONE:", school.zone || "N/A", margin + 180, yPos);
+    yPos += 15;
 
     drawField("REF NO:", school.code, margin, yPos);
-    drawField("TELEPHONE:", school.phone || "N/A", margin + 200, yPos);
-    yPos += 20;
+    drawField("TELEPHONE:", school.phone || "N/A", margin + 180, yPos);
+    yPos += 15;
 
     drawField("CONTACT OF HEAD:", school.contactPerson || "_________________________", margin, yPos);
-    yPos += 20;
+    yPos += 15;
 
-    drawField("SIGNATURE & EMAIL ADDRESS:", school.email || "N/A", margin, yPos);
-    yPos += 30;
+    drawField("SIGNATURE & EMAIL:", school.email || "N/A", margin, yPos);
+    yPos += 20;
 
     // Subjects Table
     const tableData: any[] = [];
     
     const addSubjectRows = (title: string, subjectsToFilter: any[]) => {
       if (subjectsToFilter.length > 0) {
-        tableData.push([{ content: title, colSpan: 6, styles: { fontStyle: "bold", fillColor: [240, 240, 240] } }]);
+        tableData.push([{ content: title, colSpan: 6, styles: { fontStyle: "bold", fillColor: [245, 245, 245], cellPadding: 2 } }]);
         subjectsToFilter.forEach(subject => {
           const key = `${subject.educationLevel}:${subject.code}`;
           tableData.push([
@@ -234,56 +239,75 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
 
     autoTable(doc, {
       startY: yPos,
-      head: [["CODE", "SUBJECT NAME", "ENTRIES", "P 1", "P 2", "P 3"]],
+      head: [["CODE", "SUBJECT NAME", "NO. OF\nCANDIDATES", "P 1", "P 2", "P 3"]],
       body: tableData,
       theme: "grid",
-      styles: { fontSize: 9, cellPadding: 3, lineWidth: 0.5 },
-      headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: "bold", lineWidth: 0.5 },
+      styles: { 
+        fontSize: 8, // Reduced font size for table
+        cellPadding: 2, // Reduced padding
+        lineWidth: 0.5, 
+        textColor: [0, 0, 0], 
+        lineColor: [0, 0, 0] 
+      },
+      headStyles: { 
+        fillColor: [255, 255, 255], 
+        textColor: [0, 0, 0], 
+        fontStyle: "bold", 
+        lineWidth: 0.5,
+        halign: "center",
+        valign: "middle"
+      },
       columnStyles: {
-        0: { cellWidth: 50, halign: "center" },
+        0: { cellWidth: 40, halign: "center" },
         1: { cellWidth: "auto" },
-        2: { cellWidth: 60, halign: "center" },
-        3: { cellWidth: 40, halign: "center" },
-        4: { cellWidth: 40, halign: "center" },
-        5: { cellWidth: 40, halign: "center" }
+        2: { cellWidth: 65, halign: "center" }, 
+        3: { cellWidth: 35, halign: "center" },
+        4: { cellWidth: 35, halign: "center" },
+        5: { cellWidth: 35, halign: "center" }
       },
       margin: { left: margin, right: margin }
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 30;
+    yPos = (doc as any).lastAutoTable.finalY + 15;
 
     // Financial Summary Table
     const feeTableBody = [];
     if (schoolRegFeeTotal > 0) feeTableBody.push(["School Registration Fee", `${schoolRegFeeTotal.toLocaleString()} UGX`]);
     feeTableBody.push([`Students Fee (${pricing.studentFee.toLocaleString()} X ${filteredStudents.length})`, `${studentFeeTotal.toLocaleString()} UGX`]);
-    if (uceMarkingGuideTotal > 0) feeTableBody.push([`UCE Marking Guide (35,000 X ${school.uceMarkingGuideQuantity})`, `${uceMarkingGuideTotal.toLocaleString()} UGX`]);
-    if (uaceArtsMarkingGuideTotal > 0) feeTableBody.push([`UACE Arts Marking Guide (25,000 X ${school.uaceArtsMarkingGuideQuantity})`, `${uaceArtsMarkingGuideTotal.toLocaleString()} UGX`]);
-    if (uaceSciencesMarkingGuideTotal > 0) feeTableBody.push([`UACE Sciences Marking Guide (25,000 X ${school.uaceSciencesMarkingGuideQuantity})`, `${uaceSciencesMarkingGuideTotal.toLocaleString()} UGX`]);
-    if (answerBookletsTotal > 0) feeTableBody.push([`Answer Booklets (25,000 X ${school.answerBookletsQuantity})`, `${answerBookletsTotal.toLocaleString()} UGX`]);
+    if (answerBookletsTotal > 0) feeTableBody.push([`Answer Booklets (${pricing.answerBooklet.toLocaleString()} X ${school.answerBookletsQuantity})`, `${answerBookletsTotal.toLocaleString()} UGX`]);
     
     feeTableBody.push([{ content: "TOTAL AMOUNT", styles: { fontStyle: "bold" } }, { content: `${totalAmount.toLocaleString()} UGX`, styles: { fontStyle: "bold" } }]);
-    feeTableBody.push([{ content: `AMOUNT IN WORDS: ${numberToWords(totalAmount)}`, colSpan: 2, styles: { fontSize: 8, fontStyle: "italic" } }]);
+    feeTableBody.push([{ content: `AMOUNT IN WORDS: ${numberToWords(totalAmount)}`, colSpan: 2, styles: { fontSize: 7, fontStyle: "italic", cellPadding: 1 } }]);
 
     autoTable(doc, {
       startY: yPos,
       head: [["FINANCIAL SUMMARY", "AMOUNT"]],
       body: feeTableBody,
       theme: "plain",
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fontStyle: "bold", borderBottom: 0.5 },
+      styles: { 
+        fontSize: 8, 
+        cellPadding: 1.5,
+        textColor: [0, 0, 0] 
+      },
+      headStyles: { 
+        fontStyle: "bold", 
+        borderBottom: 0.5,
+        textColor: [0, 0, 0] 
+      },
       columnStyles: {
         0: { cellWidth: "auto" },
-        1: { cellWidth: 150, halign: "right" }
+        1: { cellWidth: 120, halign: "right" }
       },
       margin: { left: margin, right: margin }
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 50;
+    yPos = (doc as any).lastAutoTable.finalY + 25; // Reduced space before footer
 
     // Footer
-    doc.setFontSize(10);
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
     doc.text("Official Stamp & Signature: ___________________________________", margin, yPos);
-    yPos += 25;
+    yPos += 15;
     doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPos);
 
     doc.save(`Summary_of_Entries_${level}_${school.code}.pdf`);
@@ -348,7 +372,7 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th rowSpan={2} className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider w-20 border-r border-slate-200">Code</th>
                 <th rowSpan={2} className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-200">Subject Name</th>
-                <th rowSpan={2} className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-center w-24 border-r border-slate-200">Entries</th>
+                <th rowSpan={2} className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-center w-32 border-r border-slate-200">No. of Candidates</th>
                 <th colSpan={3} className="px-4 py-2 text-[10px] font-black text-slate-500 uppercase tracking-wider text-center border-b border-slate-200">Papers</th>
               </tr>
               <tr className="bg-slate-50 border-b border-slate-200">
@@ -440,27 +464,9 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
               <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Students Fee ({pricing.studentFee.toLocaleString()} X {filteredStudents.length})</span>
               <span className="font-black text-slate-900">{studentFeeTotal.toLocaleString()} UGX</span>
             </div>
-            {uceMarkingGuideTotal > 0 && (
-              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
-                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">UCE Marking Guide (35,000 X {school.uceMarkingGuideQuantity})</span>
-                <span className="font-black text-slate-900">{uceMarkingGuideTotal.toLocaleString()} UGX</span>
-              </div>
-            )}
-            {uaceArtsMarkingGuideTotal > 0 && (
-              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
-                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">UACE Arts Marking Guide (25,000 X {school.uaceArtsMarkingGuideQuantity})</span>
-                <span className="font-black text-slate-900">{uaceArtsMarkingGuideTotal.toLocaleString()} UGX</span>
-              </div>
-            )}
-            {uaceSciencesMarkingGuideTotal > 0 && (
-              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
-                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">UACE Sciences Marking Guide (25,000 X {school.uaceSciencesMarkingGuideQuantity})</span>
-                <span className="font-black text-slate-900">{uaceSciencesMarkingGuideTotal.toLocaleString()} UGX</span>
-              </div>
-            )}
             {answerBookletsTotal > 0 && (
               <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
-                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Answer Booklets (25,000 X {school.answerBookletsQuantity})</span>
+                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Answer Booklets ({pricing.answerBooklet.toLocaleString()} X {school.answerBookletsQuantity})</span>
                 <span className="font-black text-slate-900">{answerBookletsTotal.toLocaleString()} UGX</span>
               </div>
             )}
