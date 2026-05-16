@@ -41,8 +41,9 @@ interface PaymentStatusProps {
   onPageChange: (page: string) => void;
 }
 
-function formatUGX(amount: number) {
-  return `${amount.toLocaleString()} UGX`;
+function formatUGX(amount: number | string) {
+  const num = typeof amount === 'number' ? amount : parseFloat(amount as string) || 0;
+  return `${num.toLocaleString()} UGX`;
 }
 
 export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
@@ -152,148 +153,173 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
       setIsDownloading(true);
       const pdf = new jsPDF();
       const pageWidth = pdf.internal.pageSize.getWidth();
-      let yPos = 20;
+      const margin = 15;
+      const contentWidth = pageWidth - (margin * 2);
+      let yPos = 25;
 
-      // Header with professional styling
-      pdf.setFontSize(24);
-      pdf.setTextColor(30, 41, 59);
-      pdf.setFont(undefined, "bold");
+      // --- Header Section ---
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(22);
+      pdf.setTextColor(15, 23, 42); // Slate 900
       pdf.text("WAKISSHA JOINT MOCK EXAMINATIONS", pageWidth / 2, yPos, { align: "center" });
-      yPos += 12;
       
-      pdf.setFontSize(18);
-      pdf.setTextColor(isReceipt ? [5, 150, 105] : [71, 85, 105]);
-      pdf.setFont(undefined, "normal");
-      pdf.text(isReceipt ? "OFFICIAL E-RECEIPT" : "PAYMENT INVOICE", pageWidth / 2, yPos, { align: "center" });
-      yPos += 18;
-
-      if (isReceipt) {
-        // Add "PAID" badge
-        pdf.setFillColor(5, 150, 105);
-        pdf.roundedRect(pageWidth - 60, 40, 45, 12, 2, 2, "F");
-        pdf.setFontSize(10);
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFont(undefined, "bold");
-        pdf.text("VERIFIED PAID", pageWidth - 37.5, 48, { align: "center" });
-      }
-
-      // Invoice info with better spacing
-      pdf.setFontSize(10);
-      pdf.setTextColor(107, 114, 128);
-      pdf.setFont(undefined, "normal");
-      pdf.text(`${isReceipt ? 'Receipt' : 'Invoice'} Serial: ${invoice.serialNumber}`, 15, yPos);
-      pdf.text(`Date: ${invoice.date}`, pageWidth - 15, yPos, { align: "right" });
       yPos += 12;
+      pdf.setFontSize(16);
+      if (isReceipt) {
+        pdf.setTextColor(5, 150, 105); // Emerald 600
+        pdf.text("OFFICIAL E-RECEIPT", pageWidth / 2, yPos, { align: "center" });
+      } else {
+        pdf.setTextColor(71, 85, 105); // Slate 600
+        pdf.text("PAYMENT INVOICE", pageWidth / 2, yPos, { align: "center" });
+      }
+      
+      yPos += 20;
 
-      // School info with improved typography
-      pdf.setTextColor(30, 41, 59);
-      pdf.setFont(undefined, "bold");
-      pdf.setFontSize(11);
-      pdf.text("BILL TO:", 15, yPos);
+      // --- Meta Data Row ---
+      pdf.setFontSize(9);
+      pdf.setTextColor(100, 116, 139); // Slate 500
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`${isReceipt ? 'Receipt' : 'Invoice'} #: ${invoice.serialNumber}`, margin, yPos);
+      pdf.text(`Date Issued: ${invoice.date}`, pageWidth - margin, yPos, { align: "right" });
+      
       yPos += 8;
-      pdf.setFont(undefined, "normal");
-      pdf.setFontSize(10);
-      pdf.text(`${user?.name}`, 15, yPos);
-      yPos += 6;
-      pdf.text(`School Code: ${user?.schoolCode}`, 15, yPos);
-      yPos += 6;
-      pdf.text(`Zone: ${currentSchool?.zone || "N/A"}`, 15, yPos);
-      yPos += 18;
+      pdf.setDrawColor(226, 232, 240); // Slate 200
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, yPos, pageWidth - margin, yPos);
+      
+      yPos += 15;
 
-      // Items Table with professional styling
+      // --- Client Info ---
+      pdf.setTextColor(15, 23, 42);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text("BILL TO:", margin, yPos);
+      
+      yPos += 6;
+      pdf.setFontSize(11);
+      pdf.text(user?.name || "N/A", margin, yPos);
+      
+      yPos += 6;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(`School Code: ${user?.schoolCode || "N/A"}`, margin, yPos);
+      pdf.text(`Zone: ${currentSchool?.zone || "N/A"}`, pageWidth - margin, yPos, { align: "right" });
+      
+      yPos += 15;
+
+      // --- Items Table ---
       autoTable(pdf, {
         head: [["DESCRIPTION", "FORMULA", "QTY", "UNIT PRICE", "TOTAL"]],
-        body: invoice.items.map(item => [
+        body: (invoice.items || []).map(item => [
           item.description,
           (item as any).formula || "-",
-          item.quantity.toString(),
-          formatUGX(item.unitPrice),
-          formatUGX(item.total)
+          (item.quantity || 0).toString(),
+          formatUGX(item.unitPrice || 0),
+          formatUGX(item.total || 0)
         ]),
         startY: yPos,
-        margin: { left: 15, right: 15 },
+        margin: { left: margin, right: margin },
+        styles: {
+          font: "helvetica",
+          fontSize: 8,
+          cellPadding: 4,
+          overflow: "linebreak",
+          valign: "middle"
+        },
         headStyles: { 
           fillColor: [30, 41, 59], 
           textColor: [255, 255, 255], 
           fontStyle: "bold",
-          fontSize: 10,
-          cellPadding: 8
-        },
-        bodyStyles: {
           fontSize: 9,
-          cellPadding: 6,
-          lineColor: [220, 220, 220],
-          lineWidth: 0.1
+          cellPadding: 5,
+          halign: "center"
+        },
+        columnStyles: {
+          0: { cellWidth: 55, halign: "left" }, // Description
+          1: { cellWidth: 50, halign: "left", fontStyle: "italic", textColor: [100, 116, 139] }, // Formula
+          2: { cellWidth: 15, halign: "center" }, // Qty
+          3: { cellWidth: 30, halign: "right" }, // Unit Price
+          4: { cellWidth: 30, halign: "right", fontStyle: "bold" } // Total
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252]
         },
-        columnStyles: {
-          0: { cellWidth: "auto", fontStyle: "normal" },
-          1: { halign: "center", fontStyle: "italic" },
-          2: { halign: "center", cellWidth: 30 },
-          3: { halign: "right", cellWidth: 50 },
-          4: { halign: "right", cellWidth: 50, fontStyle: "bold" }
-        }
+        tableLineColor: [226, 232, 240],
+        tableLineWidth: 0.1,
       });
 
-      yPos = (pdf as any).lastAutoTable.finalY + 15;
+      yPos = (pdf as any).lastAutoTable.finalY + 10;
 
-      // Total with enhanced styling
-      pdf.setFillColor(30, 41, 59);
-      pdf.rect(pageWidth - 100, yPos - 8, 85, 12, "F");
-      pdf.setFontSize(12);
-      pdf.setFont(undefined, "bold");
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(`TOTAL: ${formatUGX(invoice.totalAmount)}`, pageWidth - 15, yPos, { align: "right" });
-      yPos += 25;
-
-      // Bank Details with professional formatting
-      pdf.setTextColor(30, 41, 59);
+      // --- Totals Section ---
+      const totalLabel = "GRAND TOTAL:";
+      const totalValue = formatUGX(invoice.totalAmount || 0);
+      
+      pdf.setFont("helvetica", "bold");
       pdf.setFontSize(11);
-      pdf.setFont(undefined, "bold");
-      pdf.text("BANK PAYMENT DETAILS", 15, yPos);
-      yPos += 8;
+      pdf.setTextColor(15, 23, 42);
+      pdf.text(totalLabel, pageWidth - 75, yPos);
+      pdf.setFontSize(12);
+      pdf.setTextColor(220, 38, 38); // Red 600 for emphasis
+      pdf.text(totalValue, pageWidth - margin, yPos, { align: "right" });
       
-      // Bank details box
-      pdf.setDrawColor(200, 200, 200);
-      pdf.setLineWidth(0.5);
-      pdf.rect(15, yPos - 2, pageWidth - 30, 45);
-      
-      pdf.setFont(undefined, "normal");
-      pdf.setFontSize(10);
-      pdf.setTextColor(60, 60, 60);
-      pdf.text("Bank Name: CENTENARY BANK", 20, yPos);
-      yPos += 6;
-      pdf.text("Account Name: WAKISSHA JOINT MOCK", 20, yPos);
-      yPos += 6;
-      pdf.text("Account Number: 3100054321", 20, yPos);
-      yPos += 6;
-      pdf.text(`Reference: ${invoice.serialNumber}`, 20, yPos);
-      yPos += 8;
-      pdf.setFont(undefined, "italic");
-      pdf.setFontSize(9);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text("Please use the invoice serial as reference when making payment", 20, yPos);
       yPos += 20;
 
-      // Signature section with better spacing
-      pdf.setFont(undefined, "normal");
-      pdf.setFontSize(10);
-      pdf.setTextColor(30, 41, 59);
-      pdf.text("__________________________", 15, yPos);
-      pdf.text("__________________________", pageWidth - 15, yPos, { align: "right" });
-      yPos += 6;
-      pdf.setFont(undefined, "bold");
-      pdf.text("School Headteacher / Bursar", 15, yPos);
-      pdf.text("WAKISSHA Secretariat", pageWidth - 15, yPos, { align: "right" });
+      // --- Bank Details ---
+      pdf.setDrawColor(241, 245, 249); // Slate 100
+      pdf.setFillColor(248, 250, 252); // Slate 50
+      pdf.roundedRect(margin, yPos, contentWidth, 40, 3, 3, "FD");
+      
+      let bankY = yPos + 8;
+      pdf.setFontSize(9);
+      pdf.setTextColor(71, 85, 105);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("BANK PAYMENT DETAILS", margin + 5, bankY);
+      
+      bankY += 6;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.text("Bank Name: CENTENARY BANK", margin + 5, bankY);
+      pdf.text("Account Name: WAKISSHA JOINT MOCK", pageWidth / 2, bankY);
+      
+      bankY += 6;
+      pdf.text("Account Number: 3100054321", margin + 5, bankY);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(15, 23, 42);
+      pdf.text(`Reference: ${invoice.serialNumber}`, pageWidth / 2, bankY);
+      
+      bankY += 8;
+      pdf.setFont("helvetica", "italic");
+      pdf.setTextColor(100, 116, 139);
+      pdf.text("Note: Please ensure the serial number is included as your payment reference.", margin + 5, bankY);
+      
+      yPos += 60;
+
+      // --- Signatures ---
+      pdf.setDrawColor(203, 213, 225); // Slate 300
+      pdf.setLineWidth(0.2);
+      pdf.line(margin, yPos, margin + 60, yPos);
+      pdf.line(pageWidth - margin - 60, yPos, pageWidth - margin, yPos);
+      
+      yPos += 5;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text("Authorised Signature", margin, yPos);
+      pdf.text("School Official Stamp", pageWidth - margin, yPos, { align: "right" });
+
+      // --- Footer ---
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7);
+      pdf.setTextColor(148, 163, 184); // Slate 400
+      pdf.text("WAKISSHA JOINT MOCK EXAMINATIONS - P.O. BOX 1234, WAKISO, UGANDA", pageWidth / 2, 285, { align: "center" });
 
       const fileName = isReceipt ? `receipt-${invoice.serialNumber}.pdf` : `invoice-${invoice.serialNumber}.pdf`;
       pdf.save(fileName);
       toast.success(isReceipt ? "E-Receipt downloaded successfully" : "Invoice downloaded successfully");
     } catch (error) {
       toast.error("Failed to generate PDF");
-      console.error(error);
+      console.error("PDF Generation Error:", error);
     } finally {
       setIsDownloading(false);
     }
