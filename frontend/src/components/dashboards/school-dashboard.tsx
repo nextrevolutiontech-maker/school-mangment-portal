@@ -135,6 +135,52 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
   const handleFinalise = () => {
     if (!user?.schoolCode) return;
     
+    if (levelStudents.length === 0) {
+      toast.error("No students found", {
+        description: `You must have at least one ${finaliseLevel} student to finalise registration.`
+      });
+      return;
+    }
+
+    // Validate Marking Guides
+    if (finaliseLevel === "UCE" && uceMarkingGuideQuantity === 0) {
+      toast.error("Selection Required", {
+        description: "Please specify quantity for UCE Marking Guide."
+      });
+      return;
+    }
+
+    if (finaliseLevel === "UACE") {
+      const artsCodes = ["LIT", "HIST", "GEOG", "KISWA", "CRE", "IRE", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA", "ART", "PE", "COM", "ECON", "ENG", "CHINESE", "ATESO"];
+      
+      const hasArts = levelStudents.some(s => 
+        s.subjects.some(subj => artsCodes.includes(subj.subjectCode))
+      );
+      const hasSciences = levelStudents.some(s => 
+        s.subjects.some(subj => !artsCodes.includes(subj.subjectCode))
+      );
+
+      if (hasArts && uaceArtsMarkingGuideQuantity === 0) {
+        toast.error("Selection Required", {
+          description: "You have Arts students. Please specify quantity for Arts Marking Guide."
+        });
+        return;
+      }
+      if (hasSciences && uaceSciencesMarkingGuideQuantity === 0) {
+        toast.error("Selection Required", {
+          description: "You have Science students. Please specify quantity for Sciences Marking Guide."
+        });
+        return;
+      }
+    }
+
+    if (answerBookletsQuantity === 0) {
+      toast.error("Selection Required", {
+        description: "Please specify quantity for Answer Booklets."
+      });
+      return;
+    }
+
     finaliseRegistration(
       user.schoolCode, 
       finaliseLevel, 
@@ -584,13 +630,13 @@ export function SchoolDashboard({ onPageChange }: SchoolDashboardProps) {
         setIsFinaliseDialogOpen(open);
         if (!open) { setFinaliseStep(1); setIsVerified(false); }
       }}>
-        <DialogContent className="sm:max-w-[800px] rounded-3xl">
+        <DialogContent className="sm:max-w-[800px] rounded-3xl" aria-describedby="finalise-registration-description">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
               <div className="h-10 w-10 rounded-2xl bg-orange-600/10 flex items-center justify-center text-orange-600"><ShieldCheck className="h-6 w-6" /></div>
               <div>
                 <DialogTitle className="text-2xl font-bold text-slate-900">Finalise Registration</DialogTitle>
-                <DialogDescription className="text-slate-500">Step {finaliseStep} of 3</DialogDescription>
+                <DialogDescription id="finalise-registration-description" className="text-slate-500">Step {finaliseStep} of 3</DialogDescription>
               </div>
             </div>
           </DialogHeader>

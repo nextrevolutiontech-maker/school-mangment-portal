@@ -1110,10 +1110,10 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                   Finalise {(!isUceFinalised && !isUaceFinalised) ? "" : (isUceFinalised ? "UACE " : "UCE ")}Registration
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md rounded-3xl">
+              <DialogContent className="max-w-md rounded-3xl" aria-describedby="finalise-description">
                 <DialogHeader>
                   <DialogTitle className="text-xl font-black text-slate-900">Finalise Registration</DialogTitle>
-                  <DialogDescription className="text-slate-500 font-medium">
+                  <DialogDescription id="finalise-description" className="text-slate-500 font-medium">
                     Once finalised, you will no longer be able to edit or delete existing students for this level. 
                     Any students added after this will be treated as "Additional Students" with separate invoices.
                   </DialogDescription>
@@ -1200,10 +1200,56 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
                     className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold"
                     onClick={() => {
                       if (user?.schoolCode) {
+                        const levelStudents = filteredStudents.filter(s => s.examLevel === finaliseLevel && !s.isAdditional);
+                        
+                        if (levelStudents.length === 0) {
+                          toast.error("No students found", {
+                            description: `You must have at least one ${finaliseLevel} student to finalise registration.`
+                          });
+                          return;
+                        }
+
+                        // Validate Marking Guides
+                        if (finaliseLevel === "UCE" && uceMarkingGuideQuantity === 0) {
+                          toast.error("Selection Required", {
+                            description: "Please specify quantity for UCE Marking Guide."
+                          });
+                          return;
+                        }
+
+                        if (finaliseLevel === "UACE") {
+                          const hasArts = levelStudents.some(s => 
+                            s.subjects.some(subj => getSubjectCategory(subj.subjectCode) === "Arts")
+                          );
+                          const hasSciences = levelStudents.some(s => 
+                            s.subjects.some(subj => getSubjectCategory(subj.subjectCode) === "Sciences")
+                          );
+
+                          if (hasArts && uaceArtsMarkingGuideQuantity === 0) {
+                            toast.error("Selection Required", {
+                              description: "You have Arts students. Please specify quantity for Arts Marking Guide."
+                            });
+                            return;
+                          }
+                          if (hasSciences && uaceSciencesMarkingGuideQuantity === 0) {
+                            toast.error("Selection Required", {
+                              description: "You have Science students. Please specify quantity for Sciences Marking Guide."
+                            });
+                            return;
+                          }
+                        }
+
+                        if (answerBookletsQuantity === 0) {
+                          toast.error("Selection Required", {
+                            description: "Please specify quantity for Answer Booklets."
+                          });
+                          return;
+                        }
+
                         finaliseRegistration(
                           user.schoolCode, 
                           finaliseLevel, 
-                          filteredStudents.filter(s => s.examLevel === finaliseLevel && !s.isAdditional),
+                          levelStudents,
                           uceMarkingGuideQuantity,
                           uaceArtsMarkingGuideQuantity,
                           uaceSciencesMarkingGuideQuantity,
@@ -1796,10 +1842,10 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
       {/* View Student Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" aria-describedby="view-student-description">
           <DialogHeader>
             <DialogTitle>Student Details</DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="view-student-description">
               View complete information for {viewingStudent?.studentName}
             </DialogDescription>
           </DialogHeader>
@@ -2203,10 +2249,10 @@ export function StudentsEntries({ onPageChange, autoOpenAddDialog = false }: Stu
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby="delete-student-description">
           <DialogHeader>
             <DialogTitle>Delete Student</DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="delete-student-description">
               Are you sure you want to delete {deletingStudent?.studentName}?
             </DialogDescription>
           </DialogHeader>

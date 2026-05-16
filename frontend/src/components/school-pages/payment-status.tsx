@@ -147,7 +147,7 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
     toast.success("Additional invoice generated successfully");
   };
 
-  const downloadInvoicePDF = async (invoice: Invoice) => {
+  const downloadInvoicePDF = async (invoice: Invoice, isReceipt = false) => {
     try {
       setIsDownloading(true);
       const pdf = new jsPDF();
@@ -162,16 +162,26 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
       yPos += 12;
       
       pdf.setFontSize(18);
-      pdf.setTextColor(71, 85, 105);
+      pdf.setTextColor(isReceipt ? [5, 150, 105] : [71, 85, 105]);
       pdf.setFont(undefined, "normal");
-      pdf.text("PAYMENT INVOICE", pageWidth / 2, yPos, { align: "center" });
+      pdf.text(isReceipt ? "OFFICIAL E-RECEIPT" : "PAYMENT INVOICE", pageWidth / 2, yPos, { align: "center" });
       yPos += 18;
+
+      if (isReceipt) {
+        // Add "PAID" badge
+        pdf.setFillColor(5, 150, 105);
+        pdf.roundedRect(pageWidth - 60, 40, 45, 12, 2, 2, "F");
+        pdf.setFontSize(10);
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont(undefined, "bold");
+        pdf.text("VERIFIED PAID", pageWidth - 37.5, 48, { align: "center" });
+      }
 
       // Invoice info with better spacing
       pdf.setFontSize(10);
       pdf.setTextColor(107, 114, 128);
       pdf.setFont(undefined, "normal");
-      pdf.text(`Invoice Serial: ${invoice.serialNumber}`, 15, yPos);
+      pdf.text(`${isReceipt ? 'Receipt' : 'Invoice'} Serial: ${invoice.serialNumber}`, 15, yPos);
       pdf.text(`Date: ${invoice.date}`, pageWidth - 15, yPos, { align: "right" });
       yPos += 12;
 
@@ -278,8 +288,9 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
       pdf.text("School Headteacher / Bursar", 15, yPos);
       pdf.text("WAKISSHA Secretariat", pageWidth - 15, yPos, { align: "right" });
 
-      pdf.save(`invoice-${invoice.serialNumber}.pdf`);
-      toast.success("Invoice downloaded successfully");
+      const fileName = isReceipt ? `receipt-${invoice.serialNumber}.pdf` : `invoice-${invoice.serialNumber}.pdf`;
+      pdf.save(fileName);
+      toast.success(isReceipt ? "E-Receipt downloaded successfully" : "Invoice downloaded successfully");
     } catch (error) {
       toast.error("Failed to generate PDF");
       console.error(error);
@@ -524,6 +535,18 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
                             <Eye className="h-4 w-4 mr-1" />
                             Invoice
                           </Button>
+                          {invoice.status === "paid" && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 font-bold"
+                              onClick={() => downloadInvoicePDF(invoice, true)}
+                              title="Download E-Receipt"
+                            >
+                              <FileText className="h-4 w-4 mr-1" />
+                              Receipt
+                            </Button>
+                          )}
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -829,14 +852,14 @@ export function PaymentStatus({ onPageChange }: PaymentStatusProps) {
 
       {/* Receipt Preview Modal */}
       <Dialog open={!!viewingReceipt} onOpenChange={() => setViewingReceipt(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0 border-none shadow-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0 border-none shadow-2xl" aria-describedby="receipt-preview-description">
           <DialogHeader className="p-4 border-b bg-slate-50">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
                 <FileText className="h-5 w-5 text-blue-600" />
                 Payment Receipt
               </DialogTitle>
-              <DialogDescription className="sr-only">
+              <DialogDescription id="receipt-preview-description" className="sr-only">
                 View the details of your payment receipt.
               </DialogDescription>
               <Button 

@@ -564,7 +564,7 @@ export function Timetable({ onPageChange }: TimetableProps) {
       </Tabs>
 
       <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-        <DialogContent className="sm:max-w-[520px] rounded-2xl border-slate-200">
+        <DialogContent className="sm:max-w-[520px] rounded-2xl border-slate-200" aria-describedby="timetable-desc">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               {editingEntry ? <Pencil className="h-5 w-5 text-slate-700" /> : <Plus className="h-5 w-5 text-slate-700" />}

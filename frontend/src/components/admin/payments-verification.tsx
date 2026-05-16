@@ -161,7 +161,7 @@ export function PaymentsVerification({
       setIsProcessing(false);
 
       toast.success("Payment verified successfully.", {
-        description: `${selectedSchool.name} moved to verified status and registration numbers assigned.`,
+        description: `${selectedSchool.name} moved to verified status. Registration numbers assigned and confirmation email sent.`,
       });
     }, 1500);
   };

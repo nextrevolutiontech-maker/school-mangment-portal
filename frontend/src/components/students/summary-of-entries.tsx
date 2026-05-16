@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "../ui/dialog";
-import { useAuth, SchoolRecord, StudentRecord, Subject, Invoice } from "../auth-context";
+import { useAuth, SchoolRecord, StudentRecord, Subject, Invoice, mapSubjectCode } from "../auth-context";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { FileText, ChevronDown, CheckCircle, Lock, AlertCircle, Download } from "lucide-react";
@@ -74,28 +74,41 @@ interface SummaryOfEntriesProps {
 }
 
 export function SummaryOfEntries({ school, students, subjects, level, invoices }: SummaryOfEntriesProps) {
+  // Ensure we only count unique students
   const filteredStudents = useMemo(() => {
-    if (level === "Combined") return students;
-    return students.filter(s => s.examLevel === level);
+    const uniqueMap = new Map();
+    students.forEach(s => {
+      if (level === "Combined" || s.examLevel === level) {
+        uniqueMap.set(s.id, s);
+      }
+    });
+    return Array.from(uniqueMap.values());
   }, [students, level]);
 
   const stats = useMemo(() => {
-    const studentSubjects = filteredStudents.flatMap((s) => s.subjects.map(sub => ({
-      ...sub,
-      examLevel: s.examLevel
-    })));
-    
-    // Group subjects by code and exam level to avoid mixing UCE/UACE with same codes
-    const subjectCounts = studentSubjects.reduce((acc, sub) => {
-      const key = `${sub.examLevel}:${sub.subjectCode}`;
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const subjectCounts: Record<string, number> = {};
+    filteredStudents.forEach(student => {
+      // Use a Set to track unique subjects for THIS student
+      const studentSubjectKeys = new Set<string>();
+      student.subjects?.forEach(subj => {
+        studentSubjectKeys.add(`${student.examLevel}:${mapSubjectCode(subj.subjectCode)}`);
+      });
 
-    const subjectList = Array.from(new Set(studentSubjects.map(s => `${s.examLevel}:${s.subjectCode}`)))
-      .map(key => {
-        const [examLevel, subjectCode] = key.split(":");
-        const subject = subjects.find(s => s.code === subjectCode && s.educationLevel === examLevel);
+      // Increment counts for each unique subject key the student has
+      studentSubjectKeys.forEach(key => {
+        subjectCounts[key] = (subjectCounts[key] || 0) + 1;
+      });
+    });
+
+    const subjectList = subjects
+      .filter(s => {
+        const key = `${s.educationLevel}:${s.code}`;
+        return subjectCounts[key] > 0;
+      })
+      .map(subject => {
+        const key = `${subject.educationLevel}:${subject.code}`;
+        const examLevel = key.split(":")[0];
+        const subjectCode = key.split(":")[1];
         return {
           code: subjectCode,
           name: subject?.name || "Unknown Subject",
@@ -109,10 +122,7 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
       totalStudents: filteredStudents.length,
       subjectList,
       totalEntries: filteredStudents.reduce((sum, s) => sum + s.totalEntries, 0),
-      subjectCountsMap: new Map(Object.entries(subjectCounts).map(([k, v]) => {
-        const [examLevel, subjectCode] = k.split(":");
-        return [`${examLevel}:${subjectCode}`, v];
-      }))
+      subjectCountsMap: new Map(Object.entries(subjectCounts))
     };
   }, [filteredStudents, subjects]);
 
@@ -130,31 +140,23 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
     return subjects;
   }, [level, uceSubjects, uaceSubjects, subjects]);
 
-  // Financial calculations based on new quantity fields
-  const pricing = {
-    uceMarkingGuide: 0,
-    uaceMarkingGuide: 0,
-    answerBooklet: 25000,
-    studentFee: 27000,
-    schoolRegistrationFee: 25000,
-  };
+  // Financial calculations - School Registration Fee is a fixed annual amount
+  const schoolRegFeeTotal = 25000;
 
-  const schoolRegFeeTotal = useMemo(() => {
-    // Check if any invoice exists with "School Registration Fee"
-    const hasRegistrationInvoice = invoices.some(inv => 
-      inv.schoolCode === school.code && inv.items.some(item => item.description === "School Registration Fee")
-    );
-    // Only include if no level was finalised before and no registration invoice exists
-    return (!school.uceRegistrationFinalised && !school.uaceRegistrationFinalised && !hasRegistrationInvoice) ? pricing.schoolRegistrationFee : 0;
-  }, [school, invoices]);
+  const studentFeeTotal = filteredStudents.length * 27000;
+  
+  // Separate Marking Guide Business Logic
+  const uceMarkingGuideTotal = (level === "UCE" && school.uceMarkingGuideQuantity) 
+    ? school.uceMarkingGuideQuantity * 35000 
+    : 0;
+    
+  const uaceMarkingGuideTotal = (level === "UACE") 
+    ? ((school.uaceArtsMarkingGuideQuantity || 0) + (school.uaceSciencesMarkingGuideQuantity || 0)) * 25000 
+    : 0;
 
-  const studentFeeTotal = filteredStudents.length * pricing.studentFee;
-  const uceMarkingGuideTotal = (level !== "UACE" && school.uceMarkingGuideQuantity) ? school.uceMarkingGuideQuantity * pricing.uceMarkingGuide : 0;
-  const uaceArtsMarkingGuideTotal = (level !== "UCE" && school.uaceArtsMarkingGuideQuantity) ? school.uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide : 0;
-  const uaceSciencesMarkingGuideTotal = (level !== "UCE" && school.uaceSciencesMarkingGuideQuantity) ? school.uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide : 0;
-  const answerBookletsTotal = school.answerBookletsQuantity ? school.answerBookletsQuantity * pricing.answerBooklet : 0;
+  const answerBookletsTotal = (school.answerBookletsQuantity || 0) * 25000;
 
-  const totalAmount = schoolRegFeeTotal + studentFeeTotal + uceMarkingGuideTotal + uaceArtsMarkingGuideTotal + uaceSciencesMarkingGuideTotal + answerBookletsTotal;
+  const totalAmount = schoolRegFeeTotal + studentFeeTotal + uceMarkingGuideTotal + uaceMarkingGuideTotal + answerBookletsTotal;
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF({
@@ -272,9 +274,27 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
 
     // Financial Summary Table
     const feeTableBody = [];
-    if (schoolRegFeeTotal > 0) feeTableBody.push(["School Registration Fee", `${schoolRegFeeTotal.toLocaleString()} UGX`]);
-    feeTableBody.push([`Students Fee (${pricing.studentFee.toLocaleString()} X ${filteredStudents.length})`, `${studentFeeTotal.toLocaleString()} UGX`]);
-    if (answerBookletsTotal > 0) feeTableBody.push([`Answer Booklets (${pricing.answerBooklet.toLocaleString()} X ${school.answerBookletsQuantity})`, `${answerBookletsTotal.toLocaleString()} UGX`]);
+    feeTableBody.push(["School Registration Fee", `${schoolRegFeeTotal.toLocaleString()} UGX`]);
+    feeTableBody.push([`Students Fee (27,000 X ${filteredStudents.length})`, `${studentFeeTotal.toLocaleString()} UGX`]);
+    
+    // Separate Marking Guide Business Logic for PDF
+    let markingGuideQty = 0;
+    let markingGuidePrice = 0;
+    let markingGuideTotalAmount = 0;
+
+    if (level === "UCE") {
+      markingGuideQty = school.uceMarkingGuideQuantity || 0;
+      markingGuidePrice = 35000;
+      markingGuideTotalAmount = uceMarkingGuideTotal;
+    } else {
+      markingGuideQty = (school.uaceArtsMarkingGuideQuantity || 0) + (school.uaceSciencesMarkingGuideQuantity || 0);
+      markingGuidePrice = 25000;
+      markingGuideTotalAmount = uaceMarkingGuideTotal;
+    }
+    
+    feeTableBody.push([`Marking Guide (${markingGuidePrice.toLocaleString()} X ${markingGuideQty})`, `${markingGuideTotalAmount.toLocaleString()} UGX`]);
+
+    feeTableBody.push([`Answer Booklets (25,000 X ${school.answerBookletsQuantity || 0})`, `${answerBookletsTotal.toLocaleString()} UGX`]);
     
     feeTableBody.push([{ content: "TOTAL AMOUNT", styles: { fontStyle: "bold" } }, { content: `${totalAmount.toLocaleString()} UGX`, styles: { fontStyle: "bold" } }]);
     feeTableBody.push([{ content: `AMOUNT IN WORDS: ${numberToWords(totalAmount)}`, colSpan: 2, styles: { fontSize: 7, fontStyle: "italic", cellPadding: 1 } }]);
@@ -454,22 +474,29 @@ export function SummaryOfEntries({ school, students, subjects, level, invoices }
           </div>
           
           <div className="space-y-4 text-base">
-            {schoolRegFeeTotal > 0 && (
-              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
-                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">School Registration Fee</span>
-                <span className="font-black text-slate-900">{schoolRegFeeTotal.toLocaleString()} UGX</span>
-              </div>
-            )}
             <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
-              <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Students Fee ({pricing.studentFee.toLocaleString()} X {filteredStudents.length})</span>
+              <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">School Registration Fee</span>
+              <span className="font-black text-slate-900">{schoolRegFeeTotal.toLocaleString()} UGX</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
+              <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Students Fee (27,000 X {filteredStudents.length})</span>
               <span className="font-black text-slate-900">{studentFeeTotal.toLocaleString()} UGX</span>
             </div>
-            {answerBookletsTotal > 0 && (
-              <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
-                <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Answer Booklets ({pricing.answerBooklet.toLocaleString()} X {school.answerBookletsQuantity})</span>
-                <span className="font-black text-slate-900">{answerBookletsTotal.toLocaleString()} UGX</span>
-              </div>
-            )}
+            
+            <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
+              <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">
+                Marking Guide ({level === "UCE" ? "35,000" : "25,000"} X {level === "UCE" ? (school.uceMarkingGuideQuantity || 0) : ((school.uaceArtsMarkingGuideQuantity || 0) + (school.uaceSciencesMarkingGuideQuantity || 0))})
+              </span>
+              <span className="font-black text-slate-900">
+                {(level === "UCE" ? uceMarkingGuideTotal : uaceMarkingGuideTotal).toLocaleString()} UGX
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center py-2 border-b border-slate-200/50">
+              <span className="text-slate-500 font-bold uppercase text-xs tracking-wider">Answer Booklets (25,000 X {school.answerBookletsQuantity || 0})</span>
+              <span className="font-black text-slate-900">{answerBookletsTotal.toLocaleString()} UGX</span>
+            </div>
             
             <div className="flex justify-between items-center pt-8">
               <span className="text-xl font-black text-slate-900 uppercase tracking-tighter">Total Amount Due</span>
@@ -584,7 +611,7 @@ export function SummaryDialog() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DialogContent className="max-w-[95vw] md:max-w-[1200px] lg:max-w-[1400px] w-full max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-3xl p-0 md:p-0 border-none shadow-[0_32px_80px_rgba(0,0,0,0.5)]" aria-describedby={undefined}>
+      <DialogContent className="max-w-[95vw] md:max-w-[1200px] lg:max-w-[1400px] w-full max-h-[95vh] overflow-y-auto overflow-x-hidden rounded-3xl p-0 md:p-0 border-none shadow-[0_32px_80px_rgba(0,0,0,0.5)]" aria-describedby="summary-dialog-description">
         <div className="flex flex-col h-full w-full max-w-full overflow-x-hidden">
           <DialogHeader className="p-6 md:p-8 border-b bg-white/90 backdrop-blur-xl sticky top-0 z-20 rounded-t-3xl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -596,7 +623,7 @@ export function SummaryDialog() {
                   <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">
                     {selectedLevel} Summary of Entries
                   </DialogTitle>
-                  <DialogDescription className="text-sm font-semibold text-slate-500">
+                  <DialogDescription id="summary-dialog-description" className="text-sm font-semibold text-slate-500">
                     Official registration summary for {currentSchool.name}
                   </DialogDescription>
                 </div>

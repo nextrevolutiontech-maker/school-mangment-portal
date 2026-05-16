@@ -844,8 +844,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const studentCount = levelStudents.length;
 
     const pricing = {
-      uceMarkingGuide: 0,
-      uaceMarkingGuide: 0,
+      uceMarkingGuide: 35000,
+      uaceMarkingGuide: 25000,
       answerBooklet: 25000,
       studentFee: 27000,
       schoolRegistrationFee: 25000,
@@ -878,6 +878,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         total: studentCount * pricing.studentFee,
         formula: `${pricing.studentFee.toLocaleString()} × ${studentCount} = ${(studentCount * pricing.studentFee).toLocaleString()}`
       });
+    }
+
+    // Marking Guides
+    if (level === "UCE" && uceMarkingGuideQuantity > 0) {
+      items.push({
+        description: "UCE Marking Guide (All Papers)",
+        quantity: uceMarkingGuideQuantity,
+        unitPrice: pricing.uceMarkingGuide,
+        total: uceMarkingGuideQuantity * pricing.uceMarkingGuide,
+        formula: `${pricing.uceMarkingGuide.toLocaleString()} × ${uceMarkingGuideQuantity} = ${(uceMarkingGuideQuantity * pricing.uceMarkingGuide).toLocaleString()}`
+      });
+    } else if (level === "UACE") {
+      if (uaceArtsMarkingGuideQuantity > 0) {
+        items.push({
+          description: "UACE Arts Marking Guide",
+          quantity: uaceArtsMarkingGuideQuantity,
+          unitPrice: pricing.uaceMarkingGuide,
+          total: uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide,
+          formula: `${pricing.uaceMarkingGuide.toLocaleString()} × ${uaceArtsMarkingGuideQuantity} = ${(uaceArtsMarkingGuideQuantity * pricing.uaceMarkingGuide).toLocaleString()}`
+        });
+      }
+      if (uaceSciencesMarkingGuideQuantity > 0) {
+        items.push({
+          description: "UACE Sciences Marking Guide",
+          quantity: uaceSciencesMarkingGuideQuantity,
+          unitPrice: pricing.uaceMarkingGuide,
+          total: uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide,
+          formula: `${pricing.uaceMarkingGuide.toLocaleString()} × ${uaceSciencesMarkingGuideQuantity} = ${(uaceSciencesMarkingGuideQuantity * pricing.uaceMarkingGuide).toLocaleString()}`
+        });
+      }
     }
 
     // Answer Booklets

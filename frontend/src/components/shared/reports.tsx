@@ -407,8 +407,10 @@ function buildStudentSubjectsDisplay(
   },
   subjectLookup: Map<string, { standardCode?: string; name?: string }>,
 ) {
-  const seen = new Set<string>();
-  const formattedSubjects: string[] = [];
+  if (!student.subjects || student.subjects.length === 0) return "No subjects registered";
+
+  const subjectGroups = new Map<string, { name: string, code: string, papers: string[] }>();
+  const subjectOrder: string[] = [];
 
   (student.subjects ?? []).forEach((subj) => {
     const lookupKey = `${student.examLevel}:${subj.subjectCode.toUpperCase()}`;
@@ -421,12 +423,29 @@ function buildStudentSubjectsDisplay(
       subjectLookup.get(lookupKey)?.name ||
       subj.subjectCode;
     const paperNumber = getPaperNumber(subj.paper);
-    const descriptor = `${resolvedName} (${resolvedCode}/${paperNumber})`;
 
-    if (!seen.has(descriptor)) {
-      seen.add(descriptor);
-      formattedSubjects.push(descriptor);
+    const groupKey = `${resolvedName}|${resolvedCode}`;
+    if (!subjectGroups.has(groupKey)) {
+      subjectGroups.set(groupKey, { name: resolvedName, code: resolvedCode, papers: [paperNumber] });
+      subjectOrder.push(groupKey);
+    } else {
+      const group = subjectGroups.get(groupKey)!;
+      if (!group.papers.includes(paperNumber)) {
+        group.papers.push(paperNumber);
+      }
     }
+  });
+
+  const formattedSubjects = subjectOrder.map(key => {
+    const { name, code, papers } = subjectGroups.get(key)!;
+    const sortedPapers = [...papers].sort((a, b) => {
+      const aNum = parseInt(a);
+      const bNum = parseInt(b);
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      return a.localeCompare(b);
+    });
+    
+    return `${name} (${code}/${sortedPapers.join(",")})`;
   });
 
   return formattedSubjects.join(", ");
@@ -445,8 +464,10 @@ function formatSubjectsForPDF(
   subjectLookup: Map<string, { standardCode?: string; name?: string }>,
   columns: number = 2,
 ) {
-  const seen = new Set<string>();
-  const formattedSubjects: string[] = [];
+  if (!student.subjects || student.subjects.length === 0) return "No subjects registered";
+
+  const subjectGroups = new Map<string, { name: string, code: string, papers: string[] }>();
+  const subjectOrder: string[] = [];
 
   (student.subjects ?? []).forEach((subj) => {
     const lookupKey = `${student.examLevel}:${subj.subjectCode.toUpperCase()}`;
@@ -460,21 +481,37 @@ function formatSubjectsForPDF(
       subj.subjectCode;
     const paperNumber = getPaperNumber(subj.paper);
 
-    let descriptor = `${resolvedName} (${resolvedCode}/${paperNumber})`;
-    if (
-      student.examLevel === "UACE" &&
-      (resolvedCode === "S101" || resolvedName.toUpperCase().includes("GENERAL PAPER"))
-    ) {
-      descriptor = `* ${descriptor} (Compulsory)`;
-    }
-
-    if (!seen.has(descriptor)) {
-      seen.add(descriptor);
-      formattedSubjects.push(descriptor);
+    const groupKey = `${resolvedName}|${resolvedCode}`;
+    if (!subjectGroups.has(groupKey)) {
+      subjectGroups.set(groupKey, { name: resolvedName, code: resolvedCode, papers: [paperNumber] });
+      subjectOrder.push(groupKey);
+    } else {
+      const group = subjectGroups.get(groupKey)!;
+      if (!group.papers.includes(paperNumber)) {
+        group.papers.push(paperNumber);
+      }
     }
   });
 
-  if (formattedSubjects.length === 0) return "No subjects registered";
+  const formattedSubjects = subjectOrder.map(key => {
+    const { name, code, papers } = subjectGroups.get(key)!;
+    const sortedPapers = [...papers].sort((a, b) => {
+      const aNum = parseInt(a);
+      const bNum = parseInt(b);
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      return a.localeCompare(b);
+    });
+    
+    let descriptor = `${name} (${code}/${sortedPapers.join(",")})`;
+    
+    if (
+      student.examLevel === "UACE" &&
+      (code === "S101" || name.toUpperCase().includes("GENERAL PAPER"))
+    ) {
+      descriptor = `* ${descriptor} (Compulsory)`;
+    }
+    return descriptor;
+  });
 
   if (student.examLevel === "UCE" && columns > 1) {
     const rowsCount = Math.ceil(formattedSubjects.length / columns);
@@ -568,7 +605,7 @@ export function Reports({ onPageChange }: ReportsProps) {
       ? null 
       : new Set(scopedSchools.filter(s => s.zone === selectedZone).map(s => s.code));
 
-    return scopedStudents.filter((student) => {
+    const baseFiltered = scopedStudents.filter((student) => {
       // Filter by School (Admin Selection)
       if (isAdmin && selectedSchool !== "all" && student.schoolCode !== selectedSchool) return false;
 
@@ -586,6 +623,9 @@ export function Reports({ onPageChange }: ReportsProps) {
       // Include all registered students in reports (matching invoice logic)
       return true;
     });
+
+    // Ensure uniqueness by student ID to prevent double-counting in reports
+    return Array.from(new Map(baseFiltered.map(s => [s.id, s])).values());
   }, [scopedStudents, studentTypeFilter, subjects, selectedZone, scopedSchools, isAdmin, selectedSchool]);
 
   useEffect(() => {
@@ -625,22 +665,30 @@ export function Reports({ onPageChange }: ReportsProps) {
     // Include all schools in the zone, regardless of whether they have students for this level.
     // This ensures a true consolidated report for all schools in the zone/centre.
     return filteredByZone.map((school) => {
-      const schoolStudents = filteredStudents.filter(
-        (student) =>
-          student.schoolCode === school.code &&
-          student.examLevel === educationLevelFilter,
-      );
+      // Ensure we only count unique students for this school and level
+      const uniqueSchoolStudentsMap = new Map();
+      filteredStudents.forEach(student => {
+        if (student.schoolCode === school.code && student.examLevel === educationLevelFilter) {
+          uniqueSchoolStudentsMap.set(student.id, student);
+        }
+      });
+      const schoolStudents = Array.from(uniqueSchoolStudentsMap.values());
       
       const subjectColumns =
         educationLevelFilter === "UACE" ? uaceSubjectColumns : uceSubjectColumns;
 
-      // Calculate total students per subject (not entries or papers)
+      // Calculate total students per subject (ensuring each student is counted only once per subject key)
       const subjectCounts = schoolStudents.reduce<
         Record<string, number>
       >((acc, student) => {
-        // For each subject the student is taking, increment the count
+        // Use a Set to track unique subject keys for THIS student
+        const studentSubjectKeys = new Set<string>();
         student.subjects?.forEach((subj) => {
-          const key = mapSubjectCode(subj.subjectCode);
+          studentSubjectKeys.add(mapSubjectCode(subj.subjectCode));
+        });
+
+        // Increment counts for each unique subject key the student has
+        studentSubjectKeys.forEach(key => {
           acc[key] = (acc[key] || 0) + 1;
         });
         return acc;
@@ -1266,9 +1314,14 @@ export function Reports({ onPageChange }: ReportsProps) {
         return;
       }
 
-      const summaryStudents = filteredStudents.filter(
-        (student) => student.schoolCode === headerSchool.code && student.examLevel === level
-      );
+      // Ensure we only count unique students for this school and level
+      const uniqueSummaryStudentsMap = new Map();
+      filteredStudents.forEach(student => {
+        if (student.schoolCode === headerSchool.code && student.examLevel === level) {
+          uniqueSummaryStudentsMap.set(student.id, student);
+        }
+      });
+      const summaryStudents = Array.from(uniqueSummaryStudentsMap.values());
 
       if (summaryStudents.length === 0) {
         toast.error(`No ${level} data available for ${headerSchool.name}`);
@@ -1412,21 +1465,32 @@ export function Reports({ onPageChange }: ReportsProps) {
       pdf.text("FINANCIAL SUMMARY", margin, y);
       y += 3;
 
-      const pricing = {
-        registration: 25000,
-        student: 27000,
-        answerBooklet: 25000,
-      };
-
       const totalStudents = summaryStudents.length;
+      const schoolRegFee = 25000;
+      const studentFeeRate = 27000;
+      const bookletUnitPrice = 25000;
       
-      const schoolRegFee = pricing.registration;
-      const studentFeesTotal = totalStudents * pricing.student;
-      
-      const bookletQty = (headerSchool as any).answerBookletsQuantity || 0;
-      const bookletTotal = bookletQty * pricing.answerBooklet;
+      let markingGuideQty = 0;
+      let markingGuideUnitPrice = 0;
+      let markingGuideTotal = 0;
 
-      const grandTotal = schoolRegFee + studentFeesTotal + bookletTotal;
+      // Separate Marking Guide Business Logic
+      if (level === "UCE") {
+        markingGuideQty = (headerSchool as any).uceMarkingGuideQuantity || 0;
+        markingGuideUnitPrice = 35000;
+        markingGuideTotal = markingGuideQty * markingGuideUnitPrice;
+      } else if (level === "UACE") {
+        const artsQty = (headerSchool as any).uaceArtsMarkingGuideQuantity || 0;
+        const scienceQty = (headerSchool as any).uaceSciencesMarkingGuideQuantity || 0;
+        markingGuideQty = artsQty + scienceQty;
+        markingGuideUnitPrice = 25000;
+        markingGuideTotal = markingGuideQty * markingGuideUnitPrice;
+      }
+
+      const studentFeesTotal = totalStudents * studentFeeRate;
+      const bookletQty = (headerSchool as any).answerBookletsQuantity || 0;
+      const bookletTotal = bookletQty * bookletUnitPrice;
+      const grandTotal = schoolRegFee + studentFeesTotal + markingGuideTotal + bookletTotal;
 
       autoTable(pdf, {
         startY: y,
@@ -1434,8 +1498,9 @@ export function Reports({ onPageChange }: ReportsProps) {
         head: [["DESCRIPTION", "DETAILS", "AMOUNT (UGX)"]],
         body: [
           ["School Registration Fee", "Fixed Annual", schoolRegFee.toLocaleString()],
-          [`Student Fees (${totalStudents} candidates)`, `@ ${pricing.student.toLocaleString()}`, studentFeesTotal.toLocaleString()],
-          [`Answer Booklets (${bookletQty} units)`, `@ ${pricing.answerBooklet.toLocaleString()}`, bookletTotal.toLocaleString()],
+          [`Student Fees (${totalStudents} candidates)`, `@ ${studentFeeRate.toLocaleString()}`, studentFeesTotal.toLocaleString()],
+          [`Marking Guide (${markingGuideQty} units)`, `@ ${markingGuideUnitPrice.toLocaleString()}`, markingGuideTotal.toLocaleString()],
+          [`Answer Booklets (${bookletQty} units)`, `@ ${bookletUnitPrice.toLocaleString()}`, bookletTotal.toLocaleString()],
           [{ content: "GRAND TOTAL", colSpan: 2, styles: { fontStyle: "bold", halign: "right" } }, { content: grandTotal.toLocaleString(), styles: { fontStyle: "bold" } }]
         ],
         theme: "grid",

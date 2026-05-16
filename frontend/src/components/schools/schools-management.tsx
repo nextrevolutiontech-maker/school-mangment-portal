@@ -228,10 +228,10 @@ export function SchoolsManagement({ onPageChange }: SchoolsManagementProps) {
               Add School
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl" aria-describedby="add-school-description">
             <DialogHeader className="mb-4">
               <DialogTitle className="text-xl font-bold text-slate-900">Register New School</DialogTitle>
-              <DialogDescription className="text-slate-500 mt-1 text-sm">
+              <DialogDescription id="add-school-description" className="text-slate-500 mt-1 text-sm">
                 Add a new school to the WAKISSHA portal. A school code will be
                 generated automatically.
               </DialogDescription>

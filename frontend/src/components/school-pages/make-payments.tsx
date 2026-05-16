@@ -21,7 +21,8 @@ import {
   AlertCircle,
   BookOpen,
   FileText,
-  Calculator
+  Calculator,
+  ShieldCheck
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
@@ -49,12 +50,15 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
   const isLevelFinalised = paymentLevel === "UCE" ? isUceFinalised : isUaceFinalised;
   const hasAnyLevelFinalised = isUceFinalised || isUaceFinalised;
 
+  const schoolInvoices = useMemo(() => {
+    return invoices.filter(inv => inv.schoolCode === user?.schoolCode);
+  }, [invoices, user]);
+
   const hasRegistrationInvoice = useMemo(() => {
-    return invoices.some(inv => 
-      inv.schoolCode === user?.schoolCode && 
+    return schoolInvoices.some(inv => 
       inv.items.some(item => item.description === "School Registration Fee")
     );
-  }, [invoices, user]);
+  }, [schoolInvoices]);
 
   const hasOriginalInvoice = useMemo(() => {
     return schoolInvoices.some(inv => inv.examLevel === paymentLevel && inv.type === "original");
@@ -75,7 +79,7 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
   }, [schoolStudents]);
 
   const pricing = {
-    registration: 500000,
+    registration: 25000,
     student: 27000,
     uceMarkingGuide: 35000,
     uaceMarkingGuide: 25000,
@@ -110,12 +114,36 @@ export function MakePayments({ onPageChange }: MakePaymentsProps) {
       });
       return;
     }
-    if (paymentLevel === "UACE" && uaceArtsMarkingGuideQuantity === 0 && uaceSciencesMarkingGuideQuantity === 0) {
-      toast.error("Selection Required", {
-        description: "Please specify quantity for at least one UACE Marking Guide (Arts or Sciences)."
-      });
-      return;
+
+    if (paymentLevel === "UACE") {
+      const hasArts = schoolStudents.some(s => 
+        s.subjects.some(subj => {
+          // Check both subject code and category
+          const arts = ["LIT", "HIST", "GEOG", "KISWA", "CRE", "IRE", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA", "ART", "PE", "COM", "ECON", "ENG", "CHINESE", "ATESO"];
+          return arts.includes(subj.subjectCode);
+        })
+      );
+      const hasSciences = schoolStudents.some(s => 
+        s.subjects.some(subj => {
+          const arts = ["LIT", "HIST", "GEOG", "KISWA", "CRE", "IRE", "FRENCH", "GERMAN", "ARABIC", "LUGANDA", "RUNY", "LUSOGA", "ART", "PE", "COM", "ECON", "ENG", "CHINESE", "ATESO"];
+          return !arts.includes(subj.subjectCode);
+        })
+      );
+
+      if (hasArts && uaceArtsMarkingGuideQuantity === 0) {
+        toast.error("Selection Required", {
+          description: "You have Arts students. Please specify quantity for Arts Marking Guide."
+        });
+        return;
+      }
+      if (hasSciences && uaceSciencesMarkingGuideQuantity === 0) {
+        toast.error("Selection Required", {
+          description: "You have Science students. Please specify quantity for Sciences Marking Guide."
+        });
+        return;
+      }
     }
+
     if (answerBookletsQuantity === 0) {
       toast.error("Selection Required", {
         description: "Please specify quantity for Answer Booklets."

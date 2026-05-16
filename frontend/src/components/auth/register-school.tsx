@@ -78,7 +78,7 @@ export function RegisterSchool({ onBackToLogin }: RegisterSchoolProps) {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       addSchool(formData);
       toast.success("Registration Successful", {
-        description: "Your school has been registered. Please login with your school code.",
+        description: "Your school registration has been received. Please login with your school code to continue to the dashboard.",
       });
       onBackToLogin();
     } catch (error) {
